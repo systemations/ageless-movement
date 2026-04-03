@@ -19,7 +19,7 @@ export default function Profile({ onBack }) {
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Reminders</h1>
@@ -51,7 +51,7 @@ export default function Profile({ onBack }) {
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Unit System</h1>
@@ -78,7 +78,7 @@ export default function Profile({ onBack }) {
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Change Password</h1>
@@ -95,7 +95,7 @@ export default function Profile({ onBack }) {
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Appearance</h1>
@@ -117,7 +117,7 @@ export default function Profile({ onBack }) {
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Connected Apps</h1>
@@ -145,7 +145,7 @@ export default function Profile({ onBack }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <button onClick={() => navigate(-1)} style={{
-          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -155,7 +155,7 @@ export default function Profile({ onBack }) {
       {/* Profile */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <div style={{
-          width: 80, height: 80, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 80, height: 80, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 12px', fontSize: 32, fontWeight: 700, color: '#000',
         }}>
@@ -279,7 +279,7 @@ export default function Profile({ onBack }) {
         </div>
         <button onClick={logout} style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
-          background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 15, fontWeight: 500, width: '100%',
+          background: 'none', border: 'none', color: 'var(--accent)', fontSize: 15, fontWeight: 500, width: '100%',
         }}>
           <span style={{ fontSize: 18 }}>↩️</span>
           Logout

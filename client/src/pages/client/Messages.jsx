@@ -65,7 +65,7 @@ export default function Messages() {
               display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
             }}>
               <div style={{
-                width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-mint)', flexShrink: 0,
+                width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 700, color: '#000',
               }}>

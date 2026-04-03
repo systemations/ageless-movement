@@ -114,7 +114,7 @@ export default function ContentManager({ onBack }) {
       <div className="page-content" style={{ paddingBottom: 120 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => { setEditing(null); setForm({}); }} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -190,7 +190,7 @@ export default function ContentManager({ onBack }) {
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
           maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-          background: 'linear-gradient(to top, #000 70%, transparent)',
+          background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
         }}>
           <button className="btn-primary" onClick={save}>Save {activeTab.slice(0, -1)}</button>
         </div>
@@ -205,14 +205,14 @@ export default function ContentManager({ onBack }) {
     <div className="page-content">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={onBack} style={{
-          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Content Manager</h1>
         <button onClick={() => { setEditing('new'); setForm({}); }} style={{
-          background: 'var(--accent-mint)', border: 'none', borderRadius: 20,
+          background: 'var(--accent)', border: 'none', borderRadius: 20,
           padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#000',
         }}>+ New</button>
       </div>
@@ -234,7 +234,7 @@ export default function ContentManager({ onBack }) {
         <div style={{ textAlign: 'center', padding: 40 }}>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>No {activeTab.toLowerCase()} yet</p>
           <button onClick={() => { setEditing('new'); setForm({}); }} style={{
-            background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 14, fontWeight: 600,
+            background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 600,
           }}>Create your first {activeTab.slice(0, -1).toLowerCase()}</button>
         </div>
       ) : (

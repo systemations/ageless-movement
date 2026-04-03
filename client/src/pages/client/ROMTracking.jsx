@@ -33,7 +33,7 @@ export default function ROMTracking({ onBack }) {
       <div className="page-content" style={{ paddingBottom: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => setSelectedJoint(null)} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -51,7 +51,7 @@ export default function ROMTracking({ onBack }) {
                 <div>
                   <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{m.label}</h4>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-mint)' }}>{m.current}</span>
+                    <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{m.current}</span>
                     <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{m.unit}</span>
                     <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>/ {m.target}{m.unit}</span>
                   </div>
@@ -67,7 +67,7 @@ export default function ROMTracking({ onBack }) {
 
               {/* Progress bar */}
               <div style={{ height: 6, background: 'var(--divider)', borderRadius: 3, marginBottom: 12 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent-mint)', borderRadius: 3, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.3s' }} />
               </div>
 
               {/* Mini chart (sparkline) */}
@@ -96,7 +96,7 @@ export default function ROMTracking({ onBack }) {
               ) : (
                 <button onClick={() => setAddingTo(`${selectedJoint}-${mi}`)} style={{
                   background: 'rgba(61,255,210,0.1)', border: 'none', borderRadius: 8, padding: '8px 0',
-                  width: '100%', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600,
+                  width: '100%', color: 'var(--accent)', fontSize: 13, fontWeight: 600,
                 }}>
                   + Log New Measurement
                 </button>
@@ -113,7 +113,7 @@ export default function ROMTracking({ onBack }) {
     <div className="page-content">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <button onClick={onBack} style={{
-          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>

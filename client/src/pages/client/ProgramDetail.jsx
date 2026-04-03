@@ -35,7 +35,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={onBack} style={{
-          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -73,7 +73,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
       {enrollment && (
         <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <p style={{ fontSize: 13, color: 'var(--accent-mint)', fontWeight: 600 }}>Currently Active</p>
+            <p style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>Currently Active</p>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Week {enrollment.current_week} · Day {enrollment.current_day}</p>
           </div>
           <div style={{ position: 'relative', width: 44, height: 44 }}>
@@ -134,7 +134,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
           maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-          background: 'linear-gradient(to top, #000 70%, transparent)',
+          background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
         }}>
           <button className="btn-primary">Add to Schedule</button>
         </div>

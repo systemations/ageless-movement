@@ -99,7 +99,7 @@ export default function Home() {
           <button
             onClick={() => navigate('/profile')}
             style={{
-              width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+              width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
               color: '#000', fontWeight: 700, fontSize: 14
             }}
@@ -237,7 +237,7 @@ export default function Home() {
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{DAYS[i]}</span>
                 <div style={{ fontSize: 8, height: 6 }}>
                   {hasActivity && (
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-mint)' }} />
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
                   )}
                 </div>
                 <div style={{
@@ -263,7 +263,7 @@ export default function Home() {
       {/* Program Card */}
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ color: 'var(--accent-mint)', fontSize: 14, fontWeight: 600 }}>
+          <p style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>
             {activeProgram?.program_title || `${user?.name || 'Your'} - Phase 1`} &gt;
           </p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
@@ -331,12 +331,12 @@ export default function Home() {
           <p style={{ fontSize: 24, fontWeight: 700 }}>
             {Math.round(nutrition.calories)} <span style={{ fontSize: 16, color: 'var(--text-secondary)', fontWeight: 400 }}>/ {profile.calorie_target?.toLocaleString() || '2,200'} cals</span>
           </p>
-          <p style={{ fontSize: 12, color: 'var(--accent-mint)' }}>
+          <p style={{ fontSize: 12, color: 'var(--accent)' }}>
             {Math.max(0, (profile.calorie_target || 2200) - Math.round(nutrition.calories)).toLocaleString()} left
           </p>
         </div>
         <div style={{ height: 4, background: 'var(--divider)', borderRadius: 2 }}>
-          <div style={{ height: '100%', width: `${Math.min(100, (nutrition.calories / (profile.calorie_target || 2200)) * 100)}%`, background: 'var(--accent-mint)', borderRadius: 2, transition: 'width 0.3s' }} />
+          <div style={{ height: '100%', width: `${Math.min(100, (nutrition.calories / (profile.calorie_target || 2200)) * 100)}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.3s' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
           {[

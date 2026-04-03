@@ -44,7 +44,7 @@ export default function ClientManager() {
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{clients.length} clients</p>
         </div>
         <button onClick={() => setShowInvite(!showInvite)} style={{
-          background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10,
+          background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10,
           padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
         }}>+ Invite Client</button>
       </div>
@@ -57,7 +57,7 @@ export default function ClientManager() {
             <div><label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Email</label><input type="email" className="input-field" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
-            <button onClick={invite} style={{ background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Send Invite</button>
+            <button onClick={invite} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Send Invite</button>
             {msg && <p style={{ fontSize: 12, color: msg.startsWith('✓') ? 'var(--success)' : 'var(--error)' }}>{msg}</p>}
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function ClientManager() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+                width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 14, fontWeight: 700, color: '#000',
               }}>{c.name?.charAt(0)}</div>

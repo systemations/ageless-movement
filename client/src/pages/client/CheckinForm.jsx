@@ -53,7 +53,7 @@ export default function CheckinForm({ onClose, onSuccess }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <button onClick={onClose} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -138,7 +138,7 @@ export default function CheckinForm({ onClose, onSuccess }) {
             ) : (
               <button
                 onClick={() => setAnswers({ ...answers, [i]: '' })}
-                style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}
+                style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}
               >
                 Add Answer &gt;
               </button>
@@ -151,7 +151,7 @@ export default function CheckinForm({ onClose, onSuccess }) {
       <div style={{
         position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
         maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-        background: 'linear-gradient(to top, #000 70%, transparent)',
+        background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
       }}>
         <button className="btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save'}

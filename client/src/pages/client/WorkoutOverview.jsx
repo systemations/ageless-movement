@@ -54,7 +54,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
         background: 'linear-gradient(135deg, #2C2C2E, #1C1C1E)',
         display: 'flex', alignItems: 'flex-end',
       }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #000 0%, transparent 60%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-primary) 0%, transparent 60%)' }} />
         <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 8 }}>
           <button onClick={onBack} style={{
             width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
@@ -197,7 +197,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
                 <p style={{ fontSize: 14, fontWeight: 600 }}>{showAlternatives.name}</p>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{showAlternatives.reps} reps</p>
               </div>
-              <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', padding: 4 }}>
+              <button style={{ background: 'none', border: 'none', color: 'var(--accent)', padding: 4 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </button>
             </div>
@@ -216,7 +216,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
                   <p style={{ fontSize: 14, fontWeight: 600 }}>{alt.name}</p>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{alt.reps || showAlternatives.reps} reps</p>
                 </div>
-                <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', padding: 4 }}>
+                <button style={{ background: 'none', border: 'none', color: 'var(--accent)', padding: 4 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 </button>
               </div>
@@ -229,7 +229,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
       <div style={{
         position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
         maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-        background: 'linear-gradient(to top, #000 70%, transparent)',
+        background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
       }}>
         <button className="btn-primary" onClick={() => setPlaying(true)} style={{ fontSize: 17 }}>
           Start

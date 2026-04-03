@@ -75,14 +75,14 @@ export default function FoodDiary() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <button onClick={() => shiftDate(-1)} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h2 style={{ fontSize: 16, fontWeight: 700 }}>{formatDate(date)}</h2>
         <button onClick={() => shiftDate(1)} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
@@ -95,10 +95,10 @@ export default function FoodDiary() {
           <p style={{ fontSize: 24, fontWeight: 700 }}>
             {Math.round(totals.calories)} <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 400 }}>/ {targets.calories.toLocaleString()} cals</span>
           </p>
-          <p style={{ fontSize: 13, color: 'var(--accent-mint)' }}>{calsLeft.toLocaleString()} left</p>
+          <p style={{ fontSize: 13, color: 'var(--accent)' }}>{calsLeft.toLocaleString()} left</p>
         </div>
         <div style={{ height: 6, background: 'var(--divider)', borderRadius: 3 }}>
-          <div style={{ height: '100%', width: `${Math.min(100, (totals.calories / targets.calories) * 100)}%`, background: 'var(--accent-mint)', borderRadius: 3, transition: 'width 0.3s' }} />
+          <div style={{ height: '100%', width: `${Math.min(100, (totals.calories / targets.calories) * 100)}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.3s' }} />
         </div>
 
         {/* Macros */}
@@ -122,7 +122,7 @@ export default function FoodDiary() {
         </div>
       </div>
 
-      <div style={{ height: 2, background: 'var(--accent-mint)', opacity: 0.3, borderRadius: 1, marginBottom: 16 }} />
+      <div style={{ height: 2, background: 'var(--accent)', opacity: 0.3, borderRadius: 1, marginBottom: 16 }} />
 
       {/* Meal Sections */}
       {Object.entries(meals).map(([mealType, meal]) => {
@@ -165,7 +165,7 @@ export default function FoodDiary() {
             <button
               onClick={() => setAddingTo(mealType)}
               style={{
-                background: 'none', border: 'none', color: 'var(--accent-mint)',
+                background: 'none', border: 'none', color: 'var(--accent)',
                 fontSize: 13, fontWeight: 600, padding: '8px 0', display: 'flex', alignItems: 'center', gap: 4,
               }}
             >

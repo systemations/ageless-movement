@@ -32,7 +32,7 @@ export default function RecipeBrowser({ onBack }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <button onClick={() => setSelectedRecipe(null)} style={{
-            width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -115,7 +115,7 @@ export default function RecipeBrowser({ onBack }) {
             {r.instructions.map((step, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <div style={{
-                  width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-mint)', flexShrink: 0,
+                  width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 700, color: '#000',
                 }}>
@@ -138,15 +138,15 @@ export default function RecipeBrowser({ onBack }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={onBack} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <h2 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>Recipes</h2>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)' }}><BookmarkIcon /></button>
-          <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)' }}><SearchIcon /></button>
+          <button style={{ background: 'none', border: 'none', color: 'var(--accent)' }}><BookmarkIcon /></button>
+          <button style={{ background: 'none', border: 'none', color: 'var(--accent)' }}><SearchIcon /></button>
         </div>
       </div>
 

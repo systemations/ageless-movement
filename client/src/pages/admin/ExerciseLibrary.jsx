@@ -90,7 +90,7 @@ export default function ExerciseLibrary() {
               {form.thumbnail_url && <img src={form.thumbnail_url} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
               <label style={{
                 padding: '8px 16px', background: 'var(--bg-card)', borderRadius: 8, cursor: 'pointer',
-                fontSize: 13, color: 'var(--accent-mint)', border: '1px solid var(--divider)',
+                fontSize: 13, color: 'var(--accent)', border: '1px solid var(--divider)',
               }}>
                 {uploading ? 'Uploading...' : 'Upload Image'}
                 <input type="file" accept="image/*" onChange={handleUploadThumb} style={{ display: 'none' }} />
@@ -101,7 +101,7 @@ export default function ExerciseLibrary() {
 
         <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
           <button onClick={save} style={{
-            background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10,
+            background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10,
             padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
           }}>Save Exercise</button>
           <button onClick={() => { setEditing(null); setForm({}); }} style={{
@@ -122,7 +122,7 @@ export default function ExerciseLibrary() {
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{exercises.length} exercises · {exercises.filter(e => e.demo_video_url).length} with video</p>
         </div>
         <button onClick={() => { setEditing('new'); setForm({}); }} style={{
-          background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10,
+          background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10,
           padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
         }}>+ New Exercise</button>
       </div>

@@ -34,7 +34,7 @@ export default function FoodSearch({ mealType, onSelect, onBack }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={onBack} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -103,11 +103,11 @@ export default function FoodSearch({ mealType, onSelect, onBack }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{food.name}</p>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-              {food.serving} · <span style={{ color: 'var(--accent-mint)' }}>{food.calories} kcals</span>
+              {food.serving} · <span style={{ color: 'var(--accent)' }}>{food.calories} kcals</span>
             </p>
           </div>
           <button style={{
-            width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

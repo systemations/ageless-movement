@@ -47,20 +47,20 @@ export default function CoachCheckins() {
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => setClientTimeline(null)} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>{client.name}</h1>
-          <button onClick={() => setSelectedClient(client)} style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}>
+          <button onClick={() => setSelectedClient(client)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>
             Profile
           </button>
         </div>
 
         {/* Check in Now prompt */}
         <div className="card" style={{ textAlign: 'center', marginBottom: 20, border: '1px solid var(--divider)' }}>
-          <p style={{ color: 'var(--accent-mint)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
+          <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
         </div>
 
@@ -74,7 +74,7 @@ export default function CoachCheckins() {
             <div key={ci.id} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
               {/* Timeline line + dot */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20 }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--accent-mint)', flexShrink: 0 }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
                 {i < checkins.length - 1 && <div style={{ width: 2, flex: 1, background: 'var(--divider)', marginTop: 4 }} />}
               </div>
 

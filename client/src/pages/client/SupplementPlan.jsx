@@ -34,9 +34,9 @@ export default function SupplementPlan() {
       {data.sections.map((section, si) => (
         <div key={si} style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent-mint)', opacity: 0.3 }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--accent)', opacity: 0.3 }} />
             <h3 style={{ fontSize: 14, fontWeight: 700 }}>{section.time}</h3>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent-mint)', opacity: 0.3 }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--accent)', opacity: 0.3 }} />
           </div>
 
           {section.items.map((item, ii) => (

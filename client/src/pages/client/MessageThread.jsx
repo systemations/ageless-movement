@@ -83,7 +83,7 @@ export default function MessageThread({ conversationId, title, onBack }) {
         borderBottom: '1px solid var(--divider)', flexShrink: 0,
       }}>
         <button onClick={onBack} style={{
-          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -91,7 +91,7 @@ export default function MessageThread({ conversationId, title, onBack }) {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>{title || convo?.title || 'Chat'}</h2>
         </div>
-        <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', padding: 4 }}>
+        <button style={{ background: 'none', border: 'none', color: 'var(--accent)', padding: 4 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         </button>
       </div>
@@ -118,7 +118,7 @@ export default function MessageThread({ conversationId, title, onBack }) {
               {!isMe && (
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--accent-mint)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 700, color: '#000',
                 }}>
                   {item.sender_name?.charAt(0) || '?'}
@@ -132,7 +132,7 @@ export default function MessageThread({ conversationId, title, onBack }) {
                 borderBottomLeftRadius: isMe ? 16 : 4,
               }}>
                 {!isMe && convo?.type === 'group' && (
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-mint)', marginBottom: 2 }}>{item.sender_name}</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>{item.sender_name}</p>
                 )}
                 <p style={{ fontSize: 14, lineHeight: 1.4 }}>{item.content}</p>
                 <p style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right' }}>{formatTime(item.created_at)}</p>

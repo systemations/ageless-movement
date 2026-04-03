@@ -90,7 +90,7 @@ export default function ProgramBuilder() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700 }}>Exercises ({selectedWorkout.exercises?.length || 0})</h3>
               <button onClick={() => setAddingExercise(true)} style={{
-                background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 8,
+                background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8,
                 padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}>+ Add Exercise</button>
             </div>
@@ -124,7 +124,7 @@ export default function ProgramBuilder() {
             {(!selectedWorkout.exercises || selectedWorkout.exercises.length === 0) && (
               <div style={{ textAlign: 'center', padding: 32, background: 'var(--bg-card)', borderRadius: 12 }}>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>No exercises added yet</p>
-                <button onClick={() => setAddingExercise(true)} style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontWeight: 600, cursor: 'pointer' }}>+ Add your first exercise</button>
+                <button onClick={() => setAddingExercise(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}>+ Add your first exercise</button>
               </div>
             )}
           </div>
@@ -223,7 +223,7 @@ export default function ProgramBuilder() {
             <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Equipment</label><input className="input-field" value={form.equipment || ''} onChange={e => setForm({ ...form, equipment: e.target.value })} /></div>
             <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Description</label><textarea className="input-field" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} style={{ minHeight: 60 }} /></div>
           </div>
-          <button onClick={saveWorkout} style={{ marginTop: 16, background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Save Workout</button>
+          <button onClick={saveWorkout} style={{ marginTop: 16, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Save Workout</button>
         </div>
       );
     }
@@ -234,7 +234,7 @@ export default function ProgramBuilder() {
           <button onClick={() => setSelectedProgram(null)} style={{ background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>← All Programs</button>
           <h2 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{selectedProgram.title}</h2>
           <button onClick={() => { setEditing('new-workout'); setForm({ week_number: 1, day_number: programWorkouts.length + 1 }); }} style={{
-            background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 8,
+            background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8,
             padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>+ Add Workout</button>
         </div>
@@ -246,7 +246,7 @@ export default function ProgramBuilder() {
         {programWorkouts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, background: 'var(--bg-card)', borderRadius: 12 }}>
             <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>No workouts yet</p>
-            <button onClick={() => { setEditing('new-workout'); setForm({ week_number: 1, day_number: 1 }); }} style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontWeight: 600, cursor: 'pointer' }}>+ Create first workout</button>
+            <button onClick={() => { setEditing('new-workout'); setForm({ week_number: 1, day_number: 1 }); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}>+ Create first workout</button>
           </div>
         ) : (
           programWorkouts.map(w => (
@@ -294,7 +294,7 @@ export default function ProgramBuilder() {
           <div className="input-group" style={{ flex: 1 }}><label>Weeks</label><input type="number" className="input-field" value={form.duration_weeks || ''} onChange={e => setForm({ ...form, duration_weeks: parseInt(e.target.value) })} /></div>
           <div className="input-group" style={{ flex: 1 }}><label>Workouts/Week</label><input type="number" className="input-field" value={form.workouts_per_week || ''} onChange={e => setForm({ ...form, workouts_per_week: parseInt(e.target.value) })} /></div>
         </div>
-        <button onClick={saveProgram} style={{ marginTop: 8, background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Create Program</button>
+        <button onClick={saveProgram} style={{ marginTop: 8, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Create Program</button>
       </div>
     );
   }
@@ -307,7 +307,7 @@ export default function ProgramBuilder() {
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{programs.length} programs</p>
         </div>
         <button onClick={() => { setEditing('new'); setForm({}); }} style={{
-          background: 'var(--accent-mint)', color: '#000', border: 'none', borderRadius: 10,
+          background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10,
           padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
         }}>+ New Program</button>
       </div>

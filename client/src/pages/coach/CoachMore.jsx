@@ -78,7 +78,7 @@ export default function CoachMore() {
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => setShowActivity(false)} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -111,14 +111,14 @@ export default function CoachMore() {
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => { setShowClients(false); setShowInvite(false); setInviteMsg(''); }} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Clients</h1>
           <button onClick={() => setShowInvite(!showInvite)} style={{
-            background: 'var(--accent-mint)', border: 'none', borderRadius: 20,
+            background: 'var(--accent)', border: 'none', borderRadius: 20,
             padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#000',
           }}>+ Invite</button>
         </div>
@@ -129,7 +129,7 @@ export default function CoachMore() {
             <input placeholder="Client Name" value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} className="input-field" style={{ marginBottom: 8, fontSize: 14 }} />
             <input placeholder="Client Email" type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} className="input-field" style={{ marginBottom: 12, fontSize: 14 }} />
             <button className="btn-primary" onClick={inviteClient} style={{ fontSize: 14 }}>Send Invite</button>
-            {inviteMsg && <p style={{ fontSize: 12, color: 'var(--accent-mint)', marginTop: 8, textAlign: 'center' }}>{inviteMsg}</p>}
+            {inviteMsg && <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, textAlign: 'center' }}>{inviteMsg}</p>}
           </div>
         )}
 
@@ -158,7 +158,7 @@ export default function CoachMore() {
       {/* Coach Profile */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <div style={{
-          width: 80, height: 80, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 80, height: 80, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 12px', fontSize: 32, fontWeight: 700, color: '#000',
         }}>
@@ -233,7 +233,7 @@ export default function CoachMore() {
           onClick={logout}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '14px 0',
-            background: 'none', color: 'var(--accent-mint)', fontSize: 15, fontWeight: 500,
+            background: 'none', color: 'var(--accent)', fontSize: 15, fontWeight: 500,
             width: '100%',
           }}
         >

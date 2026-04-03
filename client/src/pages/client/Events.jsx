@@ -27,7 +27,7 @@ export default function Events() {
       <div className="page-content" style={{ paddingBottom: 120 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => { setShowBooking(false); setSelectedDate(''); setSelectedTime(''); }} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -68,7 +68,7 @@ export default function Events() {
           <div style={{
             position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
             maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-            background: 'linear-gradient(to top, #000 70%, transparent)',
+            background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
           }}>
             <div className="card" style={{ marginBottom: 12, textAlign: 'center' }}>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Video Call · 15 mins · Online</p>
@@ -125,7 +125,7 @@ export default function Events() {
             <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
               {selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Upcoming'} at {selectedTime || 'TBD'}
             </p>
-            <p style={{ fontSize: 12, color: 'var(--accent-mint)', marginTop: 8 }}>15 mins · Online</p>
+            <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8 }}>15 mins · Online</p>
           </div>
         </>
       )}

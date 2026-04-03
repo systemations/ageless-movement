@@ -43,7 +43,7 @@ export default function NutritionHub({ onBack }) {
           onClick={() => setShowRecipes(true)}
           style={{
             padding: '10px 14px', borderRadius: 50, background: 'transparent', border: 'none',
-            color: 'var(--accent-mint)', fontSize: 16,
+            color: 'var(--accent)', fontSize: 16,
           }}
         >
           👨‍🍳

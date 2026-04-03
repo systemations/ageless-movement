@@ -91,7 +91,7 @@ export default function OnboardingQuestionnaire({ onComplete }) {
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}
+              style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}
             >
               Back
             </button>
@@ -99,7 +99,7 @@ export default function OnboardingQuestionnaire({ onComplete }) {
         </div>
         <div style={{ height: 4, background: 'var(--divider)', borderRadius: 2 }}>
           <div style={{
-            height: '100%', width: `${progress}%`, background: 'var(--accent-mint)',
+            height: '100%', width: `${progress}%`, background: 'var(--accent)',
             borderRadius: 2, transition: 'width 0.3s ease',
           }} />
         </div>
@@ -162,7 +162,7 @@ export default function OnboardingQuestionnaire({ onComplete }) {
       <div style={{
         position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
         maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-        background: 'linear-gradient(to top, #000 70%, transparent)',
+        background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
       }}>
         <button
           className="btn-primary"

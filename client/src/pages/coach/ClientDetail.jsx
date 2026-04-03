@@ -37,7 +37,7 @@ export default function ClientDetail({ client, onBack }) {
         <button
           onClick={onBack}
           style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
           }}
         >
@@ -48,7 +48,7 @@ export default function ClientDetail({ client, onBack }) {
           <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{client.name.toLowerCase().replace(' ', '')}@email.com</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', padding: 4 }}>
+          <button style={{ background: 'none', border: 'none', color: 'var(--accent)', padding: 4 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           </button>
           <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: 4 }}>
@@ -103,7 +103,7 @@ export default function ClientDetail({ client, onBack }) {
             <h2 style={{ fontSize: 16 }}>Gallery</h2>
             <div style={{ display: 'flex', gap: 8 }}>
               <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>VIEW ALL</button>
-              <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 16 }}>+</button>
+              <button style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 16 }}>+</button>
             </div>
           </div>
           <div className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -117,7 +117,7 @@ export default function ClientDetail({ client, onBack }) {
               <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>VIEW ALL</button>
               <button
                 onClick={() => setShowAddNote(true)}
-                style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 16 }}
+                style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 16 }}
               >+</button>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function ClientDetail({ client, onBack }) {
                 <h3 style={{ fontSize: 15, fontWeight: 700 }}>New Note</h3>
                 <button
                   onClick={handleSaveNote}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 14, fontWeight: 700 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}
                 >Save</button>
               </div>
               <input

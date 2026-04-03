@@ -61,7 +61,7 @@ export default function Progress() {
           {/* Goals Section */}
           <div className="section-header" style={{ marginTop: 0 }}>
             <h2>Goals</h2>
-            <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
+            <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
           </div>
 
           {/* Add Goal Form */}
@@ -122,7 +122,7 @@ export default function Progress() {
           <button
             onClick={() => setShowAchieved(!showAchieved)}
             style={{
-              background: 'none', border: 'none', color: 'var(--accent-mint)',
+              background: 'none', border: 'none', color: 'var(--accent)',
               fontSize: 14, fontWeight: 600, padding: '12px 0', width: '100%', textAlign: 'left',
               display: 'flex', alignItems: 'center', gap: 6,
             }}
@@ -175,7 +175,7 @@ export default function Progress() {
             <h2>Check-ins &gt;</h2>
           </div>
           <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
-            <p style={{ color: 'var(--accent-mint)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
+            <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
             <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
           </div>
 

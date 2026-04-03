@@ -61,7 +61,7 @@ export default function PainLogging({ onBack }) {
       <div className="page-content" style={{ paddingBottom: 120 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button onClick={() => setAdding(false)} style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -97,7 +97,7 @@ export default function PainLogging({ onBack }) {
         </div>
 
         {selectedArea && (
-          <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--accent-mint)' }}>
+          <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--accent)' }}>
             {selectedArea}
           </p>
         )}
@@ -135,7 +135,7 @@ export default function PainLogging({ onBack }) {
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
           maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-          background: 'linear-gradient(to top, #000 70%, transparent)',
+          background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
         }}>
           <button className="btn-primary" onClick={handleSave} disabled={!selectedArea}>Save Log</button>
         </div>
@@ -148,14 +148,14 @@ export default function PainLogging({ onBack }) {
     <div className="page-content">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <button onClick={onBack} style={{
-          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-mint)',
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Pain / Discomfort Log</h1>
         <button onClick={() => setAdding(true)} style={{
-          background: 'var(--accent-mint)', border: 'none', borderRadius: 20,
+          background: 'var(--accent)', border: 'none', borderRadius: 20,
           padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#000',
         }}>+ Log</button>
       </div>

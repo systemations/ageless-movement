@@ -77,7 +77,7 @@ export default function AdminLayout() {
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-mint)',
+            width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 14, fontWeight: 700, color: '#000', flexShrink: 0,
           }}>

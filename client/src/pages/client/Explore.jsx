@@ -171,7 +171,7 @@ export default function Explore() {
           <div style={{ marginBottom: 28 }}>
             <div className="section-header" style={{ marginTop: 0 }}>
               <h2 style={{ fontSize: 18 }}>Courses</h2>
-              <button style={{ background: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600, border: 'none' }}>See All &gt;</button>
+              <button style={{ background: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, border: 'none' }}>See All &gt;</button>
             </div>
 
             {/* Featured Course Hero */}
@@ -199,7 +199,7 @@ export default function Explore() {
                 {/* Free badge */}
                 <div style={{
                   position: 'absolute', top: 16, right: 20,
-                  background: 'var(--accent-mint)', color: '#000', fontSize: 11, fontWeight: 700,
+                  background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700,
                   padding: '4px 12px', borderRadius: 20, letterSpacing: 0.5,
                 }}>
                   FREE
@@ -222,7 +222,7 @@ export default function Explore() {
 
                 {/* Progress bar */}
                 <div style={{ marginTop: 12, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${featured.progress}%`, background: 'var(--accent-mint)', borderRadius: 2 }} />
+                  <div style={{ height: '100%', width: `${featured.progress}%`, background: 'var(--accent)', borderRadius: 2 }} />
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function Explore() {
 
                     {/* Difficulty badge */}
                     <div style={{
-                      fontSize: 10, color: 'var(--accent-mint)', fontWeight: 600,
+                      fontSize: 10, color: 'var(--accent)', fontWeight: 600,
                       marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5,
                     }}>
                       {course.difficulty}
@@ -272,7 +272,7 @@ export default function Explore() {
 
                     {/* Progress */}
                     <div style={{ marginTop: 10, height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }}>
-                      <div style={{ height: '100%', width: `${course.progress}%`, background: 'var(--accent-mint)', borderRadius: 2 }} />
+                      <div style={{ height: '100%', width: `${course.progress}%`, background: 'var(--accent)', borderRadius: 2 }} />
                     </div>
                   </div>
                 </div>
@@ -281,7 +281,7 @@ export default function Explore() {
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'var(--accent-mint)', opacity: 0.2, margin: '4px 0 20px' }} />
+          <div style={{ height: 1, background: 'var(--accent)', opacity: 0.2, margin: '4px 0 20px' }} />
 
           {/* ===== PROGRAMS ===== */}
           {apiData?.programs && apiData.programs.length > 0 && (
@@ -367,9 +367,9 @@ export default function Explore() {
 
           {/* Meet the Team */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '24px 0 16px' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent-mint)' }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--accent)' }} />
             <h2 style={{ fontSize: 16, fontWeight: 700 }}>Meet the Team</h2>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent-mint)' }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--accent)' }} />
           </div>
           <div className="hide-scrollbar" style={{ display: 'flex', gap: 16, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
             <div style={{ textAlign: 'center', minWidth: 100, cursor: 'pointer' }}>
@@ -379,7 +379,7 @@ export default function Explore() {
               }}>
                 <span style={{ fontSize: 32 }}>👤</span>
               </div>
-              <p style={{ fontSize: 11, color: 'var(--accent-mint)', fontWeight: 600 }}>Coach</p>
+              <p style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>Coach</p>
               <p style={{ fontSize: 14, fontWeight: 700 }}>Dan</p>
             </div>
           </div>

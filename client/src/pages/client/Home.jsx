@@ -119,9 +119,10 @@ export default function Home() {
 
       {/* Training Streak */}
       <div style={{
-        background: 'linear-gradient(135deg, #1E1A2E 0%, #2D1F10 100%)',
+        background: 'var(--bg-card)',
         borderRadius: 16, padding: '16px 20px', marginBottom: 12,
         display: 'flex', alignItems: 'center', gap: 16,
+        border: '1px solid var(--divider)',
       }}>
         <div style={{
           width: 56, height: 56, borderRadius: '50%',
@@ -292,14 +293,19 @@ export default function Home() {
       {/* Hero Workout Card */}
       <div className="card" style={{
         padding: 0, overflow: 'hidden', position: 'relative',
-        background: 'linear-gradient(135deg, #2C2C2E 0%, #1C1C1E 100%)', minHeight: 200,
+        background: 'var(--bg-card)', minHeight: 200,
         display: 'flex', alignItems: 'flex-end',
       }}>
+        {todayWorkout?.image_url ? (
+          <img src={todayWorkout.image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : null}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%)',
+          background: todayWorkout?.image_url
+            ? 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%)'
+            : 'linear-gradient(to top, var(--bg-card) 0%, var(--bg-card-hover) 100%)',
         }} />
-        <div style={{ position: 'relative', padding: 20, width: '100%' }}>
+        <div style={{ position: 'relative', padding: 20, width: '100%', color: todayWorkout?.image_url ? '#fff' : 'var(--text-primary)' }}>
           <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>
             {todayWorkout?.title || '#1 Full Body Mobility'}
           </h3>

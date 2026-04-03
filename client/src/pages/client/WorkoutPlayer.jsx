@@ -156,13 +156,13 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
         flex: '0 0 220px', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
       }}>
-        {currentEx?.demo_video_url && getVimeoEmbedUrl(currentEx.demo_video_url) ? (
+        {currentEx?.demo_video_url && getVimeoEmbedUrl(currentEx.demo_video_url, { autoplay: true, loop: true, muted: false }) ? (
           <iframe
             key={currentEx.exercise_id}
-            src={getVimeoEmbedUrl(currentEx.demo_video_url)}
+            src={getVimeoEmbedUrl(currentEx.demo_video_url, { autoplay: true, loop: true, muted: false })}
             width="100%" height="100%"
             frameBorder="0"
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
             style={{ border: 'none', position: 'absolute', inset: 0 }}
           />

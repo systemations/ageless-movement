@@ -1,4 +1,4 @@
-export function getVimeoEmbedUrl(url) {
+export function getVimeoEmbedUrl(url, options = {}) {
   if (!url) return null;
   // Handle formats:
   // https://vimeo.com/768740602
@@ -9,19 +9,30 @@ export function getVimeoEmbedUrl(url) {
   if (!match) return null;
   const videoId = match[1];
   const hash = match[2];
-  return hash
-    ? `https://player.vimeo.com/video/${videoId}?h=${hash}&autoplay=1&loop=1&muted=1&background=1`
-    : `https://player.vimeo.com/video/${videoId}?autoplay=1&loop=1&muted=1&background=1`;
+
+  const {
+    autoplay = false,
+    loop = true,
+    muted = false,
+    background = false,
+  } = options;
+
+  const params = new URLSearchParams();
+  if (hash) params.set('h', hash);
+  if (autoplay) params.set('autoplay', '1');
+  if (loop) params.set('loop', '1');
+  if (muted) params.set('muted', '1');
+  if (background) params.set('background', '1');
+
+  return `https://player.vimeo.com/video/${videoId}?${params.toString()}`;
 }
 
 export function getVimeoThumbnailUrl(url) {
-  // Vimeo doesn't have a simple thumbnail URL scheme — we'd need the API
-  // For now return null and use the uploaded thumbnail or placeholder
   return null;
 }
 
-export default function VimeoEmbed({ url, width = '100%', height = 220, autoplay = true, muted = true, style = {} }) {
-  const embedUrl = getVimeoEmbedUrl(url);
+export default function VimeoEmbed({ url, width = '100%', height = 220, autoplay = false, muted = false, background = false, style = {} }) {
+  const embedUrl = getVimeoEmbedUrl(url, { autoplay, muted, background, loop: true });
   if (!embedUrl) return null;
 
   return (

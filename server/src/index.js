@@ -10,6 +10,8 @@ import nutritionRoutes from './routes/nutrition.js';
 import messagingRoutes from './routes/messaging.js';
 import coachRoutes from './routes/coach.js';
 import favouritesRoutes from './routes/favourites.js';
+import uploadRoutes from './routes/uploads.js';
+import contentRoutes from './routes/content.js';
 
 dotenv.config();
 
@@ -20,6 +22,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Serve uploaded files
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -28,6 +34,8 @@ app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/messages', messagingRoutes);
 app.use('/api/coach', coachRoutes);
 app.use('/api/favourites', favouritesRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/content', contentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

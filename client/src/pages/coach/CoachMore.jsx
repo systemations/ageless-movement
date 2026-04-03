@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ChevronRight } from '../../components/Icons';
+import ContentManager from './ContentManager';
 
 const actionIcons = {
   workout_completed: '🏋️',
@@ -17,6 +18,7 @@ export default function CoachMore() {
   const [showActivity, setShowActivity] = useState(false);
   const [showClients, setShowClients] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const [activities, setActivities] = useState([]);
   const [clients, setClients] = useState([]);
   const [inviteForm, setInviteForm] = useState({ name: '', email: '' });
@@ -65,6 +67,9 @@ export default function CoachMore() {
     if (hrs < 24) return `${hrs}h ago`;
     return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
   };
+
+  // Content Manager view
+  if (showContent) return <ContentManager onBack={() => setShowContent(false)} />;
 
   // Activity Feed view
   if (showActivity) {
@@ -197,7 +202,7 @@ export default function CoachMore() {
       {/* Settings */}
       <div className="card" style={{ marginTop: 12 }}>
         {[
-          { label: 'Explore', desc: 'The on-demand content available for your clients', action: () => alert('Manage on-demand content — coming soon') },
+          { label: 'Explore', desc: 'The on-demand content available for your clients', action: () => setShowContent(true) },
           { label: 'Leads Landing Page', desc: 'The landing page shown to new users', action: () => alert('Landing page editor — coming soon') },
           { label: 'App Launch Page', desc: 'The screen someone sees when they launch the app', action: () => alert('Launch page editor — coming soon') },
           { label: 'About Company', desc: 'How clients see your company profile', action: () => alert('Company profile editor — coming soon') },

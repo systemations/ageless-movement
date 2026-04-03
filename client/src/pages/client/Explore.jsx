@@ -337,9 +337,13 @@ export default function Explore() {
                       marginBottom: 8, position: 'relative', overflow: 'hidden',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <span style={{ fontSize: 40, opacity: 0.3 }}>
-                        {(item.workout_type || item.tag || '').includes('mobility') ? '🧘' : '🏋️'}
-                      </span>
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: 40, opacity: 0.3 }}>
+                          {(item.workout_type || item.tag || '').includes('mobility') ? '🧘' : '🏋️'}
+                        </span>
+                      )}
                       <div style={{ position: 'absolute', top: 4, right: 4 }}>
                         <FavButton
                           itemType="workout"

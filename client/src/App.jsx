@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
 import Login from './pages/auth/Login';
@@ -36,6 +36,7 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -89,7 +90,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to={user ? defaultRoute : '/login'} replace />} />
       </Routes>
 
-      {user && <BottomNav />}
+      {user && !location.pathname.startsWith('/admin') && <BottomNav />}
     </div>
   );
 }

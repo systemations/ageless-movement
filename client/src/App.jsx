@@ -18,6 +18,7 @@ import CoachLive from './pages/coach/CoachLive';
 import CoachMore from './pages/coach/CoachMore';
 import { FavouritesProvider } from './context/FavouritesContext';
 import FavouritesPage from './pages/client/FavouritesPage';
+import AdminLayout from './pages/admin/AdminLayout';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -73,6 +74,9 @@ function AppRoutes() {
         <Route path="/nutrition" element={<ProtectedRoute><NutritionHub /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile onBack={() => window.history.back()} /></ProtectedRoute>} />
         <Route path="/favourites" element={<ProtectedRoute><FavouritesPage /></ProtectedRoute>} />
+
+        {/* Admin Panel (desktop) */}
+        <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>} />
 
         {/* Coach Routes */}
         <Route path="/coach/messages" element={<ProtectedRoute><CoachMessages /></ProtectedRoute>} />

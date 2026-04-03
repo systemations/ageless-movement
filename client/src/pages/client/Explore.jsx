@@ -198,19 +198,14 @@ export default function Explore() {
 
                 {/* Free badge */}
                 <div style={{
-                  position: 'absolute', top: 16, left: 20,
+                  position: 'absolute', top: 16, right: 20,
                   background: 'var(--accent-mint)', color: '#000', fontSize: 11, fontWeight: 700,
-                  padding: '3px 10px', borderRadius: 20, letterSpacing: 0.5,
+                  padding: '4px 12px', borderRadius: 20, letterSpacing: 0.5,
                 }}>
                   FREE
                 </div>
 
-                {/* AM logo */}
-                <img src="/logo.png" alt="" style={{
-                  width: 40, height: 40, borderRadius: '50%', marginBottom: 12, opacity: 0.8,
-                }} />
-
-                <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, lineHeight: 1.2 }}>
+                <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, lineHeight: 1.2, marginTop: 8 }}>
                   {featured.title}
                 </h3>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>
@@ -331,7 +326,7 @@ export default function Explore() {
               <div className="hide-scrollbar" style={{
                 display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, margin: '0 -16px', padding: '0 16px',
               }}>
-                {(carousel.items || []).map((item) => (
+                {(carousel.items || []).map((item, itemIdx) => (
                   <div
                     key={item.id || item.name}
                     onClick={() => item.id && setSelectedWorkout(item.id)}
@@ -348,7 +343,7 @@ export default function Explore() {
                       <div style={{ position: 'absolute', top: 4, right: 4 }}>
                         <FavButton
                           itemType="workout"
-                          itemId={item.id || i}
+                          itemId={item.id || itemIdx}
                           itemTitle={item.title || item.name}
                           itemMeta={`${item.duration_mins ? item.duration_mins + ' mins' : item.duration} · ${item.body_parts || item.tag}`}
                         />

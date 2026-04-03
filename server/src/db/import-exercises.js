@@ -48,10 +48,11 @@ console.log(`Total rows in CSV: ${records.length}`);
 const exercises = records.filter(r => {
   const name = (r['Exercise Display / Reference Name'] || r['Exercise Display / Reference Name '] || '').trim();
   const status = (r['Status'] || '').trim();
-  return name && status === 'Complete';
+  const hasVideo = (r['Vimeo URL'] || '').trim() || (r['YouTube URL'] || '').trim();
+  return name && (status === 'Complete' || status === 'In Handsdan App' || hasVideo);
 });
 
-console.log(`Complete exercises to import: ${exercises.length}`);
+console.log(`Exercises to import: ${exercises.length}`);
 
 // Clear existing exercises (except seed data linked to workouts)
 // We'll use INSERT OR IGNORE to avoid duplicates

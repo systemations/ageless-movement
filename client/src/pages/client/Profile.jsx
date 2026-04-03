@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight } from '../../components/Icons';
 
 export default function Profile({ onBack }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [appearance, setAppearance] = useState('dark');
+  const { theme, setTheme } = useTheme();
+  const [appearance, setAppearance] = useState(theme);
   const [showSubPage, setShowSubPage] = useState(null);
   const [unitSystem, setUnitSystem] = useState({ weight: 'kg', height: 'cm' });
   const [reminders, setReminders] = useState({ workout: true, meals: true, water: false, checkin: true });
@@ -99,11 +101,11 @@ export default function Profile({ onBack }) {
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Appearance</h1>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {['Auto', 'Light', 'Dark'].map(mode => (
-            <button key={mode} onClick={() => setAppearance(mode.toLowerCase())} style={{
+          {['Light', 'Dark'].map(mode => (
+            <button key={mode} onClick={() => { setAppearance(mode.toLowerCase()); setTheme(mode.toLowerCase()); }} style={{
               flex: 1, padding: '16px 12px', borderRadius: 12, border: 'none', fontSize: 15, fontWeight: 600, textAlign: 'center',
-              background: appearance === mode.toLowerCase() ? 'var(--accent-mint)' : 'var(--bg-card)',
-              color: appearance === mode.toLowerCase() ? '#000' : 'var(--text-primary)',
+              background: appearance === mode.toLowerCase() ? 'var(--accent)' : 'var(--bg-card)',
+              color: appearance === mode.toLowerCase() ? '#fff' : 'var(--text-primary)',
             }}>{mode}</button>
           ))}
         </div>

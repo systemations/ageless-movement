@@ -5,13 +5,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-:root {
+/* ===== DARK THEME (default) ===== */
+:root, [data-theme="dark"] {
   --bg-primary: #000000;
   --bg-card: #1C1C1E;
   --bg-card-hover: #2C2C2E;
   --bg-input: #1C1C1E;
+  --accent: #FF8C00;
+  --accent-hover: #E67E00;
+  --accent-active: #CC7000;
   --accent-mint: #3DFFD2;
-  --accent-orange: #FF9500;
+  --accent-orange: #FF8C00;
   --text-primary: #FFFFFF;
   --text-secondary: #8E8E93;
   --text-tertiary: #636366;
@@ -23,6 +27,28 @@
   --steps-pink: #FF6B9D;
   --nav-height: 80px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --bg-primary: #F5F5F7;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F0F0F2;
+  --bg-input: #FFFFFF;
+  --accent: #FF8C00;
+  --accent-hover: #E67E00;
+  --accent-active: #CC7000;
+  --accent-mint: #169B7D;
+  --accent-orange: #FF8C00;
+  --text-primary: #1C1C1E;
+  --text-secondary: #6C6C70;
+  --text-tertiary: #AEAEB2;
+  --logo-bg: #E8E5F0;
+  --divider: #E5E5EA;
+  --success: #28A745;
+  --error: #DC3545;
+  --water-blue: #0A84FF;
+  --steps-pink: #FF2D55;
 }
 
 html, body {
@@ -83,7 +109,7 @@ input, textarea, select {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  background: #1C1C1E;
+  background: var(--bg-card);
   border-top: 1px solid var(--divider);
   display: flex;
   justify-content: space-around;
@@ -108,7 +134,7 @@ input, textarea, select {
 }
 
 .nav-item.active {
-  color: var(--accent-mint);
+  color: var(--accent);
 }
 
 .nav-item svg {
@@ -133,8 +159,8 @@ input, textarea, select {
 
 /* Buttons */
 .btn-primary {
-  background: var(--accent-mint);
-  color: #000;
+  background: var(--accent);
+  color: #FFFFFF;
   font-weight: 600;
   font-size: 16px;
   padding: 14px 32px;
@@ -144,11 +170,16 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: opacity 0.2s;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
 }
 
 .btn-primary:active {
-  opacity: 0.8;
+  background: var(--accent-active);
+  transform: scale(0.98);
 }
 
 .btn-primary:disabled {

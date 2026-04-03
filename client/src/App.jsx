@@ -17,6 +17,7 @@ import CoachCheckins from './pages/coach/CoachCheckins';
 import CoachLive from './pages/coach/CoachLive';
 import CoachMore from './pages/coach/CoachMore';
 import { FavouritesProvider } from './context/FavouritesContext';
+import { ThemeProvider } from './context/ThemeContext';
 import FavouritesPage from './pages/client/FavouritesPage';
 import AdminLayout from './pages/admin/AdminLayout';
 
@@ -98,11 +99,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <FavouritesProvider>
-          <AppRoutes />
-        </FavouritesProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <FavouritesProvider>
+            <AppRoutes />
+          </FavouritesProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

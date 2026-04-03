@@ -417,7 +417,7 @@ export default function Home() {
         { icon: '🥗', label: 'Meal Planner', path: '/nutrition' },
         { icon: '📅', label: 'Book Session', path: '/events' },
         { icon: '🕐', label: 'Past Bookings', path: '/events' },
-        { icon: '🔖', label: 'Favourites', path: '/explore' },
+        { icon: '🔖', label: 'Favourites', path: '/favourites' },
         { icon: '🏃', label: 'Log Other Workout', path: '/explore' },
         { icon: '📥', label: 'Downloaded Workouts', path: '/explore' },
       ].map(({ icon, label, path }) => (

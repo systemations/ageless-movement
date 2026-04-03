@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BookmarkIcon, SearchIcon } from '../../components/Icons';
+import FavButton from '../../components/FavButton';
 import { useAuth } from '../../context/AuthContext';
 import CourseDetail from './CourseDetail';
 import ProgramDetail from './ProgramDetail';
@@ -344,12 +345,14 @@ export default function Explore() {
                       <span style={{ fontSize: 40, opacity: 0.3 }}>
                         {(item.workout_type || item.tag || '').includes('mobility') ? '🧘' : '🏋️'}
                       </span>
-                      <button style={{
-                        position: 'absolute', top: 8, right: 8, background: 'none',
-                        color: 'var(--accent-mint)', padding: 0,
-                      }} onClick={e => e.stopPropagation()}>
-                        <BookmarkIcon />
-                      </button>
+                      <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                        <FavButton
+                          itemType="workout"
+                          itemId={item.id || i}
+                          itemTitle={item.title || item.name}
+                          itemMeta={`${item.duration_mins ? item.duration_mins + ' mins' : item.duration} · ${item.body_parts || item.tag}`}
+                        />
+                      </div>
                     </div>
                     <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>
                       {item.title || item.name}

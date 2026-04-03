@@ -9,6 +9,7 @@ import exploreRoutes from './routes/explore.js';
 import nutritionRoutes from './routes/nutrition.js';
 import messagingRoutes from './routes/messaging.js';
 import coachRoutes from './routes/coach.js';
+import favouritesRoutes from './routes/favourites.js';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use('/api/explore', exploreRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/messages', messagingRoutes);
 app.use('/api/coach', coachRoutes);
+app.use('/api/favourites', favouritesRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

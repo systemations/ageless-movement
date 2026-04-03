@@ -278,6 +278,17 @@ db.exec(`
     metadata TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS favourites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id),
+    item_type TEXT NOT NULL,
+    item_id INTEGER NOT NULL,
+    item_title TEXT,
+    item_meta TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, item_type, item_id)
+  );
 `);
 
 // Helper to match pg-style query interface

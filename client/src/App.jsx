@@ -16,6 +16,8 @@ import CoachGroups from './pages/coach/CoachGroups';
 import CoachCheckins from './pages/coach/CoachCheckins';
 import CoachLive from './pages/coach/CoachLive';
 import CoachMore from './pages/coach/CoachMore';
+import { FavouritesProvider } from './context/FavouritesContext';
+import FavouritesPage from './pages/client/FavouritesPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -70,6 +72,7 @@ function AppRoutes() {
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/nutrition" element={<ProtectedRoute><NutritionHub /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile onBack={() => window.history.back()} /></ProtectedRoute>} />
+        <Route path="/favourites" element={<ProtectedRoute><FavouritesPage /></ProtectedRoute>} />
 
         {/* Coach Routes */}
         <Route path="/coach/messages" element={<ProtectedRoute><CoachMessages /></ProtectedRoute>} />
@@ -91,7 +94,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <FavouritesProvider>
+          <AppRoutes />
+        </FavouritesProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { BookmarkIcon, SearchIcon } from '../../components/Icons';
+import FavButton from '../../components/FavButton';
 
 export default function RecipeBrowser({ onBack }) {
   const { token } = useAuth();
@@ -37,9 +38,7 @@ export default function RecipeBrowser({ onBack }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h2 style={{ fontSize: 16, fontWeight: 700, flex: 1, textAlign: 'center' }}>{r.name}</h2>
-          <button onClick={() => toggleBookmark(r.id)} style={{ background: 'none', border: 'none', color: bookmarked.has(r.id) ? 'var(--accent-mint)' : 'var(--text-secondary)' }}>
-            <BookmarkIcon filled={bookmarked.has(r.id)} />
-          </button>
+          <FavButton itemType="recipe" itemId={r.id} itemTitle={r.name} itemMeta={`${r.calories} cals`} />
         </div>
 
         {/* Hero placeholder */}
@@ -172,15 +171,14 @@ export default function RecipeBrowser({ onBack }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <span style={{ fontSize: 40, opacity: 0.3 }}>🍽️</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleBookmark(recipe.id); }}
-                    style={{
-                      position: 'absolute', top: 8, right: 8, background: 'none', border: 'none',
-                      color: bookmarked.has(recipe.id) ? 'var(--accent-mint)' : 'var(--text-tertiary)',
-                    }}
-                  >
-                    <BookmarkIcon filled={bookmarked.has(recipe.id)} />
-                  </button>
+                  <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                    <FavButton
+                      itemType="recipe"
+                      itemId={recipe.id}
+                      itemTitle={recipe.name}
+                      itemMeta={`${recipe.calories} cals`}
+                    />
+                  </div>
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{recipe.name}</p>
                 <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{recipe.calories} cals</p>

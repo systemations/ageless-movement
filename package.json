@@ -1,0 +1,15 @@
+{
+  "name": "ageless-movement",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && node --watch src/index.js",
+    "dev:client": "cd client && npx vite",
+    "build": "cd client && npx vite build",
+    "start": "cd server && node src/index.js",
+    "seed": "cd server && node src/db/seed.js && node src/db/seed-messaging.js",
+    "postinstall": "cd client && npm install && cd ../server && npm install"
+  }
+}

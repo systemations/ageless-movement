@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getVimeoEmbedUrl } from '../../components/VimeoEmbed';
 
 export default function WorkoutPlayer({ workout, exercises, onBack }) {
   const { token } = useAuth();
@@ -153,10 +154,24 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
       {/* Video area */}
       <div style={{
         flex: '0 0 220px', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative',
+        position: 'relative', overflow: 'hidden',
       }}>
-        <img src="/logo.png" alt="" style={{ position: 'absolute', top: 12, left: 12, width: 28, height: 28, borderRadius: '50%', opacity: 0.6 }} />
-        <span style={{ fontSize: 48, opacity: 0.2 }}>🎥</span>
+        {currentEx?.demo_video_url && getVimeoEmbedUrl(currentEx.demo_video_url) ? (
+          <iframe
+            key={currentEx.exercise_id}
+            src={getVimeoEmbedUrl(currentEx.demo_video_url)}
+            width="100%" height="100%"
+            frameBorder="0"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            style={{ border: 'none', position: 'absolute', inset: 0 }}
+          />
+        ) : (
+          <>
+            <img src="/logo.png" alt="" style={{ position: 'absolute', top: 12, left: 12, width: 28, height: 28, borderRadius: '50%', opacity: 0.6 }} />
+            <span style={{ fontSize: 48, opacity: 0.2 }}>🎥</span>
+          </>
+        )}
       </div>
 
       {/* Exercise info */}

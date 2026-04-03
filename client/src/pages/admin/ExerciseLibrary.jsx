@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import VimeoEmbed from '../../components/VimeoEmbed';
 
 export default function ExerciseLibrary() {
   const { token } = useAuth();
@@ -78,9 +79,10 @@ export default function ExerciseLibrary() {
             <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Description & Instructions</label>
             <textarea className="input-field" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} style={{ minHeight: 100, resize: 'vertical' }} />
           </div>
-          <div>
+          <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Demo Video URL</label>
-            <input className="input-field" value={form.demo_video_url || ''} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} placeholder="https://vimeo.com/..." />
+            <input className="input-field" value={form.demo_video_url || ''} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} placeholder="https://vimeo.com/..." style={{ marginBottom: 8 }} />
+            {form.demo_video_url && <VimeoEmbed url={form.demo_video_url} height={280} />}
           </div>
           <div>
             <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Thumbnail</label>

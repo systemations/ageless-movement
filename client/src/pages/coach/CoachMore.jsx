@@ -197,12 +197,12 @@ export default function CoachMore() {
       {/* Settings */}
       <div className="card" style={{ marginTop: 12 }}>
         {[
-          { label: 'Explore', desc: 'The on-demand content available for your clients' },
-          { label: 'Leads Landing Page', desc: 'The landing page shown to new users' },
-          { label: 'App Launch Page', desc: 'The screen someone sees when they launch the app' },
-          { label: 'About Company', desc: 'How clients see your company profile' },
-        ].map(({ label, desc }) => (
-          <div key={label} style={{
+          { label: 'Explore', desc: 'The on-demand content available for your clients', action: () => alert('Manage on-demand content — coming soon') },
+          { label: 'Leads Landing Page', desc: 'The landing page shown to new users', action: () => alert('Landing page editor — coming soon') },
+          { label: 'App Launch Page', desc: 'The screen someone sees when they launch the app', action: () => alert('Launch page editor — coming soon') },
+          { label: 'About Company', desc: 'How clients see your company profile', action: () => alert('Company profile editor — coming soon') },
+        ].map(({ label, desc, action }) => (
+          <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 0', borderBottom: '1px solid var(--divider)', cursor: 'pointer',
           }}>

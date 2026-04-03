@@ -35,6 +35,16 @@ export default function Progress() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [showROM, setShowROM] = useState(false);
   const [showPain, setShowPain] = useState(false);
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [newGoal, setNewGoal] = useState({ title: '', target: '', category: 'General' });
+  const [goals, setGoals] = useState(activeGoals);
+
+  const handleAddGoal = () => {
+    if (!newGoal.title.trim()) return;
+    setGoals([...goals, { id: Date.now(), ...newGoal, progress: 0 }]);
+    setNewGoal({ title: '', target: '', category: 'General' });
+    setShowAddGoal(false);
+  };
 
   if (showCheckin) return <CheckinForm onClose={() => setShowCheckin(false)} onSuccess={() => setShowCheckin(false)} />;
   if (showROM) return <ROMTracking onBack={() => setShowROM(false)} />;
@@ -51,11 +61,23 @@ export default function Progress() {
           {/* Goals Section */}
           <div className="section-header" style={{ marginTop: 0 }}>
             <h2>Goals</h2>
-            <button style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
+            <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent-mint)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
           </div>
 
+          {/* Add Goal Form */}
+          {showAddGoal && (
+            <div className="card" style={{ marginBottom: 12, border: '1px solid var(--accent-mint)' }}>
+              <input placeholder="Goal title (e.g. Touch toes)" value={newGoal.title} onChange={e => setNewGoal({...newGoal, title: e.target.value})} className="input-field" style={{ marginBottom: 8, fontSize: 14 }} />
+              <input placeholder="Target description" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} className="input-field" style={{ marginBottom: 8, fontSize: 14 }} />
+              <select value={newGoal.category} onChange={e => setNewGoal({...newGoal, category: e.target.value})} className="input-field" style={{ marginBottom: 12, fontSize: 14 }}>
+                {['Mobility', 'Flexibility', 'Consistency', 'Body Comp', 'Strength', 'Nutrition', 'General'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button className="btn-primary" onClick={handleAddGoal} style={{ fontSize: 14 }}>Add Goal</button>
+            </div>
+          )}
+
           {/* Active Goals */}
-          {activeGoals.map((goal) => (
+          {goals.map((goal) => (
             <div key={goal.id} className="card" style={{ marginBottom: 8, cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 {/* Progress Ring */}
@@ -171,13 +193,13 @@ export default function Progress() {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+            <div className="card" onClick={() => alert('Compare feature coming soon — complete check-ins with photos to enable side-by-side comparison')} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
                 <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
               </svg>
               <p style={{ fontSize: 13, fontWeight: 600 }}>Compare</p>
             </div>
-            <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+            <div className="card" onClick={() => { if (navigator.share) navigator.share({ title: 'My Ageless Movement Progress', text: 'Check out my progress!' }); else alert('Share your progress via screenshot or social media'); }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
                 <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
               </svg>
@@ -201,8 +223,8 @@ export default function Progress() {
 
           {/* Set Goals & Add New */}
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <button className="btn-secondary" style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
-            <button className="btn-secondary" style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
+            <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
+            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
           </div>
 
           {/* Exercises */}

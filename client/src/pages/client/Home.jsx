@@ -95,7 +95,7 @@ export default function Home() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <img src="/logo.png" alt="AM" style={{ width: 36, height: 36, borderRadius: '50%' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="header-icon"><CalendarIcon /></button>
+          <button className="header-icon" onClick={() => navigate('/progress')}><CalendarIcon /></button>
           <button
             onClick={() => navigate('/profile')}
             style={{
@@ -413,15 +413,15 @@ export default function Home() {
         <h2>More</h2>
       </div>
       {[
-        { icon: '🏋️', label: 'Workout Planner' },
-        { icon: '🥗', label: 'Meal Planner' },
-        { icon: '📅', label: 'Book Session' },
-        { icon: '🕐', label: 'Past Bookings' },
-        { icon: '🔖', label: 'Favourites' },
-        { icon: '🏃', label: 'Log Other Workout' },
-        { icon: '📥', label: 'Downloaded Workouts' },
-      ].map(({ icon, label }) => (
-        <div key={label} className="card-sm" style={{
+        { icon: '🏋️', label: 'Workout Planner', path: '/explore' },
+        { icon: '🥗', label: 'Meal Planner', path: '/nutrition' },
+        { icon: '📅', label: 'Book Session', path: '/events' },
+        { icon: '🕐', label: 'Past Bookings', path: '/events' },
+        { icon: '🔖', label: 'Favourites', path: '/explore' },
+        { icon: '🏃', label: 'Log Other Workout', path: '/explore' },
+        { icon: '📥', label: 'Downloaded Workouts', path: '/explore' },
+      ].map(({ icon, label, path }) => (
+        <div key={label} onClick={() => navigate(path)} className="card-sm" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

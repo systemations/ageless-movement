@@ -37,7 +37,7 @@ export default function ClientManager() {
   };
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <div style={{ padding: '24px 40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800 }}>Clients</h1>

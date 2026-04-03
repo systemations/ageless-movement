@@ -33,7 +33,7 @@ export default function AdminLayout() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)', position: 'fixed', inset: 0, zIndex: 1000, maxWidth: 'none' }}>
       {/* Sidebar */}
       <div style={{
         width: sidebarOpen ? 240 : 64, flexShrink: 0, background: 'var(--bg-card)',

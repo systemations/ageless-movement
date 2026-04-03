@@ -53,7 +53,7 @@ export default function ExerciseLibrary() {
   // Edit view
   if (editing) {
     return (
-      <div style={{ padding: '24px 32px', maxWidth: 700 }}>
+      <div style={{ padding: '24px 40px', maxWidth: 900 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button onClick={() => { setEditing(null); setForm({}); }} style={{
             background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px',
@@ -114,7 +114,7 @@ export default function ExerciseLibrary() {
   }
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <div style={{ padding: '24px 40px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -160,7 +160,7 @@ export default function ExerciseLibrary() {
       <div style={{ background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
         {/* Header row */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '48px 1fr 180px 140px 60px',
+          display: 'grid', gridTemplateColumns: '48px 1fr 220px 160px 80px',
           padding: '10px 16px', borderBottom: '1px solid var(--divider)',
           fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5,
         }}>
@@ -174,7 +174,7 @@ export default function ExerciseLibrary() {
         {/* Rows */}
         {filtered.slice(0, 50).map(ex => (
           <div key={ex.id} onClick={() => { setEditing(ex.id); setForm(ex); }} style={{
-            display: 'grid', gridTemplateColumns: '48px 1fr 180px 140px 60px',
+            display: 'grid', gridTemplateColumns: '48px 1fr 220px 160px 80px',
             padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.03)',
             cursor: 'pointer', alignItems: 'center',
             transition: 'background 0.15s',

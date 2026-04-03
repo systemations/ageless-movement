@@ -77,7 +77,7 @@ export default function ProgramBuilder() {
     const filteredExercises = exercises.filter(e => !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase()));
 
     return (
-      <div style={{ padding: '24px 32px' }}>
+      <div style={{ padding: '24px 40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button onClick={() => setSelectedWorkout(null)} style={{ background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>← Back to Program</button>
           <h2 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{selectedWorkout.title}</h2>
@@ -201,7 +201,7 @@ export default function ProgramBuilder() {
 
     if (editing === 'new-workout' || (editing && editing !== 'new')) {
       return (
-        <div style={{ padding: '24px 32px', maxWidth: 700 }}>
+        <div style={{ padding: '24px 40px', maxWidth: 900 }}>
           <button onClick={() => { setEditing(null); setForm({}); }} style={{ background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>← Back</button>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>{editing === 'new-workout' ? 'New Workout' : 'Edit Workout'}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -229,7 +229,7 @@ export default function ProgramBuilder() {
     }
 
     return (
-      <div style={{ padding: '24px 32px' }}>
+      <div style={{ padding: '24px 40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button onClick={() => setSelectedProgram(null)} style={{ background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>← All Programs</button>
           <h2 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{selectedProgram.title}</h2>
@@ -285,7 +285,7 @@ export default function ProgramBuilder() {
   // ===== PROGRAM LIST =====
   if (editing === 'new') {
     return (
-      <div style={{ padding: '24px 32px', maxWidth: 600 }}>
+      <div style={{ padding: '24px 40px', maxWidth: 700 }}>
         <button onClick={() => { setEditing(null); setForm({}); }} style={{ background: 'var(--bg-card)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>← Back</button>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>New Program</h2>
         <div className="input-group"><label>Title</label><input className="input-field" value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. AMS Ground Zero" /></div>
@@ -300,7 +300,7 @@ export default function ProgramBuilder() {
   }
 
   return (
-    <div style={{ padding: '24px 32px' }}>
+    <div style={{ padding: '24px 40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800 }}>Programs</h1>

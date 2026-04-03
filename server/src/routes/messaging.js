@@ -4,10 +4,78 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
+// Auto-create default group conversations if they don't exist
+function ensureGroupConversations(userId) {
+  const groups = [
+    { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD' },
+    { title: 'Active Clients', icon: '👤', icon_bg: '#D1ECF1' },
+    { title: 'Q&A for the Community', icon: '❓', icon_bg: '#FFE0B2' },
+    { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9' },
+  ];
+
+  for (const g of groups) {
+    const existing = pool.query("SELECT c.id FROM conversations c WHERE c.type = 'group' AND c.title = ?", [g.title]);
+    if (existing.rows.length === 0) {
+      const convo = pool.query("INSERT INTO conversations (type, title, icon, icon_bg) VALUES ('group', ?, ?, ?) RETURNING id", [g.title, g.icon, g.icon_bg]);
+      pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convo.rows[0].id, userId]);
+      // Add all other users
+      const allUsers = pool.query('SELECT id FROM users WHERE id != ?', [userId]);
+      for (const u of allUsers.rows) {
+        pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convo.rows[0].id, u.id]);
+      }
+    } else {
+      // Ensure this user is a member
+      pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [existing.rows[0].id, userId]);
+    }
+  }
+
+  // Auto-create DMs between coaches and clients
+  const userRole = pool.query('SELECT role FROM users WHERE id = ?', [userId]);
+  if (userRole.rows[0]?.role === 'coach') {
+    const clients = pool.query("SELECT id FROM users WHERE role = 'client'");
+    for (const client of clients.rows) {
+      const existingDM = pool.query(`
+        SELECT c.id FROM conversations c
+        JOIN conversation_members cm1 ON cm1.conversation_id = c.id AND cm1.user_id = ?
+        JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id = ?
+        WHERE c.type = 'direct'
+      `, [userId, client.id]);
+      if (existingDM.rows.length === 0) {
+        const dm = pool.query("INSERT INTO conversations (type) VALUES ('direct') RETURNING id", []);
+        pool.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [dm.rows[0].id, userId]);
+        pool.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [dm.rows[0].id, client.id]);
+        // Add welcome message
+        pool.query('INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)',
+          [dm.rows[0].id, userId, 'Welcome to Ageless Movement! Let me know if you have any questions about your program.']);
+      }
+    }
+  } else {
+    // Client: ensure DM with all coaches
+    const coaches = pool.query("SELECT id FROM users WHERE role = 'coach'");
+    for (const coach of coaches.rows) {
+      const existingDM = pool.query(`
+        SELECT c.id FROM conversations c
+        JOIN conversation_members cm1 ON cm1.conversation_id = c.id AND cm1.user_id = ?
+        JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id = ?
+        WHERE c.type = 'direct'
+      `, [userId, coach.id]);
+      if (existingDM.rows.length === 0) {
+        const dm = pool.query("INSERT INTO conversations (type) VALUES ('direct') RETURNING id", []);
+        pool.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [dm.rows[0].id, userId]);
+        pool.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [dm.rows[0].id, coach.id]);
+      }
+    }
+  }
+}
+
 // Get all conversations for current user
 router.get('/conversations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Auto-create conversations if needed
+    ensureGroupConversations(userId);
+
     const convos = pool.query(`
       SELECT c.*, cm.user_id as member_id,
         (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,

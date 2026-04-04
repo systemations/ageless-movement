@@ -101,7 +101,7 @@ export default function Home() {
             style={{
               width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
-              color: '#000', fontWeight: 700, fontSize: 14
+              color: '#fff', fontWeight: 700, fontSize: 14
             }}
           >
             {user?.name?.charAt(0)?.toUpperCase() || 'U'}

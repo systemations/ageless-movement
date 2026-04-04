@@ -11,6 +11,10 @@ export default function ExerciseLibrary() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [videoFilter, setVideoFilter] = useState('with_video');
+  const [alternatives, setAlternatives] = useState([]);
+  const [altSearch, setAltSearch] = useState('');
+  const [showAltPanel, setShowAltPanel] = useState(false);
 
   useEffect(() => { fetchExercises(); }, []);
 
@@ -19,11 +23,38 @@ export default function ExerciseLibrary() {
     if (res.ok) { const data = await res.json(); setExercises(data.exercises); }
   };
 
+  const fetchAlternatives = async (exId) => {
+    const res = await fetch(`/api/content/exercises/${exId}/alternatives`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { const data = await res.json(); setAlternatives(data.alternatives); }
+  };
+
+  const addAlternative = async (altId) => {
+    if (!selected) return;
+    await fetch(`/api/content/exercises/${selected.id}/alternatives`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alternative_id: altId }),
+    });
+    fetchAlternatives(selected.id);
+    setAltSearch('');
+  };
+
+  const removeAlternative = async (altId) => {
+    if (!selected) return;
+    await fetch(`/api/content/exercises/${selected.id}/alternatives/${altId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchAlternatives(selected.id);
+  };
+
   const filtered = exercises.filter(ex => {
     const matchesSearch = !search || ex.name.toLowerCase().includes(search.toLowerCase()) || (ex.body_part || '').toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'All' || (ex.body_part || '').toLowerCase().includes(filterType.toLowerCase());
-    return matchesSearch && matchesType;
+    const matchesVideo = videoFilter === 'all' || (videoFilter === 'with_video' ? ex.demo_video_url : !ex.demo_video_url);
+    return matchesSearch && matchesType && matchesVideo;
   });
+
+  const noVideoCount = exercises.filter(e => !e.demo_video_url).length;
+  const withVideoCount = exercises.filter(e => e.demo_video_url).length;
 
   const bodyParts = ['All', ...new Set(exercises.map(e => e.body_part).filter(Boolean).flatMap(bp => bp.split(',').map(b => b.trim())).filter(Boolean))].slice(0, 20);
 
@@ -72,6 +103,21 @@ export default function ExerciseLibrary() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..." className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} />
           </div>
+          {/* Video filter */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {[
+              { id: 'with_video', label: `With Video (${withVideoCount})` },
+              { id: 'no_video', label: `No Video (${noVideoCount})` },
+              { id: 'all', label: 'All' },
+            ].map(f => (
+              <button key={f.id} onClick={() => setVideoFilter(f.id)} style={{
+                padding: '4px 10px', borderRadius: 14, border: 'none', fontSize: 10, fontWeight: 600,
+                background: videoFilter === f.id ? (f.id === 'no_video' ? 'var(--error)' : 'var(--accent)') : 'var(--bg-card)',
+                color: videoFilter === f.id ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
+              }}>{f.label}</button>
+            ))}
+          </div>
+          {/* Body part filter */}
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12, maxHeight: 60, overflow: 'hidden' }}>
             {bodyParts.slice(0, 12).map(bp => (
               <button key={bp} onClick={() => setFilterType(bp)} style={{
@@ -83,7 +129,7 @@ export default function ExerciseLibrary() {
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '0 8px' }}>
           {filtered.slice(0, 100).map(ex => (
-            <div key={ex.id} onClick={() => { setSelected(ex); setEditing(false); setForm(ex); }} style={{
+            <div key={ex.id} onClick={() => { setSelected(ex); setEditing(false); setForm(ex); fetchAlternatives(ex.id); setShowAltPanel(false); }} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', marginBottom: 2,
               background: selected?.id === ex.id ? 'rgba(255,140,0,0.1)' : 'transparent',
               border: selected?.id === ex.id ? '1px solid var(--accent)' : '1px solid transparent',
@@ -180,6 +226,46 @@ export default function ExerciseLibrary() {
                     <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>EQUIPMENT</p>
                     <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.equipment || 'Bodyweight'}</p>
                   </div>
+                </div>
+
+                {/* Alternatives */}
+                <div style={{ marginTop: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)' }}>ALTERNATIVES ({alternatives.length})</h4>
+                    <button onClick={() => setShowAltPanel(!showAltPanel)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      + Add
+                    </button>
+                  </div>
+
+                  {showAltPanel && (
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 8, padding: 12, marginBottom: 12, border: '1px solid var(--accent)' }}>
+                      <input value={altSearch} onChange={e => setAltSearch(e.target.value)} placeholder="Search exercises to add as alternative..." className="input-field" style={{ fontSize: 13, marginBottom: 8 }} autoFocus />
+                      <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                        {exercises.filter(e => e.id !== selected?.id && e.demo_video_url && altSearch && e.name.toLowerCase().includes(altSearch.toLowerCase())).slice(0, 15).map(ex => (
+                          <div key={ex.id} onClick={() => addAlternative(ex.id)} style={{ padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,140,0,0.08)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            {ex.thumbnail_url ? <img src={ex.thumbnail_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, opacity: 0.3 }}>💪</span>}
+                            <span>{ex.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {alternatives.map(alt => (
+                    <div key={alt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--divider)' }}>
+                      {alt.thumbnail_url ? <img src={alt.thumbnail_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 14, opacity: 0.3 }}>💪</span></div>}
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600 }}>{alt.name}</p>
+                        {alt.body_part && <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{alt.body_part}</p>}
+                      </div>
+                      <button onClick={() => removeAlternative(alt.alternative_id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 14 }}>×</button>
+                    </div>
+                  ))}
+
+                  {alternatives.length === 0 && !showAltPanel && (
+                    <p style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 12 }}>No alternatives linked yet</p>
+                  )}
                 </div>
               </>
             )}

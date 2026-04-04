@@ -91,17 +91,56 @@ router.put('/exercises/:id', authenticateToken, requireRole('coach'), (req, res)
 
 // ===== WORKOUT EXERCISES (link exercises to workouts) =====
 router.post('/workouts/:id/exercises', authenticateToken, requireRole('coach'), (req, res) => {
-  const { exercise_id, order_index, sets, reps, duration_secs, rest_secs, group_type, group_label } = req.body;
+  const { exercise_id, order_index, sets, reps, duration_secs, rest_secs, group_type, group_label, tempo, rir, rpe, per_side, modality, training_type, time_based } = req.body;
   const result = pool.query(
     'INSERT INTO workout_exercises (workout_id, exercise_id, order_index, sets, reps, duration_secs, rest_secs, group_type, group_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id',
     [req.params.id, exercise_id, order_index || 0, sets || 3, reps || '10', duration_secs, rest_secs || 30, group_type, group_label]
   );
-  res.json({ id: result.rows[0].id });
+  // Save meta if provided
+  const weId = result.rows[0].id;
+  if (tempo || rir || rpe || per_side || modality || training_type || time_based) {
+    pool.query(
+      'INSERT OR REPLACE INTO workout_exercise_meta (workout_exercise_id, tempo, rir, rpe, per_side, modality, training_type, time_based, duration_secs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [weId, tempo || null, rir || null, rpe || null, per_side ? 1 : 0, modality || null, training_type || null, time_based ? 1 : 0, duration_secs || null]
+    );
+  }
+  res.json({ id: weId });
 });
 
 router.delete('/workout-exercises/:id', authenticateToken, requireRole('coach'), (req, res) => {
+  pool.query('DELETE FROM workout_exercise_meta WHERE workout_exercise_id = ?', [req.params.id]);
   pool.query('DELETE FROM workout_exercises WHERE id = ?', [req.params.id]);
   res.json({ success: true });
+});
+
+// ===== EXERCISE ALTERNATIVES =====
+router.get('/exercises/:id/alternatives', authenticateToken, (req, res) => {
+  const alts = pool.query(`
+    SELECT ea.*, e.name, e.thumbnail_url, e.body_part, e.demo_video_url
+    FROM exercise_alternatives ea
+    JOIN exercises e ON ea.alternative_id = e.id
+    WHERE ea.exercise_id = ?
+  `, [req.params.id]);
+  res.json({ alternatives: alts.rows });
+});
+
+router.post('/exercises/:id/alternatives', authenticateToken, requireRole('coach'), (req, res) => {
+  const { alternative_id, reps } = req.body;
+  pool.query('INSERT OR IGNORE INTO exercise_alternatives (exercise_id, alternative_id, reps) VALUES (?, ?, ?)',
+    [req.params.id, alternative_id, reps || null]);
+  res.json({ success: true });
+});
+
+router.delete('/exercises/:id/alternatives/:altId', authenticateToken, requireRole('coach'), (req, res) => {
+  pool.query('DELETE FROM exercise_alternatives WHERE exercise_id = ? AND alternative_id = ?',
+    [req.params.id, req.params.altId]);
+  res.json({ success: true });
+});
+
+// ===== EXERCISES WITHOUT VIDEO =====
+router.get('/exercises/no-video', authenticateToken, requireRole('coach'), (req, res) => {
+  const exercises = pool.query("SELECT id, name, body_part, equipment FROM exercises WHERE demo_video_url IS NULL OR demo_video_url = '' ORDER BY name");
+  res.json({ exercises: exercises.rows, count: exercises.rows.length });
 });
 
 export default router;

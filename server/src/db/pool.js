@@ -116,6 +116,19 @@ db.exec(`
     notes TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS workout_exercise_meta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workout_exercise_id INTEGER UNIQUE REFERENCES workout_exercises(id) ON DELETE CASCADE,
+    tempo TEXT,
+    rir INTEGER,
+    rpe INTEGER,
+    per_side INTEGER DEFAULT 0,
+    modality TEXT,
+    training_type TEXT,
+    time_based INTEGER DEFAULT 0,
+    duration_secs INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS exercise_alternatives (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exercise_id INTEGER REFERENCES exercises(id),

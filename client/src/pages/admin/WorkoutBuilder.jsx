@@ -84,7 +84,7 @@ export default function WorkoutBuilder() {
         for (const ex of block.exercises) {
           await fetch(`/api/content/workouts/${workoutId}/exercises`, {
             method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exercise_id: ex.exercise_id || ex.id, order_index: order, sets: block.sets || ex.sets || 3, reps: ex.reps || '10', rest_secs: block.rest || 30, group_type: block.type === 'standard' ? null : block.type }),
+            body: JSON.stringify({ exercise_id: ex.exercise_id || ex.id, order_index: order, sets: block.sets || ex.sets || 3, reps: ex.reps || '10', rest_secs: block.rest || 30, group_type: block.type === 'standard' ? null : block.type, tempo: ex.tempo, rir: ex.rir ? parseInt(ex.rir) : null, rpe: ex.rpe ? parseInt(ex.rpe) : null, per_side: ex.per_side, modality: ex.modality, training_type: ex.training_type, time_based: !!ex.duration }),
           });
           order++;
         }
@@ -215,19 +215,51 @@ export default function WorkoutBuilder() {
 
               {/* Block exercises */}
               {block.exercises.map((ex, ei) => (
-                <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: ei > 0 ? '1px solid var(--divider)' : 'none' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', width: 20 }}>{ei + 1}</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600 }}>{ex.name}</p>
+                <div key={ei} style={{ padding: '8px 0', borderTop: ei > 0 ? '1px solid var(--divider)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', width: 20 }}>{ei + 1}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600 }}>{ex.name}</p>
+                      {ex.per_side && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>PER SIDE</span>}
+                    </div>
+                    <button onClick={() => setInspectorExercise(ex)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </button>
+                    <button onClick={() => removeExerciseFromBlock(block.id, ei)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 14 }}>×</button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input value={ex.reps || ''} onChange={e => updateBlockExercise(block.id, ei, 'reps', e.target.value)} placeholder="10" style={{ width: 60, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 6, padding: '4px 6px', color: 'var(--text-primary)', fontSize: 12, textAlign: 'center' }} />
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>reps</span>
+                  {/* Exercise detail row */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6, marginLeft: 28, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <label style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 28 }}>Reps</label>
+                      <input value={ex.reps || ''} onChange={e => updateBlockExercise(block.id, ei, 'reps', e.target.value)} placeholder="10" style={{ width: 50, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '3px 4px', color: 'var(--text-primary)', fontSize: 11, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <label style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 36 }}>Tempo</label>
+                      <input value={ex.tempo || ''} onChange={e => updateBlockExercise(block.id, ei, 'tempo', e.target.value)} placeholder="3-1-2-1" style={{ width: 58, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '3px 4px', color: 'var(--text-primary)', fontSize: 11, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <label style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 20 }}>RIR</label>
+                      <input type="number" value={ex.rir || ''} onChange={e => updateBlockExercise(block.id, ei, 'rir', e.target.value)} placeholder="-" style={{ width: 32, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '3px 4px', color: 'var(--text-primary)', fontSize: 11, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <label style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 22 }}>RPE</label>
+                      <input type="number" value={ex.rpe || ''} onChange={e => updateBlockExercise(block.id, ei, 'rpe', e.target.value)} placeholder="-" style={{ width: 32, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '3px 4px', color: 'var(--text-primary)', fontSize: 11, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <label style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 28 }}>Time</label>
+                      <input value={ex.duration || ''} onChange={e => updateBlockExercise(block.id, ei, 'duration', e.target.value)} placeholder="0:45" style={{ width: 42, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '3px 4px', color: 'var(--text-primary)', fontSize: 11, textAlign: 'center' }} />
+                    </div>
+                    <button onClick={() => updateBlockExercise(block.id, ei, 'per_side', !ex.per_side)} style={{
+                      fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                      background: ex.per_side ? 'rgba(255,140,0,0.2)' : 'var(--bg-primary)', color: ex.per_side ? 'var(--accent)' : 'var(--text-tertiary)',
+                    }}>
+                      /side
+                    </button>
+                    <select value={ex.modality || ''} onChange={e => updateBlockExercise(block.id, ei, 'modality', e.target.value)} style={{ fontSize: 10, background: 'var(--bg-primary)', border: '1px solid var(--divider)', borderRadius: 4, padding: '2px 4px', color: 'var(--text-primary)' }}>
+                      <option value="">Modality</option>
+                      {['Barbell', 'Dumbbell', 'Cable', 'Bodyweight', 'TRX', 'Kettlebell', 'Band', 'Machine', 'Rings', 'Other'].map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
                   </div>
-                  <button onClick={() => setInspectorExercise(ex)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  </button>
-                  <button onClick={() => removeExerciseFromBlock(block.id, ei)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 14 }}>×</button>
                 </div>
               ))}
 

@@ -72,19 +72,19 @@ router.get('/exercises', authenticateToken, requireRole('coach'), (req, res) => 
 });
 
 router.post('/exercises', authenticateToken, requireRole('coach'), (req, res) => {
-  const { name, description, demo_video_url, thumbnail_url, body_part, equipment } = req.body;
+  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area } = req.body;
   const result = pool.query(
-    'INSERT INTO exercises (name, description, demo_video_url, thumbnail_url, body_part, equipment) VALUES (?, ?, ?, ?, ?, ?) RETURNING id, name',
-    [name, description, demo_video_url || null, thumbnail_url || null, body_part, equipment]
+    'INSERT INTO exercises (name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, name',
+    [name, display_name || name, description, demo_video_url || null, thumbnail_url || null, body_part, equipment, exercise_type || 'Strength', tracking_fields || 'Repetitions with Weight', per_side || 'None', target_area]
   );
   res.json({ exercise: result.rows[0] });
 });
 
 router.put('/exercises/:id', authenticateToken, requireRole('coach'), (req, res) => {
-  const { name, description, demo_video_url, thumbnail_url, body_part, equipment } = req.body;
+  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area } = req.body;
   pool.query(
-    'UPDATE exercises SET name=?, description=?, demo_video_url=?, thumbnail_url=?, body_part=?, equipment=? WHERE id=?',
-    [name, description, demo_video_url, thumbnail_url, body_part, equipment, req.params.id]
+    'UPDATE exercises SET name=?, display_name=?, description=?, demo_video_url=?, thumbnail_url=?, body_part=?, equipment=?, exercise_type=?, tracking_fields=?, per_side=?, target_area=? WHERE id=?',
+    [name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, req.params.id]
   );
   res.json({ success: true });
 });

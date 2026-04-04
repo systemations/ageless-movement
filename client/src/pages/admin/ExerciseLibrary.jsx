@@ -205,49 +205,115 @@ export default function ExerciseLibrary() {
             </div>
 
             {editing ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exercise Name</label><input className="input-field" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} style={{ fontSize: 16, fontWeight: 600 }} /></div>
-                <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Body Part / Muscle Groups</label><input className="input-field" value={form.body_part || ''} onChange={e => setForm({ ...form, body_part: e.target.value })} /></div>
-                <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Equipment</label><input className="input-field" value={form.equipment || ''} onChange={e => setForm({ ...form, equipment: e.target.value })} /></div>
-                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Description</label><textarea className="input-field" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} style={{ minHeight: 100, resize: 'vertical' }} /></div>
-                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Demo Video URL</label><input className="input-field" value={form.demo_video_url || ''} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} style={{ marginBottom: 8 }} />{form.demo_video_url && <VimeoEmbed url={form.demo_video_url} height={300} />}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Reference Name *</label><input className="input-field" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} style={{ fontSize: 15, fontWeight: 600 }} /></div>
+                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Display Name</label><input className="input-field" value={form.display_name || ''} onChange={e => setForm({ ...form, display_name: e.target.value })} placeholder="Same as reference name if blank" /></div>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Type</label>
+                  <select className="input-field" value={form.exercise_type || ''} onChange={e => setForm({ ...form, exercise_type: e.target.value })}>
+                    <option value="">None</option>
+                    {['Strength', 'Mobility', 'Bodyweight', 'Stretching', 'TRX', 'Conditioning', 'Prehab', 'Cardio'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Tracking Fields</label>
+                    <select className="input-field" value={form.tracking_fields || ''} onChange={e => setForm({ ...form, tracking_fields: e.target.value })}>
+                      {['Repetitions with Weight', 'Repetitions', 'Duration', 'Distance'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Per Side</label>
+                    <select className="input-field" value={form.per_side || 'None'} onChange={e => setForm({ ...form, per_side: e.target.value })}>
+                      {['None', 'Per Side', 'Per Arm', 'Per Leg'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Equipment</label><input className="input-field" value={form.equipment || ''} onChange={e => setForm({ ...form, equipment: e.target.value })} placeholder="Add equipment..." /></div>
+                <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Muscle Groups</label><input className="input-field" value={form.body_part || ''} onChange={e => setForm({ ...form, body_part: e.target.value })} placeholder="Add muscle groups..." /></div>
+                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Target Area</label><input className="input-field" value={form.target_area || ''} onChange={e => setForm({ ...form, target_area: e.target.value })} placeholder="e.g. Upper Body, Lower Body, Full Body" /></div>
+                <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Description</label><textarea className="input-field" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} style={{ minHeight: 80, resize: 'vertical' }} /></div>
+
+                {/* Media */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Media</label>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontWeight: 600 }}>Vimeo</span>
+                  </div>
+                  <input className="input-field" value={form.demo_video_url || ''} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} placeholder="https://vimeo.com/..." style={{ marginBottom: 8 }} />
+                  {form.demo_video_url && <VimeoEmbed url={form.demo_video_url} height={250} />}
+                </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Thumbnail</label>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    {form.thumbnail_url && <img src={form.thumbnail_url} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />}
-                    <label style={{ padding: '8px 20px', background: 'var(--bg-card)', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: 'var(--accent)', border: '1px solid var(--divider)' }}>
+                    {form.thumbnail_url && <img src={form.thumbnail_url} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />}
+                    <label style={{ padding: '8px 16px', background: 'var(--bg-card)', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: 'var(--accent)', border: '1px solid var(--divider)' }}>
                       {uploading ? 'Uploading...' : 'Upload Thumbnail'}<input type="file" accept="image/*" onChange={handleUploadThumb} style={{ display: 'none' }} />
                     </label>
-                    {form.thumbnail_url && <button onClick={() => setForm({ ...form, thumbnail_url: null })} style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 12, cursor: 'pointer' }}>Remove</button>}
+                    {form.thumbnail_url && <button onClick={() => setForm({ ...form, thumbnail_url: null })} style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 11, cursor: 'pointer' }}>Remove</button>}
                   </div>
                 </div>
               </div>
             ) : (
               <>
-                <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{selected?.name}</h2>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-                  {selected?.body_part && selected.body_part.split(',').map(bp => (
-                    <span key={bp} style={{ fontSize: 12, background: 'rgba(255,140,0,0.1)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 20, fontWeight: 600 }}>{bp.trim()}</span>
-                  ))}
-                  {selected?.equipment && <span style={{ fontSize: 12, background: 'var(--bg-card)', color: 'var(--text-secondary)', padding: '4px 12px', borderRadius: 20 }}>{selected.equipment}</span>}
+                {/* Header with thumbnail + name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {selected?.thumbnail_url ? <img src={selected.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 28, opacity: 0.3 }}>💪</span>}
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 800 }}>{selected?.name}</h2>
+                    {selected?.display_name && selected.display_name !== selected.name && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{selected.display_name}</p>}
+                  </div>
                 </div>
-                {selected?.demo_video_url && <div style={{ marginBottom: 20 }}><VimeoEmbed url={selected.demo_video_url} height={360} style={{ borderRadius: 16 }} /></div>}
-                {selected?.description && (
-                  <div style={{ marginBottom: 20 }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text-secondary)' }}>DESCRIPTION</h4>
-                    <p style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{selected.description}</p>
+
+                {/* Meta grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>EXERCISE TYPE</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.exercise_type || 'Not specified'}</p>
                   </div>
-                )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div style={{ background: 'var(--bg-card)', borderRadius: 12, padding: 16 }}>
-                    <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>MUSCLE GROUPS</p>
-                    <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.body_part || 'Not specified'}</p>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>TRACKING FIELDS</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.tracking_fields || 'Repetitions with Weight'}</p>
                   </div>
-                  <div style={{ background: 'var(--bg-card)', borderRadius: 12, padding: 16 }}>
-                    <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>EQUIPMENT</p>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>MUSCLE GROUPS</p>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {selected?.body_part ? selected.body_part.split(',').map(bp => (
+                        <span key={bp} style={{ fontSize: 12, background: 'rgba(255,140,0,0.1)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>{bp.trim()}</span>
+                      )) : <span style={{ fontSize: 13 }}>Not specified</span>}
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>TARGET AREA</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.target_area || 'Not specified'}</p>
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>EQUIPMENT</p>
                     <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.equipment || 'Bodyweight'}</p>
                   </div>
+                  <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>PER SIDE</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{selected?.per_side || 'None'}</p>
+                  </div>
                 </div>
+
+                {/* Video */}
+                {selected?.demo_video_url && <div style={{ marginBottom: 20 }}><VimeoEmbed url={selected.demo_video_url} height={320} style={{ borderRadius: 12 }} /></div>}
+
+                {/* How to Perform */}
+                {selected?.description && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700 }}>How to Perform</h4>
+                      <button onClick={() => setEditing(true)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text-secondary)' }}>{selected.description}</p>
+                  </div>
+                )}
 
                 {/* Alternatives */}
                 <div style={{ marginTop: 20 }}>
@@ -273,28 +339,27 @@ export default function ExerciseLibrary() {
                     </div>
                   )}
 
-                  {alternatives.map((alt, ai) => (
-                    <div key={alt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--divider)' }}>
-                      {/* Reorder arrows */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <button onClick={() => moveAlternative(ai, -1)} disabled={ai === 0} style={{ background: 'none', border: 'none', cursor: ai === 0 ? 'default' : 'pointer', opacity: ai === 0 ? 0.2 : 0.6, padding: 0, lineHeight: 1 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="18 15 12 9 6 15"/></svg>
-                        </button>
-                        <button onClick={() => moveAlternative(ai, 1)} disabled={ai === alternatives.length - 1} style={{ background: 'none', border: 'none', cursor: ai === alternatives.length - 1 ? 'default' : 'pointer', opacity: ai === alternatives.length - 1 ? 0.2 : 0.6, padding: 0, lineHeight: 1 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
+                  {/* Grid layout like FitBudd */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
+                    {alternatives.map((alt, ai) => (
+                      <div key={alt.id} style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 10, position: 'relative', textAlign: 'center' }}>
+                        <button onClick={() => removeAlternative(alt.alternative_id)} style={{ position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 12, opacity: 0.6 }}>×</button>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 6px', overflow: 'hidden', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 18, opacity: 0.3 }}>💪</span>}
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alt.name}</p>
+                        {/* Reorder */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 4 }}>
+                          <button onClick={() => moveAlternative(ai, -1)} disabled={ai === 0} style={{ background: 'none', border: 'none', cursor: ai === 0 ? 'default' : 'pointer', opacity: ai === 0 ? 0.2 : 0.6, padding: 0 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                          </button>
+                          <button onClick={() => moveAlternative(ai, 1)} disabled={ai === alternatives.length - 1} style={{ background: 'none', border: 'none', cursor: ai === alternatives.length - 1 ? 'default' : 'pointer', opacity: ai === alternatives.length - 1 ? 0.2 : 0.6, padding: 0 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                          </button>
+                        </div>
                       </div>
-                      {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 14, opacity: 0.3 }}>💪</span></div>}
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600 }}>{alt.name}</p>
-                        {alt.body_part && <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{alt.body_part}</p>}
-                      </div>
-                      {alt.demo_video_url && (
-                        <span style={{ fontSize: 9, background: 'rgba(48,209,88,0.15)', color: 'var(--success)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>Video</span>
-                      )}
-                      <button onClick={() => removeAlternative(alt.alternative_id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 14 }}>×</button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
 
                   {alternatives.length === 0 && !showAltPanel && (
                     <p style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 12 }}>No alternatives linked yet</p>

@@ -94,11 +94,16 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS exercises (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    display_name TEXT,
     description TEXT,
     demo_video_url TEXT,
     thumbnail_url TEXT,
+    exercise_type TEXT DEFAULT 'Strength',
+    tracking_fields TEXT DEFAULT 'Repetitions with Weight',
+    per_side TEXT DEFAULT 'None',
     body_part TEXT,
     equipment TEXT,
+    target_area TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 

@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import ExerciseLibrary from './ExerciseLibrary';
 import ProgramBuilder from './ProgramBuilder';
 import ClientManager from './ClientManager';
+import WorkoutBuilder from './WorkoutBuilder';
 
 const navItems = [
   { id: 'fitness', label: 'Fitness', icon: '💪', children: [
@@ -30,6 +31,7 @@ export default function AdminLayout() {
     switch (activePage) {
       case 'exercises': return <ExerciseLibrary />;
       case 'programs': return <ProgramBuilder />;
+      case 'workouts': return <WorkoutBuilder />;
       case 'clients': return <ClientManager />;
       default: return (
         <div style={{ padding: 40, textAlign: 'center' }}>

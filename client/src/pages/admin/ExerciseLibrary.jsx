@@ -15,6 +15,7 @@ export default function ExerciseLibrary() {
   const [alternatives, setAlternatives] = useState([]);
   const [altSearch, setAltSearch] = useState('');
   const [showAltPanel, setShowAltPanel] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => { fetchExercises(); }, []);
 
@@ -36,6 +37,14 @@ export default function ExerciseLibrary() {
     });
     fetchAlternatives(selected.id);
     setAltSearch('');
+  };
+
+  const moveAlternative = (index, direction) => {
+    const newAlts = [...alternatives];
+    const newIdx = index + direction;
+    if (newIdx < 0 || newIdx >= newAlts.length) return;
+    [newAlts[index], newAlts[newIdx]] = [newAlts[newIdx], newAlts[index]];
+    setAlternatives(newAlts);
   };
 
   const removeAlternative = async (altId) => {
@@ -103,29 +112,41 @@ export default function ExerciseLibrary() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..." className="input-field" style={{ paddingLeft: 36, fontSize: 14 }} />
           </div>
-          {/* Video filter */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-            {[
-              { id: 'with_video', label: `With Video (${withVideoCount})` },
-              { id: 'no_video', label: `No Video (${noVideoCount})` },
-              { id: 'all', label: 'All' },
-            ].map(f => (
-              <button key={f.id} onClick={() => setVideoFilter(f.id)} style={{
-                padding: '4px 10px', borderRadius: 14, border: 'none', fontSize: 10, fontWeight: 600,
-                background: videoFilter === f.id ? (f.id === 'no_video' ? 'var(--error)' : 'var(--accent)') : 'var(--bg-card)',
-                color: videoFilter === f.id ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
-              }}>{f.label}</button>
-            ))}
+          {/* Filter bar */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[
+                { id: 'with_video', label: `Video (${withVideoCount})` },
+                { id: 'no_video', label: `No Video (${noVideoCount})` },
+                { id: 'all', label: 'All' },
+              ].map(f => (
+                <button key={f.id} onClick={() => setVideoFilter(f.id)} style={{
+                  padding: '4px 8px', borderRadius: 14, border: 'none', fontSize: 10, fontWeight: 600,
+                  background: videoFilter === f.id ? (f.id === 'no_video' ? 'var(--error)' : 'var(--accent)') : 'var(--bg-card)',
+                  color: videoFilter === f.id ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
+                }}>{f.label}</button>
+              ))}
+            </div>
+            <button onClick={() => setShowFilters(!showFilters)} style={{
+              display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 14, border: '1px solid var(--divider)',
+              background: showFilters || filterType !== 'All' ? 'rgba(255,140,0,0.1)' : 'transparent',
+              color: filterType !== 'All' ? 'var(--accent)' : 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              {filterType !== 'All' ? filterType : 'Filter'}
+            </button>
           </div>
-          {/* Body part filter */}
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12, maxHeight: 60, overflow: 'hidden' }}>
-            {bodyParts.slice(0, 12).map(bp => (
-              <button key={bp} onClick={() => setFilterType(bp)} style={{
-                padding: '4px 10px', borderRadius: 14, border: 'none', fontSize: 11, fontWeight: 600,
-                background: filterType === bp ? 'var(--accent)' : 'var(--bg-card)', color: filterType === bp ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
-              }}>{bp}</button>
-            ))}
-          </div>
+          {/* Expandable body part filters */}
+          {showFilters && (
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12, padding: 8, background: 'var(--bg-card)', borderRadius: 8 }}>
+              {bodyParts.map(bp => (
+                <button key={bp} onClick={() => { setFilterType(bp); if (bp !== 'All') setShowFilters(false); }} style={{
+                  padding: '4px 10px', borderRadius: 14, border: 'none', fontSize: 11, fontWeight: 600,
+                  background: filterType === bp ? 'var(--accent)' : 'transparent', color: filterType === bp ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
+                }}>{bp}</button>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '0 8px' }}>
           {filtered.slice(0, 100).map(ex => (
@@ -252,13 +273,25 @@ export default function ExerciseLibrary() {
                     </div>
                   )}
 
-                  {alternatives.map(alt => (
+                  {alternatives.map((alt, ai) => (
                     <div key={alt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--divider)' }}>
-                      {alt.thumbnail_url ? <img src={alt.thumbnail_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 14, opacity: 0.3 }}>💪</span></div>}
+                      {/* Reorder arrows */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <button onClick={() => moveAlternative(ai, -1)} disabled={ai === 0} style={{ background: 'none', border: 'none', cursor: ai === 0 ? 'default' : 'pointer', opacity: ai === 0 ? 0.2 : 0.6, padding: 0, lineHeight: 1 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="18 15 12 9 6 15"/></svg>
+                        </button>
+                        <button onClick={() => moveAlternative(ai, 1)} disabled={ai === alternatives.length - 1} style={{ background: 'none', border: 'none', cursor: ai === alternatives.length - 1 ? 'default' : 'pointer', opacity: ai === alternatives.length - 1 ? 0.2 : 0.6, padding: 0, lineHeight: 1 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                      </div>
+                      {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 14, opacity: 0.3 }}>💪</span></div>}
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: 13, fontWeight: 600 }}>{alt.name}</p>
                         {alt.body_part && <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{alt.body_part}</p>}
                       </div>
+                      {alt.demo_video_url && (
+                        <span style={{ fontSize: 9, background: 'rgba(48,209,88,0.15)', color: 'var(--success)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>Video</span>
+                      )}
                       <button onClick={() => removeAlternative(alt.alternative_id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 14 }}>×</button>
                     </div>
                   ))}

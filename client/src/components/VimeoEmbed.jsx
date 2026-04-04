@@ -1,9 +1,16 @@
-export function getVimeoEmbedUrl(url, options = {}) {
+export function getVideoEmbedUrl(url, options = {}) {
   if (!url) return null;
-  // Handle formats:
-  // https://vimeo.com/768740602
-  // https://vimeo.com/765466375/97c494bfc0
-  // https://vimeo.com/manage/videos/413798400/77518b9cf2
+
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    const params = new URLSearchParams();
+    if (options.autoplay) params.set('autoplay', '1');
+    if (options.loop) params.set('loop', '1');
+    return `https://www.youtube.com/embed/${ytMatch[1]}?${params.toString()}`;
+  }
+
+  // Vimeo
   const cleaned = url.replace('/manage/videos/', '/');
   const match = cleaned.match(/vimeo\.com\/(\d+)(?:\/([a-f0-9]+))?/);
   if (!match) return null;
@@ -27,12 +34,15 @@ export function getVimeoEmbedUrl(url, options = {}) {
   return `https://player.vimeo.com/video/${videoId}?${params.toString()}`;
 }
 
+// Alias for backward compatibility
+export const getVimeoEmbedUrl = getVideoEmbedUrl;
+
 export function getVimeoThumbnailUrl(url) {
   return null;
 }
 
 export default function VimeoEmbed({ url, width = '100%', height = 220, autoplay = false, muted = false, background = false, style = {} }) {
-  const embedUrl = getVimeoEmbedUrl(url, { autoplay, muted, background, loop: true });
+  const embedUrl = getVideoEmbedUrl(url, { autoplay, muted, background, loop: true });
   if (!embedUrl) return null;
 
   return (

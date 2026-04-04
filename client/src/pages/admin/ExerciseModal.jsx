@@ -205,8 +205,8 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
                 <input type="file" accept="video/*" onChange={e => handleUpload(e, 'demo_video_url')} style={{ display: 'none' }} />
               </label>
             )}
-            {/* Vimeo URL input */}
-            <input className="input-field" value={form.demo_video_url} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} placeholder="Or paste Vimeo URL..." style={{ marginTop: 8, fontSize: 12 }} />
+            {/* Video URL input */}
+            <input className="input-field" value={form.demo_video_url} onChange={e => setForm({ ...form, demo_video_url: e.target.value })} placeholder="Paste Vimeo or YouTube URL..." style={{ marginTop: 8, fontSize: 12 }} />
           </div>
 
           {/* Photo */}
@@ -234,58 +234,116 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Sets / Reps / Rest Period */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 16 }}>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Sets *</label>
-            <input type="number" className="input-field" value={form.default_sets} onChange={e => setForm({ ...form, default_sets: e.target.value })} placeholder="Enter Sets" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Reps *</label>
-            <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Reps" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Rest Period</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input type="number" className="input-field" value={form.rest_min} onChange={e => setForm({ ...form, rest_min: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
-              <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Min</span>
-              <input type="number" className="input-field" value={form.rest_sec} onChange={e => setForm({ ...form, rest_sec: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
-              <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Sec</span>
+        {/* Dynamic fields based on exercise type */}
+        {form.tracking_fields === 'Sets & Reps' && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Sets *</label>
+                <input type="number" className="input-field" value={form.default_sets} onChange={e => setForm({ ...form, default_sets: e.target.value })} placeholder="Enter Sets" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Reps *</label>
+                <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Reps" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Rest Period</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="number" className="input-field" value={form.rest_min} onChange={e => setForm({ ...form, rest_min: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
+                  <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Min</span>
+                  <input type="number" className="input-field" value={form.rest_sec} onChange={e => setForm({ ...form, rest_sec: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
+                  <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Sec</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+            {/* Advanced Settings */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: showAdvanced ? 12 : 16 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>Advanced Settings</span>
+              <button onClick={() => setShowAdvanced(!showAdvanced)} style={{
+                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', position: 'relative',
+                background: showAdvanced ? 'var(--accent)' : 'var(--divider)', transition: 'background 0.2s',
+              }}>
+                <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: showAdvanced ? 20 : 2, transition: 'left 0.2s' }} />
+              </button>
+            </div>
+            {showAdvanced && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 16, padding: 12, background: 'var(--bg-card)', borderRadius: 10 }}>
+                <p style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Note: You can enter either RIR or RPE</p>
+                <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RIR</label><input className="input-field" value={form.rir} onChange={e => setForm({ ...form, rir: e.target.value })} placeholder="Enter RIR" style={{ fontSize: 13 }} /></div>
+                <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RPE</label><input className="input-field" value={form.rpe} onChange={e => setForm({ ...form, rpe: e.target.value })} placeholder="Enter RPE" style={{ fontSize: 13 }} /></div>
+                <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Intensity</label><input className="input-field" value={form.intensity} onChange={e => setForm({ ...form, intensity: e.target.value })} placeholder="Enter Intensity" style={{ fontSize: 13 }} /></div>
+                <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Tempo</label><input className="input-field" value={form.tempo} onChange={e => setForm({ ...form, tempo: e.target.value })} placeholder="e.g. 3-1-2-1" style={{ fontSize: 13 }} /></div>
+              </div>
+            )}
+          </>
+        )}
 
-        {/* Advanced Settings Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: showAdvanced ? 12 : 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>Advanced Settings</span>
-          <button onClick={() => setShowAdvanced(!showAdvanced)} style={{
-            width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', position: 'relative',
-            background: showAdvanced ? 'var(--accent)' : 'var(--divider)', transition: 'background 0.2s',
-          }}>
-            <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: showAdvanced ? 20 : 2, transition: 'left 0.2s' }} />
-          </button>
-        </div>
-
-        {showAdvanced && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 16, padding: 12, background: 'var(--bg-card)', borderRadius: 10 }}>
-            <p style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Note: You can enter either RIR or RPE</p>
+        {form.tracking_fields === 'Reps' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RIR</label>
-              <input className="input-field" value={form.rir} onChange={e => setForm({ ...form, rir: e.target.value })} placeholder="Enter RIR" style={{ fontSize: 13 }} />
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Reps *</label>
+              <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Reps" />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RPE</label>
-              <input className="input-field" value={form.rpe} onChange={e => setForm({ ...form, rpe: e.target.value })} placeholder="Enter RPE" style={{ fontSize: 13 }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Intensity</label>
-              <input className="input-field" value={form.intensity} onChange={e => setForm({ ...form, intensity: e.target.value })} placeholder="Enter Intensity" style={{ fontSize: 13 }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Tempo</label>
-              <input className="input-field" value={form.tempo} onChange={e => setForm({ ...form, tempo: e.target.value })} placeholder="e.g. 3-1-2-1" style={{ fontSize: 13 }} />
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RPE</label>
+              <input className="input-field" value={form.rpe} onChange={e => setForm({ ...form, rpe: e.target.value })} placeholder="Enter RPE" />
             </div>
           </div>
+        )}
+
+        {form.tracking_fields === 'Distance' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Distance *</label>
+              <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Distance" />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Distance Unit</label>
+              <select className="input-field" value={form.distance_unit || 'Meters'} onChange={e => setForm({ ...form, distance_unit: e.target.value })}>
+                {['Meters', 'Kilometers', 'Miles', 'Feet', 'Yards'].map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RPE</label>
+              <input className="input-field" value={form.rpe} onChange={e => setForm({ ...form, rpe: e.target.value })} placeholder="Enter RPE" />
+            </div>
+          </div>
+        )}
+
+        {form.tracking_fields === 'Kcal' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Kcal *</label>
+            <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Calories" />
+          </div>
+        )}
+
+        {form.tracking_fields === 'Time' && (
+          <>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Time *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="number" className="input-field" value={form.rest_min} onChange={e => setForm({ ...form, rest_min: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
+                <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Min</span>
+                <input type="number" className="input-field" value={form.rest_sec} onChange={e => setForm({ ...form, rest_sec: parseInt(e.target.value) || 0 })} placeholder="0" style={{ width: 60 }} />
+                <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Sec</span>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Heart Rate</label>
+                <input className="input-field" value={form.heart_rate || ''} onChange={e => setForm({ ...form, heart_rate: e.target.value })} placeholder="Enter Heart Rate" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Reps</label>
+                <input className="input-field" value={form.default_reps} onChange={e => setForm({ ...form, default_reps: e.target.value })} placeholder="Enter Reps" />
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 4, display: 'block' }}>RPE</label>
+              <input className="input-field" value={form.rpe} onChange={e => setForm({ ...form, rpe: e.target.value })} placeholder="Enter RPE" />
+              <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>Allowed combinations: Time & Reps, Time & HR, or Time individually</p>
+            </div>
+          </>
         )}
 
         {/* Notes */}

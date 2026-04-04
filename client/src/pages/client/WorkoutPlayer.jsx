@@ -291,7 +291,7 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
             <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 16 }}>Session Settings</h3>
 
             {/* Mode toggle */}
-            <div style={{ display: 'flex', background: '#2C2C2E', borderRadius: 50, padding: 3, marginBottom: 16 }}>
+            <div style={{ display: 'flex', background: 'var(--bg-card)', borderRadius: 50, padding: 3, marginBottom: 16 }}>
               {['guided', 'advanced'].map(m => (
                 <button key={m} onClick={() => setSettings({ ...settings, mode: m })} style={{
                   flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600, border: 'none',
@@ -359,7 +359,7 @@ function LogExerciseModal({ exercise, onSave, onClose, existing }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 30, display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
       <div style={{
-        background: '#1C1C1E', borderRadius: '20px 20px 0 0', width: '100%',
+        background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', width: '100%',
         padding: '12px 16px 32px', maxHeight: '80vh', overflow: 'auto',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

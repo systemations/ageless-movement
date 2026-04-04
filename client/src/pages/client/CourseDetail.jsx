@@ -27,7 +27,7 @@ export default function CourseDetail({ course, onBack }) {
 
       {/* Hero Section */}
       <div style={{
-        background: 'linear-gradient(135deg, #1E1A2E 0%, #2D2640 100%)',
+        background: 'var(--bg-card)',
         borderRadius: 16, padding: '24px 20px', marginBottom: 20, position: 'relative', overflow: 'hidden',
       }}>
         {/* Decorative */}
@@ -118,7 +118,7 @@ export default function CourseDetail({ course, onBack }) {
               {/* Module Number */}
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                background: mod.completed ? 'var(--accent-mint)' : 'rgba(255,255,255,0.08)',
+                background: mod.completed ? 'var(--accent-mint)' : 'var(--divider)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 13, fontWeight: 700, color: mod.completed ? '#000' : 'var(--text-secondary)',
               }}>
@@ -148,13 +148,13 @@ export default function CourseDetail({ course, onBack }) {
             {/* Expanded Lessons */}
             {expandedModule === i && (
               <div style={{
-                background: 'rgba(28,28,30,0.7)', borderRadius: '0 0 12px 12px',
+                background: 'var(--bg-card)', borderRadius: '0 0 12px 12px',
                 padding: '4px 16px 8px', borderTop: '1px solid var(--divider)',
               }}>
                 {Array.from({ length: mod.lessons }, (_, j) => (
                   <div key={j} style={{
                     display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-                    borderBottom: j < mod.lessons - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    borderBottom: j < mod.lessons - 1 ? '1px solid var(--divider)' : 'none',
                   }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: '50%',

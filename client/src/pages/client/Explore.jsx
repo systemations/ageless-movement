@@ -119,10 +119,10 @@ const workoutCarousels = [
 ];
 
 const courseColors = [
-  'linear-gradient(135deg, #1E1A2E 0%, #2D2640 100%)',
-  'linear-gradient(135deg, #1A2E1E 0%, #243D26 100%)',
-  'linear-gradient(135deg, #2E1A1A 0%, #3D2424 100%)',
-  'linear-gradient(135deg, #1A1E2E 0%, #242D3D 100%)',
+  'var(--bg-card)',
+  'var(--bg-card)',
+  'var(--bg-card)',
+  'var(--bg-card)',
 ];
 
 export default function Explore() {
@@ -298,7 +298,7 @@ export default function Explore() {
                     onClick={() => setSelectedProgram(prog.id)}
                     style={{
                       minWidth: 200, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                      background: 'linear-gradient(135deg, #1E1A2E, #2D2640)',
+                      background: 'var(--bg-card)',
                     }}
                   >
                     <div style={{ padding: '16px 16px 14px' }}>
@@ -442,10 +442,10 @@ export default function Explore() {
               display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px',
             }}>
               {[
-                { name: 'Mobility 101', items: 8, icon: '🧘', color: 'linear-gradient(135deg, #1E1A2E, #2D2640)' },
-                { name: 'Nutrition Guides', items: 5, icon: '🥗', color: 'linear-gradient(135deg, #1A2E1E, #243D26)' },
-                { name: 'Recovery Protocols', items: 6, icon: '💆', color: 'linear-gradient(135deg, #2E1A1A, #3D2424)' },
-                { name: 'Training Science', items: 4, icon: '🧬', color: 'linear-gradient(135deg, #1A1E2E, #242D3D)' },
+                { name: 'Mobility 101', items: 8, icon: '🧘', color: 'var(--bg-card)' },
+                { name: 'Nutrition Guides', items: 5, icon: '🥗', color: 'var(--bg-card)' },
+                { name: 'Recovery Protocols', items: 6, icon: '💆', color: 'var(--bg-card)' },
+                { name: 'Training Science', items: 4, icon: '🧬', color: 'var(--bg-card)' },
               ].map((col) => (
                 <div key={col.name} style={{
                   minWidth: 160, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',

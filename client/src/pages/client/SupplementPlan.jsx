@@ -18,7 +18,7 @@ export default function SupplementPlan() {
     <div className="page-content" style={{ paddingBottom: 140 }}>
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #1E1A2E, #2D2640)', borderRadius: 16,
+        background: 'var(--bg-card)', borderRadius: 16,
         padding: '24px 20px', marginBottom: 24, textAlign: 'center',
       }}>
         <div style={{

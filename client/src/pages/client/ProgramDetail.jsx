@@ -44,7 +44,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
 
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #1E1A2E, #2D2640)', borderRadius: 16,
+        background: 'var(--bg-card)', borderRadius: 16,
         padding: '28px 20px', marginBottom: 20, position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', border: '1px solid rgba(61,255,210,0.08)' }} />

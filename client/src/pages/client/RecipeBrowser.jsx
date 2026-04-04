@@ -43,7 +43,7 @@ export default function RecipeBrowser({ onBack }) {
 
         {/* Hero placeholder */}
         <div style={{
-          height: 200, borderRadius: 16, background: 'linear-gradient(135deg, #2C2C2E, #1C1C1E)',
+          height: 200, borderRadius: 16, background: 'var(--bg-card)',
           marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <span style={{ fontSize: 64, opacity: 0.3 }}>🍳</span>

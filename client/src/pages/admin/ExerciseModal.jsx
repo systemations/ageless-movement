@@ -110,7 +110,7 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
   };
 
   const filteredAlts = allExercises.filter(e =>
-    e.id !== exercise?.id && altSearch && e.name.toLowerCase().includes(altSearch.toLowerCase()) &&
+    e.id !== exercise?.id && e.demo_video_url && altSearch && e.name.toLowerCase().includes(altSearch.toLowerCase()) &&
     !linkedAlts.some(a => (a.alternative_id || a.id) === e.id)
   );
 

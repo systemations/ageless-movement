@@ -51,7 +51,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
       {/* Hero */}
       <div style={{
         margin: '-16px -16px 0', minHeight: 220, position: 'relative',
-        background: 'linear-gradient(135deg, #2C2C2E, #1C1C1E)',
+        background: 'var(--bg-card)',
         display: 'flex', alignItems: 'flex-end',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--bg-primary) 0%, transparent 60%)' }} />
@@ -190,7 +190,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
             {/* Primary */}
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-orange)', marginBottom: 8, letterSpacing: 0.5 }}>PRIMARY</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--divider)', marginBottom: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#2C2C2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: 16, opacity: 0.4 }}>💪</span>
               </div>
               <div style={{ flex: 1 }}>
@@ -209,7 +209,7 @@ export default function WorkoutOverview({ workoutId, onBack }) {
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
                 borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer',
               }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#2C2C2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontSize: 16, opacity: 0.4 }}>💪</span>
                 </div>
                 <div style={{ flex: 1 }}>

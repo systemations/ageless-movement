@@ -322,7 +322,7 @@ export default function ProgramBuilder() {
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
             onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
           >
-            <div style={{ width: 56, height: 56, borderRadius: 12, background: 'linear-gradient(135deg, #1E1A2E, #2D2640)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 12, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 24 }}>📚</span>
             </div>
             <div style={{ flex: 1 }}>

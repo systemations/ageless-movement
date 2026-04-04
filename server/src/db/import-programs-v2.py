@@ -7,7 +7,7 @@ import os
 import re
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'ageless.db')
-BASE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..')
+BASE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'import-data')
 
 db = sqlite3.connect(DB_PATH)
 db.row_factory = sqlite3.Row

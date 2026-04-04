@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
+import ExerciseModal from './ExerciseModal';
 
 export default function ExerciseLibrary() {
   const { token } = useAuth();
@@ -101,7 +102,7 @@ export default function ExerciseLibrary() {
               <h2 style={{ fontSize: 20, fontWeight: 800 }}>Exercises ({exercises.length})</h2>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{exercises.filter(e => e.demo_video_url).length} with video</p>
             </div>
-            <button onClick={() => { setEditing('new'); setForm({}); setSelected(null); }} style={{
+            <button onClick={() => setEditing('new')} style={{
               background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '50%',
               width: 40, height: 40, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>+</button>
@@ -370,6 +371,15 @@ export default function ExerciseLibrary() {
           </div>
         )}
       </div>
+
+      {/* Exercise Modal */}
+      {editing && (
+        <ExerciseModal
+          exercise={editing === 'new' ? null : (selected || null)}
+          onClose={() => { setEditing(false); }}
+          onSaved={() => { setEditing(false); fetchExercises(); setSelected(null); }}
+        />
+      )}
     </div>
   );
 }

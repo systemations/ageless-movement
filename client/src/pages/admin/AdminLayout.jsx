@@ -5,17 +5,25 @@ import ProgramBuilder from './ProgramBuilder';
 import ClientManager from './ClientManager';
 
 const navItems = [
-  { id: 'exercises', label: 'Exercise Library', icon: '💪' },
-  { id: 'programs', label: 'Programs', icon: '📚' },
+  { id: 'fitness', label: 'Fitness', icon: '💪', children: [
+    { id: 'exercises', label: 'Exercises' },
+    { id: 'programs', label: 'Programs' },
+    { id: 'workouts', label: 'Workouts' },
+    { id: 'schedules', label: 'Schedules' },
+  ]},
+  { id: 'nutrition', label: 'Nutrition', icon: '🍽️', children: [
+    { id: 'recipes', label: 'Recipes' },
+    { id: 'meals', label: 'Meal Plans' },
+  ]},
   { id: 'clients', label: 'Clients', icon: '👥' },
-  { id: 'workouts', label: 'Workouts', icon: '🏋️' },
-  { id: 'recipes', label: 'Recipes', icon: '🍽️' },
-  { id: 'meals', label: 'Meal Plans', icon: '🥗' },
+  { id: 'explore', label: 'Explore', icon: '🔍' },
+  { id: 'challenges', label: 'Challenges', icon: '🏆' },
 ];
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const [activePage, setActivePage] = useState('exercises');
+  const [expandedMenus, setExpandedMenus] = useState(['fitness']);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const renderPage = () => {
@@ -52,22 +60,51 @@ export default function AdminLayout() {
         {/* Nav */}
         <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
           {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActivePage(item.id)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: sidebarOpen ? '12px 14px' : '12px 0', borderRadius: 10, border: 'none',
-                background: activePage === item.id ? 'rgba(61,255,210,0.12)' : 'transparent',
-                color: activePage === item.id ? 'var(--accent-mint)' : 'var(--text-secondary)',
-                fontSize: 14, fontWeight: activePage === item.id ? 600 : 400,
-                cursor: 'pointer', marginBottom: 2, textAlign: 'left',
-                justifyContent: sidebarOpen ? 'flex-start' : 'center',
-              }}
-            >
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-              {sidebarOpen && <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>}
-            </button>
+            <div key={item.id}>
+              <button
+                onClick={() => {
+                  if (item.children) {
+                    setExpandedMenus(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id]);
+                  } else {
+                    setActivePage(item.id);
+                  }
+                }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: sidebarOpen ? '12px 14px' : '12px 0', borderRadius: 10, border: 'none',
+                  background: (item.children ? item.children.some(c => c.id === activePage) : activePage === item.id) ? 'rgba(255,140,0,0.1)' : 'transparent',
+                  color: (item.children ? item.children.some(c => c.id === activePage) : activePage === item.id) ? 'var(--accent)' : 'var(--text-secondary)',
+                  fontSize: 14, fontWeight: (item.children ? item.children.some(c => c.id === activePage) : activePage === item.id) ? 600 : 400,
+                  cursor: 'pointer', marginBottom: 2, textAlign: 'left',
+                  justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                }}
+              >
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                {sidebarOpen && <span style={{ whiteSpace: 'nowrap', flex: 1 }}>{item.label}</span>}
+                {sidebarOpen && item.children && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    style={{ transform: expandedMenus.includes(item.id) ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                )}
+              </button>
+              {/* Sub-items */}
+              {item.children && expandedMenus.includes(item.id) && sidebarOpen && (
+                <div style={{ marginLeft: 32, marginBottom: 4 }}>
+                  {item.children.map(child => (
+                    <button key={child.id} onClick={() => setActivePage(child.id)} style={{
+                      width: '100%', display: 'block', padding: '8px 14px', borderRadius: 8, border: 'none',
+                      background: activePage === child.id ? 'rgba(255,140,0,0.15)' : 'transparent',
+                      color: activePage === child.id ? 'var(--accent)' : 'var(--text-tertiary)',
+                      fontSize: 13, fontWeight: activePage === child.id ? 600 : 400,
+                      cursor: 'pointer', textAlign: 'left', marginBottom: 1,
+                    }}>
+                      {child.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
 

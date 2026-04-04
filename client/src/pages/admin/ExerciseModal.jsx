@@ -44,6 +44,9 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
   const [showBodyPartDropdown, setShowBodyPartDropdown] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [altSearch, setAltSearch] = useState('');
+  const [showAltSearch, setShowAltSearch] = useState(false);
+  const [linkedAlts, setLinkedAlts] = useState([]);
+  const [allExercises, setAllExercises] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const selectedBodyParts = form.body_part ? form.body_part.split(',').map(b => b.trim()).filter(Boolean) : [];
@@ -66,6 +69,50 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
     } catch (err) { console.error(err); }
     setUploading(false);
   };
+
+  // Load exercises for alt search + existing alternatives
+  useState(() => {
+    fetch('/api/content/exercises', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setAllExercises(d.exercises || []));
+    if (exercise?.id) {
+      fetch(`/api/content/exercises/${exercise.id}/alternatives`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => setLinkedAlts(d.alternatives || []));
+    }
+  }, []);
+
+  const addAlt = async (altEx) => {
+    if (!exercise?.id) {
+      // For new exercises, save locally and link after save
+      setLinkedAlts([...linkedAlts, altEx]);
+      setAltSearch('');
+      setShowAltSearch(false);
+      return;
+    }
+    await fetch(`/api/content/exercises/${exercise.id}/alternatives`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alternative_id: altEx.id }),
+    });
+    const res = await fetch(`/api/content/exercises/${exercise.id}/alternatives`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { const d = await res.json(); setLinkedAlts(d.alternatives || []); }
+    setAltSearch('');
+    setShowAltSearch(false);
+  };
+
+  const removeAlt = async (altId) => {
+    if (!exercise?.id) {
+      setLinkedAlts(linkedAlts.filter(a => a.id !== altId));
+      return;
+    }
+    await fetch(`/api/content/exercises/${exercise.id}/alternatives/${altId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    setLinkedAlts(linkedAlts.filter(a => a.alternative_id !== altId && a.id !== altId));
+  };
+
+  const filteredAlts = allExercises.filter(e =>
+    e.id !== exercise?.id && altSearch && e.name.toLowerCase().includes(altSearch.toLowerCase()) &&
+    !linkedAlts.some(a => (a.alternative_id || a.id) === e.id)
+  );
 
   const save = async () => {
     if (!form.name.trim()) return;
@@ -352,11 +399,49 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
           <textarea className="input-field" value={form.notes || form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Add notes..." style={{ minHeight: 60, resize: 'vertical' }} />
         </div>
 
-        {/* Alternative Exercise button */}
-        <button style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, cursor: 'pointer' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Alternative Exercise
-        </button>
+        {/* Alternative Exercises */}
+        {linkedAlts.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 8 }}>Alternatives ({linkedAlts.length})</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {linkedAlts.map(alt => (
+                <div key={alt.id || alt.alternative_id} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 4px',
+                  background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--divider)',
+                }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 10, opacity: 0.3 }}>💪</span>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 500, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alt.name}</span>
+                  <button onClick={() => removeAlt(alt.alternative_id || alt.id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 12, padding: 0 }}>×</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showAltSearch ? (
+          <div style={{ marginBottom: 20, border: '1px solid var(--accent)', borderRadius: 10, padding: 12 }}>
+            <input value={altSearch} onChange={e => setAltSearch(e.target.value)} placeholder="Search exercises to add as alternative..." className="input-field" style={{ fontSize: 13, marginBottom: 8 }} autoFocus />
+            <div style={{ maxHeight: 180, overflow: 'auto' }}>
+              {filteredAlts.slice(0, 15).map(ex => (
+                <div key={ex.id} onClick={() => addAlt(ex)} style={{ padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,140,0,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {ex.thumbnail_url ? <img src={ex.thumbnail_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, opacity: 0.3 }}>💪</span>}
+                  <span>{ex.name}</span>
+                </div>
+              ))}
+              {altSearch && filteredAlts.length === 0 && <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: 8 }}>No matching exercises</p>}
+            </div>
+            <button onClick={() => { setShowAltSearch(false); setAltSearch(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 12, marginTop: 4, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowAltSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, cursor: 'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Alternative Exercise
+          </button>
+        )}
 
         {/* Save button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

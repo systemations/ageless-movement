@@ -11,6 +11,8 @@ import Progress from './pages/client/Progress';
 import OnboardingQuestionnaire from './pages/client/OnboardingQuestionnaire';
 import NutritionHub from './pages/client/NutritionHub';
 import Profile from './pages/client/Profile';
+import LogOtherWorkout from './pages/client/LogOtherWorkout';
+import WorkoutPlanner from './pages/client/WorkoutPlanner';
 import CoachMessages from './pages/coach/CoachMessages';
 import CoachGroups from './pages/coach/CoachGroups';
 import CoachCheckins from './pages/coach/CoachCheckins';
@@ -76,6 +78,8 @@ function AppRoutes() {
         <Route path="/nutrition" element={<ProtectedRoute><NutritionHub /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile onBack={() => window.history.back()} /></ProtectedRoute>} />
         <Route path="/favourites" element={<ProtectedRoute><FavouritesPage /></ProtectedRoute>} />
+        <Route path="/log-workout" element={<ProtectedRoute><LogOtherWorkout onClose={() => window.history.back()} /></ProtectedRoute>} />
+        <Route path="/workout-planner" element={<ProtectedRoute><WorkoutPlanner onBack={() => window.history.back()} /></ProtectedRoute>} />
 
         {/* Admin Panel (desktop) */}
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>} />

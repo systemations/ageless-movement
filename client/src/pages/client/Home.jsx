@@ -419,12 +419,12 @@ export default function Home() {
         <h2>More</h2>
       </div>
       {[
-        { icon: '🏋️', label: 'Workout Planner', path: '/explore' },
+        { icon: '🏋️', label: 'Workout Planner', path: '/workout-planner' },
         { icon: '🥗', label: 'Meal Planner', path: '/nutrition' },
         { icon: '📅', label: 'Book Session', path: '/events' },
         { icon: '🕐', label: 'Past Bookings', path: '/events' },
         { icon: '🔖', label: 'Favourites', path: '/favourites' },
-        { icon: '🏃', label: 'Log Other Workout', path: '/explore' },
+        { icon: '🏃', label: 'Log Other Workout', path: '/log-workout' },
         { icon: '📥', label: 'Downloaded Workouts', path: '/explore' },
       ].map(({ icon, label, path }) => (
         <div key={label} onClick={() => navigate(path)} className="card-sm" style={{

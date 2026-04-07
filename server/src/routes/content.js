@@ -113,27 +113,35 @@ router.delete('/workout-exercises/:id', authenticateToken, requireRole('coach'),
   res.json({ success: true });
 });
 
-// ===== EXERCISE ALTERNATIVES =====
+// ===== EXERCISE ALTERNATIVES (bidirectional) =====
 router.get('/exercises/:id/alternatives', authenticateToken, (req, res) => {
+  // Get alternatives in BOTH directions
   const alts = pool.query(`
-    SELECT ea.*, e.name, e.thumbnail_url, e.body_part, e.demo_video_url
+    SELECT ea.id, ea.exercise_id, ea.alternative_id, ea.reps, e.name, e.thumbnail_url, e.body_part, e.demo_video_url
     FROM exercise_alternatives ea
     JOIN exercises e ON ea.alternative_id = e.id
     WHERE ea.exercise_id = ?
-  `, [req.params.id]);
+    UNION
+    SELECT ea.id, ea.alternative_id as exercise_id, ea.exercise_id as alternative_id, ea.reps, e.name, e.thumbnail_url, e.body_part, e.demo_video_url
+    FROM exercise_alternatives ea
+    JOIN exercises e ON ea.exercise_id = e.id
+    WHERE ea.alternative_id = ?
+  `, [req.params.id, req.params.id]);
   res.json({ alternatives: alts.rows });
 });
 
 router.post('/exercises/:id/alternatives', authenticateToken, requireRole('coach'), (req, res) => {
   const { alternative_id, reps } = req.body;
+  // Only insert one direction — the GET query handles bidirectional
   pool.query('INSERT OR IGNORE INTO exercise_alternatives (exercise_id, alternative_id, reps) VALUES (?, ?, ?)',
     [req.params.id, alternative_id, reps || null]);
   res.json({ success: true });
 });
 
 router.delete('/exercises/:id/alternatives/:altId', authenticateToken, requireRole('coach'), (req, res) => {
-  pool.query('DELETE FROM exercise_alternatives WHERE exercise_id = ? AND alternative_id = ?',
-    [req.params.id, req.params.altId]);
+  // Delete in both directions
+  pool.query('DELETE FROM exercise_alternatives WHERE (exercise_id = ? AND alternative_id = ?) OR (exercise_id = ? AND alternative_id = ?)',
+    [req.params.id, req.params.altId, req.params.altId, req.params.id]);
   res.json({ success: true });
 });
 

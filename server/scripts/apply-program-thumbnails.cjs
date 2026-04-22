@@ -1,5 +1,10 @@
 const Database = require('better-sqlite3');
-const db = new Database('data/ageless.db');
+const path = require('path');
+
+// Resolve DB path relative to this script so it works from any cwd
+// (e.g. `node server/scripts/apply-program-thumbnails.cjs` from the repo
+// root on Render, as well as from the server/ dir locally).
+const db = new Database(path.join(__dirname, '..', 'data', 'ageless.db'));
 
 const MAP = {
   1:  '/programs/ground-zero.jpg',

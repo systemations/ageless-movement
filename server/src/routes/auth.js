@@ -25,6 +25,17 @@ const registerLimiter = rateLimit({
   message: { error: 'Too many signup attempts. Try again later.' },
 });
 
+// Dedicated bucket for password reset so a login flood can't exhaust it
+// (and vice versa). Token guessing is already cryptographically infeasible,
+// but this blocks noisy probes and reduces server load.
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reset attempts. Try again shortly.' },
+});
+
 const router = Router();
 
 router.post('/register', registerLimiter, async (req, res) => {
@@ -180,7 +191,7 @@ router.patch('/profile', authenticateToken, async (req, res) => {
 // Coach-initiated flow: coach hits POST /api/coach/clients/:id/reset-password
 // which returns a URL containing a one-time token. The client opens that URL,
 // enters a new password, and this endpoint swaps it in.
-router.post('/reset-password', loginLimiter, async (req, res) => {
+router.post('/reset-password', resetLimiter, async (req, res) => {
   try {
     const { token, new_password } = req.body;
     if (!token || !new_password) {

@@ -51,6 +51,8 @@ class RouteErrorBoundary extends Component {
 import BottomNav from './components/BottomNav';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import Privacy from './pages/legal/Privacy';
+import Terms from './pages/legal/Terms';
 import Home from './pages/client/Home';
 import Events from './pages/client/Events';
 import Explore from './pages/client/Explore';
@@ -169,6 +171,8 @@ function AppRoutes() {
         {/* Auth */}
         <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
 
         {/* Onboarding */}
         <Route path="/onboarding" element={

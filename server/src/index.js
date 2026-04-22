@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -30,6 +31,17 @@ const PORT = config.PORT;
 // the real client — otherwise rate limiters would key every request to
 // the proxy's IP and effectively do nothing.
 if (config.IS_PROD) app.set('trust proxy', 1);
+
+// Security headers via helmet. Defaults are sensible for an API + SPA:
+// HSTS (prod only), X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
+// plus hidden X-Powered-By. CSP is left off because we serve a React SPA
+// from the same origin and locking it down needs per-asset nonces; revisit
+// when we move to a strict CSP post-alpha.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false, // Vimeo iframes break with COEP
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow image CDN usage
+}));
 
 // CORS policy:
 // - Dev: allow every origin (Vite dev server runs on a different port and

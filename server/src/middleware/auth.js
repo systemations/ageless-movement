@@ -27,7 +27,10 @@ export const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, config.JWT_SECRET);
+    // Pin the algorithm explicitly. jsonwebtoken >=9 blocks `none` by
+    // default, but callers that rely on defaults have been bitten before —
+    // an algorithm whitelist is defence-in-depth and costs nothing.
+    const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = decoded;
     bumpLastActive(decoded.id);
     next();

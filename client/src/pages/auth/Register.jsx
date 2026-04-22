@@ -6,6 +6,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const role = 'client';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,10 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!consent) {
+      setError('Please accept the Terms and Privacy Policy to continue.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -75,7 +80,26 @@ export default function Register() {
           />
         </div>
 
-        <button type="submit" className="btn-primary" disabled={loading}>
+        <label style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45,
+          margin: '8px 0 4px', cursor: 'pointer',
+        }}>
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            style={{ marginTop: 3 }}
+          />
+          <span>
+            I agree to the{' '}
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Terms of Service</Link>
+            {' '}and{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Privacy Policy</Link>.
+          </span>
+        </label>
+
+        <button type="submit" className="btn-primary" disabled={loading || !consent}>
           {loading ? 'Creating account...' : 'Create Account'}
         </button>
       </form>

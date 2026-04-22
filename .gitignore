@@ -4,3 +4,10 @@ dist/
 server/data/
 .DS_Store
 *.log
+# SQLite working copy — real DB lives in server/data/ (gitignored) and on
+# Render's persistent disk in production. This pattern catches any stray
+# .db files elsewhere in the tree.
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

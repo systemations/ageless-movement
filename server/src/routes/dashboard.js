@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { loadPlan, scalePlanForClient } from '../lib/mealScaling.js';
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
     `, [userId]);
     const activeProgram = cpResult.rows[0] || null;
 
-    // Today's workout
+    // Today's workout — fall back to the program's thumbnail if the workout has none
     let todayWorkout = null;
     if (activeProgram) {
       const wResult = pool.query(`
@@ -33,6 +34,9 @@ router.get('/', authenticateToken, async (req, res) => {
         LIMIT 1
       `, [activeProgram.program_id, activeProgram.current_week, activeProgram.current_day]);
       todayWorkout = wResult.rows[0] || null;
+      if (todayWorkout && !todayWorkout.image_url) {
+        todayWorkout.image_url = activeProgram.image_url || null;
+      }
     }
 
     // Streak
@@ -110,6 +114,53 @@ router.get('/', authenticateToken, async (req, res) => {
     // Goals
     const goalsResult = pool.query('SELECT * FROM goals WHERE user_id = ? ORDER BY achieved ASC, created_at DESC', [userId]);
 
+    // Today's meal plan from assigned meal schedule
+    let todayMealPlan = null;
+    if (profile.active_meal_schedule_id) {
+      try {
+        // Figure out which week/day of the schedule we're on
+        const assignment = pool.query(
+          'SELECT calorie_override, started_at FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+          [userId, profile.active_meal_schedule_id],
+        ).rows[0];
+        const sched = pool.query('SELECT * FROM meal_schedules WHERE id = ?', [profile.active_meal_schedule_id]).rows[0];
+        if (sched) {
+          const startDate = assignment?.started_at ? new Date(assignment.started_at) : new Date();
+          const daysSinceStart = Math.max(0, Math.floor((new Date(today) - new Date(startDate.toISOString().split('T')[0])) / 86400000));
+          const totalDays = (sched.duration_weeks || 1) * 7;
+          const dayIndex = sched.repeating ? (daysSinceStart % totalDays) : Math.min(daysSinceStart, totalDays - 1);
+          const weekNumber = Math.floor(dayIndex / 7) + 1;
+          const dayNumber = (dayIndex % 7) + 1;
+
+          const entry = pool.query(
+            'SELECT meal_plan_id FROM meal_schedule_entries WHERE schedule_id = ? AND week_number = ? AND day_number = ?',
+            [sched.id, weekNumber, dayNumber],
+          ).rows[0];
+
+          if (entry?.meal_plan_id) {
+            const calTarget = assignment?.calorie_override || profile.calorie_target || null;
+            const loaded = loadPlan(entry.meal_plan_id);
+            if (loaded) {
+              const scaled = scalePlanForClient(loaded, calTarget);
+              todayMealPlan = {
+                schedule_title: sched.title,
+                plan_title: scaled.plan.title,
+                week_number: weekNumber,
+                day_number: dayNumber,
+                day_totals: scaled.day_totals,
+                scale_factor: scaled.scale_factor,
+                items: scaled.items,
+                meal_plan_id: entry.meal_plan_id,
+                schedule_id: sched.id,
+              };
+            }
+          }
+        }
+      } catch (mealErr) {
+        console.error('Dashboard meal plan error:', mealErr);
+      }
+    }
+
     res.json({
       profile,
       activeProgram,
@@ -126,6 +177,7 @@ router.get('/', authenticateToken, async (req, res) => {
       tasks: tasksWithStreaks,
       weekActivity: weekDates.map(d => activeDays.has(d)),
       goals: goalsResult.rows,
+      todayMealPlan,
     });
   } catch (err) {
     console.error('Dashboard error:', err);
@@ -151,6 +203,22 @@ router.post('/tasks/:taskId/toggle', authenticateToken, async (req, res) => {
     }
   } catch (err) {
     console.error('Task toggle error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add client task
+router.post('/tasks', authenticateToken, async (req, res) => {
+  try {
+    const { label } = req.body;
+    if (!label || !label.trim()) return res.status(400).json({ error: 'Label required' });
+    const result = pool.query(
+      'INSERT INTO tasks (coach_id, client_id, label, recurring) VALUES (NULL, ?, ?, 1) RETURNING id',
+      [req.user.id, label.trim()]
+    );
+    res.json({ id: result.rows[0].id });
+  } catch (err) {
+    console.error('Add task error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

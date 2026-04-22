@@ -6,21 +6,23 @@
 }
 
 /* ===== DARK THEME (default) ===== */
+/* Handsdan Palette: #FF9C33 / #85FFBA / #EDEDED / #0A0A0A */
 :root, [data-theme="dark"] {
-  --bg-primary: #000000;
-  --bg-card: #1C1C1E;
-  --bg-card-hover: #2C2C2E;
-  --bg-input: #1C1C1E;
-  --accent: #FF8C00;
-  --accent-hover: #E67E00;
-  --accent-active: #CC7000;
-  --accent-mint: #3DFFD2;
-  --accent-orange: #FF8C00;
+  --bg-primary: #0A0A0A;
+  --bg-card: #161618;
+  --bg-card-hover: #222226;
+  --bg-input: #161618;
+  --accent: #FF9C33;
+  --accent-hover: #E88A1F;
+  --accent-active: #D47A10;
+  --accent-mint: #85FFBA;
+  --mint-read: #6FA88B;
+  --accent-orange: #FF9C33;
   --text-primary: #FFFFFF;
-  --text-secondary: #8E8E93;
+  --text-secondary: #9A9A9F;
   --text-tertiary: #636366;
   --logo-bg: #1E1A2E;
-  --divider: #2C2C2E;
+  --divider: #222226;
   --success: #30D158;
   --error: #FF453A;
   --water-blue: #64D2FF;
@@ -31,20 +33,21 @@
 
 /* ===== LIGHT THEME ===== */
 [data-theme="light"] {
-  --bg-primary: #F5F5F7;
+  --bg-primary: #EDEDED;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F0F0F2;
+  --bg-card-hover: #F4F4F4;
   --bg-input: #FFFFFF;
-  --accent: #FF8C00;
-  --accent-hover: #E67E00;
-  --accent-active: #CC7000;
-  --accent-mint: #169B7D;
-  --accent-orange: #FF8C00;
-  --text-primary: #1C1C1E;
+  --accent: #FF9C33;
+  --accent-hover: #E88A1F;
+  --accent-active: #D47A10;
+  --accent-mint: #85FFBA;
+  --mint-read: #6FA88B;
+  --accent-orange: #FF9C33;
+  --text-primary: #0A0A0A;
   --text-secondary: #6C6C70;
   --text-tertiary: #AEAEB2;
   --logo-bg: #E8E5F0;
-  --divider: #E5E5EA;
+  --divider: #DCDCDC;
   --success: #28A745;
   --error: #DC3545;
   --water-blue: #0A84FF;

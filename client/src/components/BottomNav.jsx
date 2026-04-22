@@ -13,9 +13,11 @@ const clientTabs = [
   { path: '/progress', label: 'Progress', icon: ProgressIcon },
 ];
 
+// Coach mobile: Home first so coaches land on priority dashboard.
+// Groups is reachable from inside Messages + from the More tab.
 const coachTabs = [
+  { path: '/coach/home', label: 'Home', icon: HomeIcon },
   { path: '/coach/messages', label: 'Messages', icon: MessagesIcon },
-  { path: '/coach/groups', label: 'Groups', icon: GroupsIcon },
   { path: '/coach/checkins', label: 'Check-ins', icon: CheckinsIcon },
   { path: '/coach/live', label: 'Live', icon: LiveIcon },
   { path: '/coach/more', label: 'More', icon: MoreIcon },

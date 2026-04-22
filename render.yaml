@@ -1,10 +1,32 @@
+# Render infrastructure-as-code. One web service with a persistent disk
+# that holds both the SQLite database and user uploads.
+#
+# Why no Postgres yet: the server uses better-sqlite3's synchronous API
+# across 500+ callsites; porting to Postgres is a week-long refactor with
+# real risk. SQLite on a persistent disk is fine at Dan's scale (solo
+# coach, low QPS). When we need multi-instance or read replicas, we port.
+#
+# Set these in the Render dashboard before first deploy (everything else
+# is wired up automatically):
+#   - JWT_SECRET           (let Render generate with generateValue: true, or paste 48+ chars)
+#   - ALLOWED_ORIGINS      (REQUIRED: comma-separated list of origins the API accepts,
+#                           e.g. "https://app.agelessmovement.com,https://www.agelessmovement.com".
+#                           If unset in prod, only same-origin requests work.)
+#   - RESEND_API_KEY       (once SMTP is wired)
+#   - STRIPE_SECRET_KEY    (once payments are wired)
+#   - STRIPE_WEBHOOK_SECRET
+#   - SENTRY_DSN           (optional)
+
 services:
   - type: web
     name: ageless-movement
     runtime: node
     plan: starter
-    buildCommand: cd client && npm install && npx vite build && cd ../server && npm install
+    region: frankfurt # Closest to Ireland; change if Dan's audience is elsewhere
+    buildCommand: npm run build:all
     startCommand: cd server && node src/index.js
+    healthCheckPath: /api/health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,9 +34,11 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
-      - key: PORT
-        value: 3001
     disk:
-      name: data
+      # Holds both server/data (SQLite file) and server/uploads (user
+      # photos + course materials). One disk keeps costs simple.
+      # Increase sizeGB over time as uploads grow — Render supports resize
+      # in place with a restart.
+      name: ageless-data
       mountPath: /opt/render/project/src/server/data
-      sizeGB: 1
+      sizeGB: 2

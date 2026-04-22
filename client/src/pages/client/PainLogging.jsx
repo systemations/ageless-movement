@@ -156,7 +156,7 @@ export default function PainLogging({ onBack }) {
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Pain / Discomfort Log</h1>
         <button onClick={() => setAdding(true)} style={{
           background: 'var(--accent)', border: 'none', borderRadius: 20,
-          padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#000',
+          padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#fff',
         }}>+ Log</button>
       </div>
 

@@ -8,8 +8,10 @@
     "dev:server": "cd server && node --watch src/index.js",
     "dev:client": "cd client && npx vite",
     "build": "cd client && npx vite build",
+    "build:all": "cd client && npm ci && npx vite build && cd ../server && npm ci",
     "start": "cd server && node src/index.js",
     "seed": "cd server && node src/db/seed.js && node src/db/seed-messaging.js",
+    "migrate:pg": "cd server && node src/db/migrate-sqlite-to-pg.js",
     "postinstall": "cd client && npm install && cd ../server && npm install"
   }
 }

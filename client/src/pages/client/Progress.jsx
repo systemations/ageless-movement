@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import CheckinForm from './CheckinForm';
 import ROMTracking from './ROMTracking';
 import PainLogging from './PainLogging';
+import ExerciseProgress from '../../components/ExerciseProgress';
 
 const tabs = ['Progress', 'Trends'];
 
@@ -30,14 +32,56 @@ const categoryColors = {
 };
 
 export default function Progress() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('Progress');
   const [showAchieved, setShowAchieved] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showROM, setShowROM] = useState(false);
   const [showPain, setShowPain] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
+  const [showExerciseProgress, setShowExerciseProgress] = useState(null); // exercise_id
+  const [exerciseList, setExerciseList] = useState([]);
   const [newGoal, setNewGoal] = useState({ title: '', target: '', category: 'General' });
   const [goals, setGoals] = useState(activeGoals);
+  const [myCheckins, setMyCheckins] = useState([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState([]); // [checkinId, checkinId]
+  const [compareView, setCompareView] = useState(null); // { left, right }
+
+  useEffect(() => {
+    fetch('/api/explore/progress/exercises', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => setExerciseList(d.exercises || []))
+      .catch(console.error);
+
+    fetch('/api/coach/checkins/me/list', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => setMyCheckins(d.checkins || []))
+      .catch(console.error);
+  }, []);
+
+  const photoCheckins = myCheckins.filter(c => c.photo_front_url || c.photo_side_url || c.photo_back_url);
+
+  const toggleCompareSelection = (checkinId) => {
+    setCompareSelection(prev => {
+      if (prev.includes(checkinId)) return prev.filter(id => id !== checkinId);
+      if (prev.length >= 2) return [prev[1], checkinId]; // rolling window
+      return [...prev, checkinId];
+    });
+  };
+
+  const openComparison = () => {
+    if (compareSelection.length !== 2) return;
+    const [a, b] = compareSelection.map(id => photoCheckins.find(c => c.id === id));
+    if (!a || !b) return;
+    // Older on the left, newer on the right for a natural progression read.
+    const [left, right] = a.date <= b.date ? [a, b] : [b, a];
+    setCompareView({ left, right });
+  };
 
   const handleAddGoal = () => {
     if (!newGoal.title.trim()) return;
@@ -49,6 +93,8 @@ export default function Progress() {
   if (showCheckin) return <CheckinForm onClose={() => setShowCheckin(false)} onSuccess={() => setShowCheckin(false)} />;
   if (showROM) return <ROMTracking onBack={() => setShowROM(false)} />;
   if (showPain) return <PainLogging onBack={() => setShowPain(false)} />;
+  if (showExerciseProgress) return <ExerciseProgress exerciseId={showExerciseProgress} onBack={() => setShowExerciseProgress(null)} />;
+  if (compareView) return <PhotoCompareView view={compareView} onBack={() => { setCompareView(null); setCompareMode(false); setCompareSelection([]); }} />;
 
   return (
     <div className="page-content">
@@ -182,18 +228,77 @@ export default function Progress() {
           {/* Progress Photos */}
           <div className="section-header">
             <h2>Photos</h2>
+            {photoCheckins.length >= 2 && !compareMode && (
+              <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Compare</button>
+            )}
+            {compareMode && (
+              <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600 }}>Cancel</button>
+            )}
           </div>
-          <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No progress photos yet</p>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete a check-in to add photos</p>
-          </div>
+          {photoCheckins.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No progress photos yet</p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete a check-in to add photos</p>
+            </div>
+          ) : (
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px' }}>
+              {photoCheckins.map(c => {
+                const thumb = c.photo_front_url || c.photo_side_url || c.photo_back_url;
+                const selected = compareSelection.includes(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => compareMode && toggleCompareSelection(c.id)}
+                    style={{
+                      minWidth: 110, cursor: compareMode ? 'pointer' : 'default',
+                      borderRadius: 12, overflow: 'hidden', position: 'relative',
+                      border: selected ? '2px solid var(--accent-mint)' : '2px solid transparent',
+                    }}
+                  >
+                    <img src={thumb} alt="" style={{ width: 110, height: 140, objectFit: 'cover', display: 'block' }} />
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      padding: '6px 8px',
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+                      color: '#fff', fontSize: 11, fontWeight: 700,
+                    }}>{new Date(c.date).toLocaleDateString('en-IE', { day: '2-digit', month: 'short' })}</div>
+                    {selected && (
+                      <div style={{
+                        position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
+                        background: 'var(--accent-mint)', color: '#000',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 800,
+                      }}>{compareSelection.indexOf(c.id) + 1}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {compareMode && (
+            <button
+              className="btn-primary"
+              onClick={openComparison}
+              disabled={compareSelection.length !== 2}
+              style={{ fontSize: 14, opacity: compareSelection.length === 2 ? 1 : 0.5, marginTop: 12 }}
+            >
+              {compareSelection.length === 2 ? 'Show side-by-side' : `Pick ${2 - compareSelection.length} more photo${2 - compareSelection.length === 1 ? '' : 's'}`}
+            </button>
+          )}
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <div className="card" onClick={() => alert('Compare feature coming soon — complete check-ins with photos to enable side-by-side comparison')} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+            <div className="card" onClick={() => {
+              if (photoCheckins.length < 2) {
+                alert('Add at least two check-ins with photos to compare side-by-side.');
+                return;
+              }
+              setCompareMode(true);
+              setCompareSelection([]);
+            }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
                 <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
               </svg>
@@ -229,12 +334,40 @@ export default function Progress() {
 
           {/* Exercises */}
           <div className="section-header">
-            <h2>Exercises &gt;</h2>
+            <h2>Exercises</h2>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{exerciseList.length} tracked</span>
           </div>
-          <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No exercise data yet</p>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete workouts to track exercise progress</p>
-          </div>
+          {exerciseList.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No exercise data yet</p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete workouts to track exercise progress</p>
+            </div>
+          ) : (
+            exerciseList.map(ex => (
+              <div
+                key={ex.exercise_id}
+                className="card"
+                onClick={() => setShowExerciseProgress(ex.exercise_id)}
+                style={{ marginBottom: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
+              >
+                {ex.thumbnail_url ? (
+                  <img src={ex.thumbnail_url} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--bg-primary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600 }}>{ex.name}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    {ex.session_count} session{ex.session_count !== 1 ? 's' : ''} -- {ex.total_sets} sets
+                    {ex.max_weight > 0 ? ` -- ${ex.max_weight}kg max` : ''}
+                  </p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            ))
+          )}
 
           {/* ROM & Pain Tracking */}
           <div className="divider" />
@@ -298,6 +431,77 @@ export default function Progress() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Side-by-side photo comparison. Older date on the left, newer on the right;
+// angle tabs let the user pivot through front/side/back if both check-ins
+// captured the same angle.
+function PhotoCompareView({ view, onBack }) {
+  const angles = [
+    { key: 'photo_front_url', label: 'Front' },
+    { key: 'photo_side_url', label: 'Side' },
+    { key: 'photo_back_url', label: 'Back' },
+  ].filter(a => view.left[a.key] && view.right[a.key]);
+  const [angle, setAngle] = useState(angles[0]?.key || 'photo_front_url');
+  const fmt = (d) => new Date(d).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--divider)' }}>
+        <button onClick={onBack} style={{
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>Compare</h2>
+      </div>
+
+      {angles.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+            These check-ins don't share a common angle. Try two check-ins where the same angle was photographed.
+          </p>
+        </div>
+      ) : (
+        <>
+          {angles.length > 1 && (
+            <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--divider)' }}>
+              {angles.map(a => (
+                <button
+                  key={a.key}
+                  onClick={() => setAngle(a.key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 16, border: 'none',
+                    background: angle === a.key ? 'var(--accent-mint)' : 'var(--bg-card)',
+                    color: angle === a.key ? '#000' : 'var(--text-primary)',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  }}
+                >{a.label}</button>
+              ))}
+            </div>
+          )}
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, minHeight: 0 }}>
+            {[{ side: view.left, label: fmt(view.left.date), weight: view.left.weight },
+              { side: view.right, label: fmt(view.right.date), weight: view.right.weight }].map((col, i) => (
+              <div key={i} style={{ position: 'relative', background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
+                <img src={col.side[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  padding: '10px 12px',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                  color: '#fff',
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>{col.label}</p>
+                  {col.weight != null && <p style={{ fontSize: 11, opacity: 0.8 }}>{col.weight} kg</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

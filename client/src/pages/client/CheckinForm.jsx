@@ -11,7 +11,9 @@ const questions = [
 
 export default function CheckinForm({ onClose, onSuccess }) {
   const { token } = useAuth();
+  // Store both the File (for upload) and the preview URL (for instant UI feedback)
   const [photos, setPhotos] = useState({ front: null, side: null, back: null });
+  const [photoPreviews, setPhotoPreviews] = useState({ front: null, side: null, back: null });
   const [measurements, setMeasurements] = useState({
     weight: '', body_fat: '', recovery_score: '', sleep_hours: '', stress_level: '', waist: '',
   });
@@ -21,13 +23,41 @@ export default function CheckinForm({ onClose, onSuccess }) {
   const handlePhotoChange = (position, e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotos({ ...photos, [position]: URL.createObjectURL(file) });
+      setPhotos({ ...photos, [position]: file });
+      setPhotoPreviews({ ...photoPreviews, [position]: URL.createObjectURL(file) });
+    }
+  };
+
+  // Upload a single image to /api/upload and return the server URL,
+  // or null if no file was selected / upload failed. Done serially to
+  // keep memory pressure predictable on slower phone browsers.
+  const uploadPhoto = async (file) => {
+    if (!file) return null;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.url;
+    } catch {
+      return null;
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      const [front, side, back] = await Promise.all([
+        uploadPhoto(photos.front),
+        uploadPhoto(photos.side),
+        uploadPhoto(photos.back),
+      ]);
+
       await fetch('/api/coach/checkins', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -38,6 +68,9 @@ export default function CheckinForm({ onClose, onSuccess }) {
           sleep_hours: measurements.sleep_hours ? parseFloat(measurements.sleep_hours) : null,
           stress_level: measurements.stress_level ? parseInt(measurements.stress_level) : null,
           waist: measurements.waist ? parseFloat(measurements.waist) : null,
+          photo_front_url: front,
+          photo_side_url: side,
+          photo_back_url: back,
           answers,
         }),
       });
@@ -71,8 +104,8 @@ export default function CheckinForm({ onClose, onSuccess }) {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', overflow: 'hidden', position: 'relative',
           }}>
-            {photos[pos] ? (
-              <img src={photos[pos]} alt={pos} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {photoPreviews[pos] ? (
+              <img src={photoPreviews[pos]} alt={pos} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <>
                 <img src="/logo.png" alt="" style={{ width: 32, height: 32, borderRadius: '50%', opacity: 0.2, marginBottom: 4 }} />

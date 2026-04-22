@@ -4,6 +4,69 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
+// ─── Default weekday convention ─────────────────────────────────────────
+// Programs carry a raw `day_number` on each workout — in older seeds that's
+// literally "day N after enrollment starts", in newer seeds it matches
+// calendar weekdays. Rather than trust the raw value we normalise at
+// display time: sort a week's workouts by day_number, assign session
+// indexes 1..N, and map each session to a weekday using this table.
+//
+//   1 workout per week  → Mon
+//   2 workouts per week → Tue, Thu
+//   3 workouts per week → Mon, Wed, Fri
+//   4 workouts per week → Mon, Tue, Thu, Fri
+//   5 workouts per week → Mon-Fri
+//   6 workouts per week → Mon-Sat
+//   7 workouts per week → Mon-Sun
+//
+// Weekday integers: 1 = Mon, 2 = Tue, ..., 7 = Sun. Clients can shift
+// their own sessions away from the default via user_scheduled_workouts
+// and workout_reschedules (the override paths below still work).
+const DEFAULT_WEEKDAYS = {
+  1: [1],
+  2: [2, 4],
+  3: [1, 3, 5],
+  4: [1, 2, 4, 5],
+  5: [1, 2, 3, 4, 5],
+  6: [1, 2, 3, 4, 5, 6],
+  7: [1, 2, 3, 4, 5, 6, 7],
+};
+
+function cleanDateStr(s) {
+  if (!s) return null;
+  // "YYYY-MM-DD" | "YYYY-MM-DDTHH:MM:SS.sssZ" | "YYYY-MM-DD HH:MM:SS"
+  return String(s).split(/[T ]/)[0];
+}
+
+// Monday of the week containing the given date. JS getDay() returns
+// 0 for Sun so we normalise to 1=Mon..7=Sun before subtracting.
+function mondayOf(dateStr) {
+  const clean = cleanDateStr(dateStr);
+  const d = new Date(clean + 'T12:00:00'); // mid-day avoids DST edge cases
+  const dow = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - (dow - 1));
+  return d;
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Compute the calendar date for a program workout's scheduled session
+// under the default-weekdays convention.
+function computeSessionDate(startedAt, weekNumber, sessionIndex, workoutsPerWeek) {
+  const mapping = DEFAULT_WEEKDAYS[workoutsPerWeek]
+    || DEFAULT_WEEKDAYS[Math.max(1, Math.min(7, workoutsPerWeek || 3))];
+  const weekday = mapping[Math.min(sessionIndex - 1, mapping.length - 1)];
+  const week1Monday = mondayOf(startedAt);
+  const target = new Date(week1Monday);
+  target.setDate(week1Monday.getDate() + (weekNumber - 1) * 7 + (weekday - 1));
+  return isoDate(target);
+}
+
 // Helper: fetch workouts prescribed for a user on a given date.
 // Two sources merged:
 //   1. Program-driven -- if the user is enrolled in a program, its workouts
@@ -27,8 +90,11 @@ function getScheduledForDate(userId, date) {
   ).rows[0];
   if (restDay) return [];
 
-  // 1. Get all program workouts that would land on this date (default schedule)
-  const programWorkouts = pool.query(`
+  // 1. Get all program workouts for this user's enrolments, then filter by
+  //    computed date in JS using the default-weekdays convention.
+  //    (Previous SQL used raw day_number as a literal day offset, which
+  //    ignored the Tue/Thu + Mon/Wed/Fri default. We now normalise in JS.)
+  const allProgramWorkouts = pool.query(`
     SELECT
       NULL AS schedule_id,
       ? AS scheduled_date,
@@ -50,40 +116,47 @@ function getScheduledForDate(userId, date) {
       w.week_number,
       w.day_number,
       p.title AS program_title,
-      cp.id AS enrollment_id
+      p.workouts_per_week,
+      cp.id AS enrollment_id,
+      cp.started_at
     FROM client_programs cp
     JOIN programs p ON cp.program_id = p.id
     JOIN workouts w ON w.program_id = cp.program_id
     WHERE cp.user_id = ?
-      AND DATE(cp.started_at, '+' || ((w.week_number - 1) * 7 + (w.day_number - 1)) || ' days') = ?
-    ORDER BY w.day_number
-  `, [date, userId, date]).rows;
+    ORDER BY cp.id, w.week_number, w.day_number
+  `, [date, userId]).rows;
 
-  // 2. Check for permanent reschedules that shift a workout to this date
-  //    (the workout's original day_number was changed, so we recalculate)
-  const permanentMovedIn = pool.query(`
+  // Group workouts by (enrolment, week) so we can index sessions 1..N
+  // within the week and map them to weekdays per DEFAULT_WEEKDAYS.
+  const weekBuckets = new Map();
+  for (const w of allProgramWorkouts) {
+    const key = `${w.enrollment_id}|${w.week_number}`;
+    if (!weekBuckets.has(key)) weekBuckets.set(key, []);
+    weekBuckets.get(key).push(w);
+  }
+
+  const programWorkouts = [];
+  for (const bucket of weekBuckets.values()) {
+    bucket.sort((a, b) => a.day_number - b.day_number);
+    bucket.forEach((w, idx) => {
+      const sessionIndex = idx + 1;
+      const target = computeSessionDate(w.started_at, w.week_number, sessionIndex, w.workouts_per_week);
+      if (target === date) programWorkouts.push({ ...w, session_index: sessionIndex });
+    });
+  }
+
+  // 2. Permanent reschedules: `new_day_number` is reinterpreted as the
+  //    new target weekday (1=Mon..7=Sun). Compute the target date from
+  //    started_at + week offset + weekday, in JS.
+  const permRescheduleRows = pool.query(`
     SELECT
-      NULL AS schedule_id,
-      ? AS scheduled_date,
-      0 AS sort_order,
-      0 AS completed,
-      NULL AS completed_at,
-      'program' AS source,
       w.id AS workout_id,
-      w.title,
-      w.description,
-      w.duration_mins,
-      w.intensity,
-      w.body_parts,
-      w.equipment,
-      w.workout_type,
-      w.image_url,
-      w.video_url,
-      w.program_id,
-      w.week_number,
-      w.day_number,
+      w.title, w.description, w.duration_mins, w.intensity,
+      w.body_parts, w.equipment, w.workout_type, w.image_url, w.video_url,
+      w.program_id, w.week_number, w.day_number,
       p.title AS program_title,
       cp.id AS enrollment_id,
+      cp.started_at,
       wr.new_day_number AS overridden_day
     FROM workout_reschedules wr
     JOIN workouts w ON wr.workout_id = w.id
@@ -91,8 +164,26 @@ function getScheduledForDate(userId, date) {
     JOIN programs p ON cp.program_id = p.id
     WHERE wr.user_id = ?
       AND wr.permanent = 1
-      AND DATE(cp.started_at, '+' || ((w.week_number - 1) * 7 + (wr.new_day_number - 1)) || ' days') = ?
-  `, [date, userId, date]).rows;
+  `, [userId]).rows;
+
+  const permanentMovedIn = [];
+  for (const w of permRescheduleRows) {
+    const weekday = Math.max(1, Math.min(7, w.overridden_day || 1));
+    const monday = mondayOf(w.started_at);
+    const target = new Date(monday);
+    target.setDate(monday.getDate() + (w.week_number - 1) * 7 + (weekday - 1));
+    if (isoDate(target) === date) {
+      permanentMovedIn.push({
+        schedule_id: null,
+        scheduled_date: date,
+        sort_order: 0,
+        completed: 0,
+        completed_at: null,
+        source: 'program',
+        ...w,
+      });
+    }
+  }
 
   // 3. Check for one-off reschedules that move a workout TO this date
   const oneOffMovedIn = pool.query(`

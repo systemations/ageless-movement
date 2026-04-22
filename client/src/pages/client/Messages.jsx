@@ -2,8 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import MessageThread from './MessageThread';
 
+// On the client side, the "team inbox" (conversations.client_id set, client
+// is the client themselves) is re-labelled so it doesn't look like the
+// client is chatting with themselves.
+const TEAM_INBOX_LABEL = 'Ageless Movement Team';
+const TEAM_INBOX_ICON  = '🏋️';
+const isTeamInboxForClient = (conv, viewerId) =>
+  conv.client_id && viewerId && conv.client_id === viewerId;
+
 export default function Messages() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [selectedConvo, setSelectedConvo] = useState(null);
 
@@ -22,9 +30,11 @@ export default function Messages() {
   };
 
   if (selectedConvo) {
-    const title = selectedConvo.type === 'direct'
-      ? selectedConvo.other_user?.name || 'Chat'
-      : selectedConvo.title;
+    const title = isTeamInboxForClient(selectedConvo, user?.id)
+      ? TEAM_INBOX_LABEL
+      : selectedConvo.type === 'direct'
+        ? selectedConvo.other_user?.name || 'Chat'
+        : selectedConvo.title;
     return <MessageThread conversationId={selectedConvo.id} title={title} onBack={() => { setSelectedConvo(null); fetchConversations(); }} />;
   }
 
@@ -51,9 +61,6 @@ export default function Messages() {
           <span style={{ fontSize: 20 }}>👤</span>
         </div>
         <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>Direct Messages</h1>
-        <button className="header-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        </button>
       </div>
 
       {/* Direct Messages */}
@@ -64,13 +71,21 @@ export default function Messages() {
             <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
               display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
             }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 700, color: '#000',
-              }}>
-                {conv.other_user?.name?.charAt(0) || '?'}
-              </div>
+              {conv.other_user?.photo_url ? (
+                <img
+                  src={conv.other_user.photo_url}
+                  alt=""
+                  style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, fontWeight: 700, color: '#fff',
+                }}>
+                  {conv.other_user?.name?.charAt(0) || '?'}
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <p style={{ fontWeight: 600, fontSize: 15 }}>{conv.other_user?.name || 'Coach'}</p>
@@ -89,28 +104,44 @@ export default function Messages() {
       {groups.length > 0 && (
         <>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, margin: '20px 0 8px', letterSpacing: 1 }}>GROUPS</p>
-          {groups.map((conv) => (
-            <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
-              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-            }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: conv.icon_bg || 'var(--bg-card)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
+          {groups.map((conv) => {
+            const teamInbox = isTeamInboxForClient(conv, user?.id);
+            const displayTitle = teamInbox ? TEAM_INBOX_LABEL : conv.title;
+            const displayIcon  = teamInbox ? TEAM_INBOX_ICON : (conv.icon || '💬');
+            const iconBg       = teamInbox ? 'rgba(255,140,0,0.12)' : (conv.icon_bg || 'var(--bg-card)');
+            const brandedImage = !teamInbox ? conv.image_url : null;
+            return (
+              <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
               }}>
-                {conv.icon || '💬'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontWeight: 600, fontSize: 15 }}>{conv.title}</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(conv.last_message_at)}</p>
+                {brandedImage ? (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                  }}>
+                    <img src={brandedImage} alt={displayTitle}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    background: iconBg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
+                  }}>
+                    {displayIcon}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontWeight: 600, fontSize: 15 }}>{displayTitle}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(conv.last_message_at)}</p>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {conv.last_message || 'No messages yet'}
+                  </p>
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {conv.last_message || 'No messages yet'}
-                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
 

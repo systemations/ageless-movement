@@ -1,0 +1,533 @@
+{
+  "$schema": "dan-training-app-v1",
+  "generated_at": "2026-04-17",
+  "version": "1.2",
+  "athlete": {
+    "id": "dan-osullivan",
+    "name": "Dan O'Sullivan",
+    "dob_approx_age": 41,
+    "height_cm": 177.7,
+    "baseline_weight_kg": 93.0,
+    "location": "Elanora QLD",
+    "goals": [
+      "fat_loss_to_87_88kg",
+      "explosive_power_pickleball",
+      "tendon_bulletproofing",
+      "mobility_maintenance"
+    ],
+    "genetic_flags": {
+      "ACTN3": "TT",
+      "ACE": "power_favorable",
+      "MCT1": "TT_slow_lactate_clearance",
+      "COL5A1": "TT_high_tendon_risk",
+      "COL1A1": "GT_high_tendon_risk",
+      "VDR_FOK1": "TT_reduced_activity",
+      "TNFA": "AA_inflammation_prone",
+      "SLC17A7": "CG_slow_concussion_recovery",
+      "DQ2_5": "homozygous_strict_gluten_free"
+    },
+    "dietary_frame": "carnivore_near_carnivore_strict_gluten_free"
+  },
+
+  "block": {
+    "id": "dan-block-2026-04",
+    "name": "Hybrid Recomp + Tendon Bulletproofing + Power Introduction",
+    "start_date": "2026-04-20",
+    "end_date": "2026-07-12",
+    "duration_weeks": 12
+  },
+
+  "phases": [
+    {
+      "id": "phase-1",
+      "block_id": "dan-block-2026-04",
+      "name": "Accumulation + Tendon Priming",
+      "weeks": [1, 2, 3],
+      "theme": "base_building",
+      "intensity_pct_range": [65, 75],
+      "volume_rating": "high",
+      "plyo_allowance": "med_ball_and_pogo_only",
+      "progression_notes": "Wk1: RIR 3, learn tempos. Wk2: RIR 2, tighten tempos. Wk3: +2.5kg mains, RIR 1-2."
+    },
+    {
+      "id": "deload-a",
+      "block_id": "dan-block-2026-04",
+      "name": "Deload A",
+      "weeks": [4],
+      "theme": "recovery",
+      "intensity_pct_range": [55, 65],
+      "volume_rating": "minus_40_pct",
+      "plyo_allowance": "none",
+      "scan_required": "InBody_580"
+    },
+    {
+      "id": "phase-2",
+      "block_id": "dan-block-2026-04",
+      "name": "Intensification + Power Intro",
+      "weeks": [5, 6, 7],
+      "theme": "intensification",
+      "intensity_pct_range": [75, 85],
+      "volume_rating": "moderate",
+      "plyo_allowance": "broad_jumps_plyo_pushup_lateral_bounds"
+    },
+    {
+      "id": "deload-b",
+      "block_id": "dan-block-2026-04",
+      "name": "Deload B",
+      "weeks": [8],
+      "theme": "recovery",
+      "intensity_pct_range": [55, 65],
+      "volume_rating": "minus_40_pct",
+      "plyo_allowance": "none",
+      "scan_required": "InBody_580"
+    },
+    {
+      "id": "phase-3",
+      "block_id": "dan-block-2026-04",
+      "name": "Expression + Peak",
+      "weeks": [9, 10, 11],
+      "theme": "expression",
+      "intensity_pct_range": [80, 92],
+      "volume_rating": "low_quality_focus",
+      "plyo_allowance": "depth_jump_single_leg_box_full_suite"
+    },
+    {
+      "id": "test-week",
+      "block_id": "dan-block-2026-04",
+      "name": "Test + Scan",
+      "weeks": [12],
+      "theme": "retest",
+      "intensity_pct_range": [null, null],
+      "volume_rating": "reduced",
+      "plyo_allowance": "max_effort_one_day_only",
+      "scan_required": "InBody_580",
+      "bloods_required": true
+    }
+  ],
+
+  "weekly_schedule_template": {
+    "monday": [
+      { "time": "05:00", "type": "gym", "session_ref": "upper_power_handstand", "duration_min": 45 },
+      { "time": "09:30", "type": "sport", "session_ref": "pickleball_social", "duration_min": 90 }
+    ],
+    "tuesday": [
+      { "time": "14:30", "type": "run", "session_ref": "zone2_run", "duration_min": 40 }
+    ],
+    "wednesday": [
+      { "time": "afternoon", "type": "gym", "session_ref": "squat_day", "duration_min": 55 }
+    ],
+    "thursday": [
+      { "time": "morning", "type": "gym", "session_ref": "upper_push_pull_rings", "duration_min": 50 }
+    ],
+    "friday": [
+      { "time": "morning", "type": "gym", "session_ref": "deadlift_day", "duration_min": 55 }
+    ],
+    "saturday": [
+      { "time": "morning", "type": "circuit", "session_ref": "street_session", "duration_min": 60 }
+    ],
+    "sunday": [
+      { "time": "flexible", "type": "recovery", "session_ref": "mobility_reset_plus_sauna", "duration_min": 30 }
+    ]
+  },
+
+  "exercise_library": [
+    { "id": "trap_bar_dl", "name": "Trap Bar Deadlift", "pattern": "hinge", "equipment": "trap_bar", "source_library": "barbell_primary" },
+    { "id": "back_squat", "name": "Back Squat (high bar)", "pattern": "squat", "equipment": "barbell_rack", "source_library": "barbell_primary" },
+    { "id": "front_squat", "name": "Front Squat", "pattern": "squat", "equipment": "barbell_rack", "source_library": "barbell_primary" },
+    { "id": "bench_press", "name": "Bench Press (barbell)", "pattern": "horizontal_push", "equipment": "barbell_bench", "source_library": "barbell_primary" },
+    { "id": "weighted_pullup", "name": "Weighted Pullup", "pattern": "vertical_pull", "equipment": "bar_belt", "source_library": "barbell_primary" },
+    { "id": "hip_thrust", "name": "Hip Thrust", "pattern": "hinge", "equipment": "barbell_bench", "source_library": "barbell_primary" },
+    { "id": "push_press", "name": "Push Press", "pattern": "vertical_push", "equipment": "barbell_rack", "source_library": "barbell_primary" },
+    { "id": "romanian_dl", "name": "Romanian Deadlift", "pattern": "hinge", "equipment": "barbell", "source_library": "barbell_primary" },
+
+    { "id": "spanish_squat_iso", "name": "Spanish Squat Iso Hold", "pattern": "squat_iso", "equipment": "band", "source_library": "tendon", "tendon_category": "patellar" },
+    { "id": "achilles_iso", "name": "Single-Leg Calf Iso Hold", "pattern": "iso", "equipment": "bodyweight", "source_library": "tendon", "tendon_category": "achilles" },
+    { "id": "nordic_curl", "name": "Nordic Ham Curl", "pattern": "knee_flex_ecc", "equipment": "pad_band", "source_library": "tendon", "tendon_category": "hamstring" },
+    { "id": "reverse_nordic", "name": "Reverse Nordic", "pattern": "quad_ecc", "equipment": "bodyweight", "source_library": "tendon", "tendon_category": "patellar" },
+    { "id": "hsr_patellar", "name": "HSR Patellar (slow leg ext)", "pattern": "knee_ext", "equipment": "leg_ext", "source_library": "tendon", "tendon_category": "patellar" },
+    { "id": "hsr_biceps", "name": "HSR Biceps Tendon Curl", "pattern": "elbow_flex_slow", "equipment": "db", "source_library": "tendon", "tendon_category": "biceps" },
+    { "id": "calf_hsr", "name": "Calf HSR (slow tempo)", "pattern": "plantar_flex", "equipment": "calf_raise", "source_library": "tendon", "tendon_category": "achilles" },
+    { "id": "tibialis_raise", "name": "Tibialis Raise", "pattern": "dorsiflex", "equipment": "bodyweight", "source_library": "tendon", "tendon_category": "ankle" },
+    { "id": "copenhagen_plank", "name": "Copenhagen Plank", "pattern": "adductor_iso", "equipment": "bench", "source_library": "dan_calisthenics" },
+
+    { "id": "cossack_squat", "name": "Cossack Squat", "pattern": "frontal_plane_squat", "equipment": "db", "source_library": "dan_calisthenics" },
+    { "id": "bulgarian_split_squat", "name": "Bulgarian Split Squat", "pattern": "split_squat", "equipment": "db_bench", "source_library": "dan_calisthenics" },
+    { "id": "horse_stance_squat_hold", "name": "Horse Stance Squat Hold", "pattern": "squat_iso", "equipment": "bodyweight", "source_library": "dan_calisthenics" },
+    { "id": "9090_goodmorning", "name": "9090 Good Morning", "pattern": "hinge", "equipment": "light_db", "source_library": "dan_calisthenics" },
+    { "id": "ring_row", "name": "Ring Row (feet elevated)", "pattern": "horizontal_pull", "equipment": "rings", "source_library": "dan_calisthenics" },
+    { "id": "active_hang_rings", "name": "Active Hang (rings)", "pattern": "scap_decompress", "equipment": "rings", "source_library": "dan_calisthenics" },
+    { "id": "wall_handstand_hold", "name": "Wall Handstand Hold", "pattern": "handstand", "equipment": "wall", "source_library": "dan_calisthenics" },
+    { "id": "handstand_wall_walk", "name": "Handstand Wall Walk", "pattern": "handstand_dynamic", "equipment": "wall", "source_library": "dan_calisthenics" },
+    { "id": "freestanding_hs_attempt", "name": "Freestanding Handstand Attempt", "pattern": "handstand", "equipment": "open_floor", "source_library": "dan_calisthenics" },
+    { "id": "ring_support_hold", "name": "Ring Support Hold", "pattern": "gymnastic_iso", "equipment": "rings", "source_library": "dan_calisthenics" },
+    { "id": "jefferson_curl", "name": "Jefferson Curl (spinal segmentation)", "pattern": "spinal_flex", "equipment": "light_kb", "source_library": "dan_calisthenics" },
+
+    { "id": "landmine_press_half_kneel", "name": "Landmine Press (half-kneeling)", "pattern": "rotational_push", "equipment": "landmine_barbell", "source_library": "dan_calisthenics" },
+    { "id": "landmine_explosive_press", "name": "Landmine Explosive Press", "pattern": "rotational_push_power", "equipment": "landmine_barbell", "source_library": "dan_calisthenics" },
+    { "id": "cable_rotational_chop", "name": "Cable Rotational Chop (kneeling)", "pattern": "rotation", "equipment": "cable", "source_library": "dan_calisthenics" },
+    { "id": "pallof_press", "name": "Pallof Press", "pattern": "anti_rotation", "equipment": "cable_band", "source_library": "dan_calisthenics" },
+    { "id": "med_ball_chest_pass", "name": "Med Ball Chest Pass (wall)", "pattern": "horizontal_push_power", "equipment": "med_ball", "source_library": "power" },
+    { "id": "med_ball_rotational_throw", "name": "Med Ball Rotational Throw", "pattern": "rotation_power", "equipment": "heavy_med_ball", "source_library": "power" },
+
+    { "id": "pogo_hops", "name": "Pogo Hops (ankle SSC)", "pattern": "ankle_ssc", "equipment": "bodyweight", "source_library": "plyo" },
+    { "id": "broad_jump", "name": "Broad Jump", "pattern": "horizontal_jump", "equipment": "bodyweight", "source_library": "plyo" },
+    { "id": "depth_jump", "name": "Depth Jump (12 inch box)", "pattern": "vertical_ssc", "equipment": "box_12", "source_library": "plyo" },
+    { "id": "single_leg_box_jump", "name": "Single-Leg Box Jump", "pattern": "single_leg_jump", "equipment": "box", "source_library": "plyo" },
+    { "id": "split_squat_jump", "name": "Split Squat Jump", "pattern": "single_leg_jump", "equipment": "bodyweight", "source_library": "plyo" },
+    { "id": "lateral_bounds", "name": "Lateral Bounds", "pattern": "lateral_jump", "equipment": "open_floor", "source_library": "plyo" },
+    { "id": "plyo_pushup", "name": "Plyo Push-Up", "pattern": "horizontal_push_power", "equipment": "bodyweight", "source_library": "plyo" },
+
+    { "id": "cuff_er_ir_cable", "name": "Cuff ER/IR (cable)", "pattern": "shoulder_rotation", "equipment": "cable", "source_library": "prehab" },
+    { "id": "band_pull_apart", "name": "Band Pull-Apart", "pattern": "scap_retract", "equipment": "band", "source_library": "prehab" },
+    { "id": "scap_pullup", "name": "Scap Pullup", "pattern": "scap_depression", "equipment": "bar", "source_library": "prehab" },
+    { "id": "face_pull", "name": "Face Pull (rope)", "pattern": "external_rotation", "equipment": "cable_rope", "source_library": "prehab" },
+    { "id": "powell_raise", "name": "Powell Raise", "pattern": "shoulder_rotation", "equipment": "light_db", "source_library": "prehab" },
+    { "id": "db_y_raise", "name": "DB Y-Raise", "pattern": "scap_upward", "equipment": "db_bench", "source_library": "prehab" },
+    { "id": "plate_front_raise", "name": "Plate Front Raise", "pattern": "shoulder_flex", "equipment": "plate", "source_library": "prehab" }
+  ],
+
+  "session_templates": [
+    {
+      "id": "upper_power_handstand",
+      "label": "Upper Power + Handstand",
+      "day": "monday",
+      "time_slot": "05:00",
+      "duration_min": 45,
+      "phase_variants": {
+        "phase-1": [
+          { "block": "A", "exercise_id": "band_pull_apart", "sets": 2, "reps": 15, "tempo": "controlled", "load": "light", "pairing": "superset", "paired_with": "cuff_er_ir_cable" },
+          { "block": "B", "exercise_id": "weighted_pullup", "sets": 3, "reps": 5, "tempo": "2-0-X-0", "load": "BW+5kg", "rest_sec": 150 },
+          { "block": "C1", "exercise_id": "med_ball_chest_pass", "sets": 3, "reps": 5, "tempo": "explosive", "load": "moderate_ball", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_press_half_kneel", "sets": 3, "reps": "6/side", "tempo": "2-0-1-0", "load": "moderate", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "pallof_press", "sets": 3, "reps": "8/side", "tempo": "3s_hold", "load": "moderate", "pairing": "tri_set" },
+          { "block": "D", "exercise_id": "wall_handstand_hold", "sets": 3, "duration_sec": 25, "tempo": "hold", "load": "BW" },
+          { "block": "E", "exercise_id": "active_hang_rings", "sets": 2, "duration_sec": 30, "tempo": "hold", "load": "BW" }
+        ],
+        "phase-2": [
+          { "block": "A", "exercise_id": "band_pull_apart", "sets": 2, "reps": 15, "pairing": "superset", "paired_with": "cuff_er_ir_cable" },
+          { "block": "B", "exercise_id": "weighted_pullup", "sets": 4, "reps": 4, "load": "BW+7-10kg", "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "med_ball_rotational_throw", "sets": 3, "reps": "3/side", "tempo": "explosive", "load": "heavy_ball", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_press_half_kneel", "sets": 3, "reps": "5/side", "load": "moderate_heavy", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "pallof_press", "sets": 3, "reps": "8/side", "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "freestanding_hs_attempt", "sets": 3, "duration_sec": 30, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "plyo_pushup", "sets": 2, "reps": 3, "pairing": "superset" },
+          { "block": "E", "exercise_id": "active_hang_rings", "sets": 2, "reps": 8, "notes": "+ scap pull" }
+        ],
+        "phase-3": [
+          { "block": "A", "exercise_id": "cuff_er_ir_cable", "sets": 2, "reps": 12 },
+          { "block": "B", "exercise_id": "weighted_pullup", "sets": 4, "reps": 3, "load": "BW+12-15kg", "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "med_ball_rotational_throw", "sets": 4, "reps": "3/side", "tempo": "max", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_explosive_press", "sets": 3, "reps": "5/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "pallof_press", "sets": 3, "reps": "8/side", "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "freestanding_hs_attempt", "sets": 3, "duration_sec": 30, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "plyo_pushup", "sets": 3, "reps": 3, "pairing": "superset" },
+          { "block": "E", "exercise_id": "ring_support_hold", "sets": 3, "duration_sec": 20 }
+        ]
+      }
+    },
+    {
+      "id": "squat_day",
+      "label": "Squat Day + Lower",
+      "day": "wednesday",
+      "time_slot": "afternoon",
+      "duration_min": 55,
+      "phase_variants": {
+        "phase-1": [
+          { "block": "A", "exercise_id": "spanish_squat_iso", "sets": 4, "duration_sec": 30, "load": "BW" },
+          { "block": "B", "exercise_id": "back_squat", "sets": 4, "reps": 6, "tempo": "3-1-1-0", "load_pct_1rm": 72, "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "cossack_squat", "sets": 3, "reps": "6/side", "load": "db_moderate", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "bulgarian_split_squat", "sets": 3, "reps": "8/leg", "load": "db_moderate", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "horse_stance_squat_hold", "sets": 3, "duration_sec": 30, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "romanian_dl", "sets": 3, "reps": 8, "tempo": "3-0-1-0", "load": "moderate_technique", "pairing": "superset" },
+          { "block": "D2", "exercise_id": "reverse_nordic", "sets": 3, "reps": 6, "tempo": "4s_ecc", "pairing": "superset" },
+          { "block": "E", "exercise_id": "calf_hsr", "sets": 3, "reps": 10, "tempo": "3-0-3-0", "notes": "+ tibialis raise" }
+        ],
+        "phase-2": [
+          { "block": "A", "exercise_id": "spanish_squat_iso", "sets": 4, "duration_sec": 45 },
+          { "block": "B", "exercise_id": "front_squat", "sets": 4, "reps": 5, "tempo": "3-1-1-0", "load_pct_1rm": 77, "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "bulgarian_split_squat", "sets": 3, "reps": "6/leg", "load": "db_heavy", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "cossack_squat", "sets": 3, "reps": "6/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "copenhagen_plank", "sets": 3, "duration_sec": 30, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "hip_thrust", "sets": 4, "reps": 6, "load_pct_1rm": 80, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "reverse_nordic", "sets": 3, "reps": 6, "pairing": "superset" },
+          { "block": "E", "exercise_id": "calf_hsr", "sets": 3, "reps": 8, "notes": "pause at stretch" }
+        ],
+        "phase-3": [
+          { "block": "B", "exercise_id": "back_squat", "sets": 3, "reps": "1-2", "load_pct_1rm": 90, "notes": "technique, NOT 1RM", "rest_sec": 240 },
+          { "block": "C1", "exercise_id": "split_squat_jump", "sets": 3, "reps": "3/leg", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "cossack_squat", "sets": 3, "reps": "5/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "horse_stance_squat_hold", "sets": 3, "duration_sec": 45, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "hip_thrust", "sets": 3, "reps": 3, "load_pct_1rm": 85, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "reverse_nordic", "sets": 3, "reps": 5, "pairing": "superset" },
+          { "block": "E", "exercise_id": "calf_hsr", "sets": 3, "reps": 8, "tempo": "eccentric_slow" }
+        ]
+      }
+    },
+    {
+      "id": "upper_push_pull_rings",
+      "label": "Upper Push/Pull + Rings + Handstand",
+      "day": "thursday",
+      "time_slot": "morning",
+      "duration_min": 50,
+      "phase_variants": {
+        "phase-1": [
+          { "block": "A", "exercise_id": "scap_pullup", "sets": 3, "reps": 8, "pairing": "superset", "paired_with": "cuff_er_ir_cable" },
+          { "block": "B", "exercise_id": "bench_press", "sets": 4, "reps": 6, "tempo": "2-1-1-0", "load_pct_1rm": 75, "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "ring_row", "sets": 3, "reps": 8, "tempo": "2-1-1-0", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_press_half_kneel", "sets": 3, "reps": "8/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "face_pull", "sets": 3, "reps": 15, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "wall_handstand_hold", "sets": 3, "duration_sec": 30, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "db_y_raise", "sets": 3, "reps": 12, "pairing": "superset" },
+          { "block": "E", "exercise_id": "hsr_biceps", "sets": 3, "reps": 8, "tempo": "3-0-3-0" }
+        ],
+        "phase-2": [
+          { "block": "A", "exercise_id": "scap_pullup", "sets": 3, "reps": 8 },
+          { "block": "B1", "exercise_id": "bench_press", "sets": 5, "reps": 3, "load_pct_1rm": 80, "pairing": "contrast", "rest_sec": 150 },
+          { "block": "B2", "exercise_id": "plyo_pushup", "sets": 5, "reps": 3, "pairing": "contrast" },
+          { "block": "C1", "exercise_id": "ring_row", "sets": 3, "reps": 6, "load": "weighted", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_press_half_kneel", "sets": 3, "reps": "6/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "face_pull", "sets": 3, "reps": 15, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "wall_handstand_hold", "sets": 3, "duration_sec": 45, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "plate_front_raise", "sets": 3, "reps": 10, "pairing": "superset" },
+          { "block": "E", "exercise_id": "hsr_biceps", "sets": 3, "reps": 6 }
+        ],
+        "phase-3": [
+          { "block": "B1", "exercise_id": "bench_press", "sets": 4, "reps": 2, "load_pct_1rm": 87, "pairing": "contrast" },
+          { "block": "B2", "exercise_id": "plyo_pushup", "sets": 4, "reps": 3, "pairing": "contrast" },
+          { "block": "C1", "exercise_id": "weighted_pullup", "sets": 4, "reps": 3, "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "landmine_explosive_press", "sets": 3, "reps": "5/side", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "face_pull", "sets": 3, "reps": 15, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "freestanding_hs_attempt", "sets": 3, "duration_sec": 30, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "plate_front_raise", "sets": 3, "reps": 10, "pairing": "superset" },
+          { "block": "E", "exercise_id": "cuff_er_ir_cable", "sets": 3, "reps": "12/side" }
+        ]
+      }
+    },
+    {
+      "id": "deadlift_day",
+      "label": "Deadlift Day + Posterior + Rings",
+      "day": "friday",
+      "time_slot": "morning",
+      "duration_min": 55,
+      "phase_variants": {
+        "phase-1": [
+          { "block": "A", "exercise_id": "achilles_iso", "sets": 4, "duration_sec": 30 },
+          { "block": "B", "exercise_id": "trap_bar_dl", "sets": 4, "reps": 5, "tempo": "3-0-X-0", "load_pct_1rm": 72, "rest_sec": 180 },
+          { "block": "C1", "exercise_id": "weighted_pullup", "sets": 3, "reps": 6, "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "nordic_curl", "sets": 3, "reps": 5, "tempo": "5s_ecc", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "copenhagen_plank", "sets": 3, "duration_sec": 25, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "9090_goodmorning", "sets": 3, "reps": 8, "load": "light", "pairing": "superset" },
+          { "block": "D2", "exercise_id": "hsr_patellar", "sets": 3, "reps": 6, "tempo": "3-0-3-0", "pairing": "superset" },
+          { "block": "E", "exercise_id": "active_hang_rings", "sets": 3, "duration_sec": 45 }
+        ],
+        "phase-2": [
+          { "block": "A", "exercise_id": "spanish_squat_iso", "sets": 4, "duration_sec": 45 },
+          { "block": "B1", "exercise_id": "trap_bar_dl", "sets": 5, "reps": 3, "load_pct_1rm": 82, "pairing": "contrast", "rest_sec": 150 },
+          { "block": "B2", "exercise_id": "broad_jump", "sets": 5, "reps": 3, "pairing": "contrast", "notes": "ramp 3->5 reps wk5-7" },
+          { "block": "C1", "exercise_id": "weighted_pullup", "sets": 3, "reps": 5, "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "nordic_curl", "sets": 3, "reps": 5, "tempo": "full_ROM", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "copenhagen_plank", "sets": 3, "duration_sec": 30, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "9090_goodmorning", "sets": 3, "reps": 8, "pairing": "superset" },
+          { "block": "D2", "exercise_id": "hsr_patellar", "sets": 3, "reps": 6, "notes": "80% RPE", "pairing": "superset" },
+          { "block": "E", "exercise_id": "active_hang_rings", "sets": 3, "reps": 8, "notes": "+ scap pull" }
+        ],
+        "phase-3": [
+          { "block": "A", "exercise_id": "spanish_squat_iso", "sets": 4, "duration_sec": 60 },
+          { "block": "B1", "exercise_id": "trap_bar_dl", "sets": 4, "reps": 2, "load_pct_1rm": 88, "pairing": "contrast" },
+          { "block": "B2", "exercise_id": "depth_jump", "sets": 4, "reps": 3, "pairing": "contrast" },
+          { "block": "C1", "exercise_id": "ring_row", "sets": 3, "reps": 5, "load": "weighted", "pairing": "tri_set" },
+          { "block": "C2", "exercise_id": "nordic_curl", "sets": 3, "reps": 5, "tempo": "full_ROM", "pairing": "tri_set" },
+          { "block": "C3", "exercise_id": "copenhagen_plank", "sets": 3, "duration_sec": 45, "pairing": "tri_set" },
+          { "block": "D1", "exercise_id": "single_leg_box_jump", "sets": 3, "reps": "3/leg", "pairing": "superset" },
+          { "block": "D2", "exercise_id": "hsr_patellar", "sets": 3, "reps": 6, "notes": "85% RPE", "pairing": "superset" },
+          { "block": "E", "exercise_id": "active_hang_rings", "sets": 3, "reps": 10 }
+        ]
+      }
+    },
+    {
+      "id": "pickleball_social",
+      "label": "Pickleball — 90 min social",
+      "day": "monday",
+      "time_slot": "09:30",
+      "duration_min": 90,
+      "format": "10min_games_3min_rest",
+      "training_load_tags": ["rotational", "conditioning", "lower_body", "change_of_direction"],
+      "nutrition_notes": "1 banana + salt + 300ml water 15 min pre; 30g protein within 30 min post"
+    },
+    {
+      "id": "zone2_run",
+      "label": "Zone 2 Run",
+      "day": "tuesday",
+      "time_slot": "14:30",
+      "phase_distances_km": {
+        "phase-1": [5, 6, 7],
+        "phase-2": [7, 8, 6],
+        "phase-3": [5, 8, 5]
+      },
+      "phase_notes": {
+        "phase-1": "all easy 5:20-5:30/km",
+        "phase-2": "wk6 final km threshold 4:45-5:00; wk7 end with 4x200m strides",
+        "phase-3": "wk9 6x200m strides; wk10 progressive 5:30->4:50; wk11 easy taper"
+      }
+    },
+    {
+      "id": "street_session",
+      "label": "Street Session with Neighbours",
+      "day": "saturday",
+      "time_slot": "morning",
+      "duration_min": 60,
+      "type": "social_circuit",
+      "phase_round_scaling": {
+        "phase-1": "2 rounds each tri-set (protect Fri DL residual)",
+        "deload": "1 round each tri-set, skip core circuit",
+        "phase-2": "3 rounds each tri-set + full core",
+        "phase-3": "3 rounds; scale A1/A2 if legs taxed"
+      },
+      "template_exercises": [
+        { "block": "A1", "name": "Rowing", "reps_target": "16-20 cals", "pairing": "tri_set" },
+        { "block": "A2", "name": "Split Squat", "reps_target": "8/leg", "pairing": "tri_set" },
+        { "block": "A3", "name": "Seated Shoulder Press", "reps_target": 10, "pairing": "tri_set" },
+        { "block": "B1", "name": "Dips", "reps_target": 10, "pairing": "tri_set" },
+        { "block": "B2", "name": "Back Extension", "reps_target": "10 + 10s hold rep 10", "pairing": "tri_set" },
+        { "block": "B3", "name": "Powell Raises", "reps_target": "10/side", "pairing": "tri_set" },
+        { "block": "C1", "name": "Chin-Up", "reps_target": 10, "pairing": "tri_set" },
+        { "block": "C2", "name": "Harop Curls", "reps_target": 10, "pairing": "tri_set" },
+        { "block": "C3", "name": "DB Snatch", "reps_target": "16 alt", "pairing": "tri_set" },
+        { "block": "core_1", "name": "Ab Rollout", "reps_target": 10, "pairing": "circuit" },
+        { "block": "core_2", "name": "Weighted Crunch", "reps_target": 10, "pairing": "circuit" },
+        { "block": "core_3", "name": "Supermans", "reps_target": 20, "pairing": "circuit" },
+        { "block": "core_4", "name": "Reverse Crunch", "reps_target": 20, "pairing": "circuit" },
+        { "block": "core_5", "name": "Side Over Arch", "reps_target": "10/side", "pairing": "circuit" },
+        { "block": "core_6", "name": "Hanging Tucks", "reps_target": 20, "pairing": "circuit" },
+        { "block": "core_7", "name": "KB Swings", "reps_target": 16, "pairing": "circuit" },
+        { "block": "core_8", "name": "Tuck Slides", "reps_target": 20, "pairing": "circuit" }
+      ]
+    },
+    {
+      "id": "mobility_reset_plus_sauna",
+      "label": "Sunday Mobility + Sauna",
+      "day": "sunday",
+      "time_slot": "flexible",
+      "duration_min": 30,
+      "components": [
+        { "name": "90/90 hip rotations", "sets": 2, "reps": "5/side" },
+        { "name": "Couch stretch", "sets": 2, "duration_sec": 30, "notes": "per leg" },
+        { "name": "T-spine open book", "sets": 2, "reps": "8/side" },
+        { "name": "Jefferson curl (light KB)", "sets": 2, "reps": 8 },
+        { "name": "Box breathing 4-4-4-4", "duration_min": 3 },
+        { "name": "Sauna", "duration_min": 15, "temp_c": 85 }
+      ]
+    }
+  ],
+
+  "nutrition_framework": {
+    "dietary_frame": "carnivore_near_carnivore",
+    "dietary_constraints": ["strict_gluten_free_DQ2_5", "avoid_inflammatory_seed_oils", "fish_to_red_meat_ratio_3_4_fish_per_week"],
+    "daily_macros": {
+      "training_day": { "kcal": [2700, 2900], "protein_g": [180, 205], "fat_g": [120, 160], "carbs_g": [30, 50] },
+      "rest_day": { "kcal": [2400, 2500], "protein_g": [170, 190], "fat_g": [110, 140], "carbs_g": [20, 40] }
+    },
+    "protein_per_kg_bodyweight": [1.9, 2.2],
+    "hydration_l_min": 3.0,
+    "sodium_g_per_day": [4, 5],
+    "potassium_g_per_day": [3, 4],
+    "fibre_daily_requirement": "1-2 tbsp ground flax OR chia daily + 1 tsp psyllium 5x/wk",
+    "alcohol_policy": "max 1 night per fortnight"
+  },
+
+  "supplements": [
+    { "name": "Creatine monohydrate", "dose": "5g", "timing": "daily_any_time", "rationale": "power_cognition" },
+    { "name": "Collagen hydrolysate", "dose": "15g", "timing": "30-60min_pre_training", "rationale": "tendon_synthesis", "double_on_days": ["wednesday", "friday"] },
+    { "name": "Vitamin C", "dose": "50-100mg", "timing": "with_collagen", "rationale": "collagen_crosslinking" },
+    { "name": "EPA/DHA", "dose": "2-3g", "timing": "with_meals", "rationale": "inflammation_TNFA_AA" },
+    { "name": "Vitamin D3", "dose": "4000-5000IU", "timing": "AM_with_fat", "rationale": "VDR_FOK1_TT_critical", "target_serum_nmol_l": [125, 150] },
+    { "name": "Vitamin K2 MK-7", "dose": "100-200mcg", "timing": "with_D3", "rationale": "direct_calcium_to_bone" },
+    { "name": "Magnesium glycinate", "dose": "400mg", "timing": "bedtime", "rationale": "recovery_sleep" },
+    { "name": "Taurine", "dose": "2g", "timing": "anytime", "rationale": "cv_inflammation" },
+    { "name": "Cellgevity (glutathione)", "dose": "per_label", "timing": "AM", "rationale": "LDL_antioxidant" }
+  ],
+
+  "supplements_conditional": [
+    { "name": "Curcumin Meriva", "dose": "500mg_x2", "trigger": "joint_discomfort_phase_2_3" },
+    { "name": "Boron", "dose": "3mg", "trigger": "T_support_bone_joint" },
+    { "name": "Ashwagandha KSM-66", "dose": "600mg", "trigger": "HRV_drop_or_sleep_disturbance" }
+  ],
+
+  "tendon_protocol": {
+    "daily_5min_morning": [
+      { "name": "Wall ankle dorsiflexion", "sets": 2, "reps": "10/leg" },
+      { "name": "Hip CARs", "sets": 1, "reps": "3/direction/leg" },
+      { "name": "Scap slides", "sets": 2, "reps": 10 }
+    ],
+    "thrice_weekly": [
+      { "name": "Spanish Squat Iso", "purpose": "patellar" },
+      { "name": "Single-leg calf HSR", "purpose": "achilles" },
+      { "name": "Cuff ER/IR cable", "sets": 3, "reps": "12/side", "purpose": "rotator_cuff" },
+      { "name": "Hamstring HSR", "sets": 3, "reps": 6, "purpose": "hamstring_tendon" }
+    ],
+    "twice_weekly": [
+      { "name": "Sauna", "duration_min": [15, 20], "purpose": "HSP_collagen_turnover" },
+      { "name": "Soft tissue (foam roll + lacrosse)", "duration_min": 10 }
+    ],
+    "red_flag_triggers": [
+      "morning_tendon_stiffness_over_10_min",
+      "pain_during_eccentric_phase",
+      "acute_sharp_pain",
+      "sleep_under_6h_for_3_plus_nights"
+    ],
+    "red_flag_response": "pause_plyo_and_heavy_loading_7_days_iso_only"
+  },
+
+  "wellness_protocols": [
+    { "category": "sleep", "target_hours": 8, "bed_time": "21:00_sunday_for_monday_5am", "rules": ["no_alcohol_3h_pre_bed", "no_caffeine_after_13:00", "morning_sun_10min_within_30min_waking"] },
+    { "category": "hrv", "cadence": "daily", "rule": "drop_over_1_sd_for_2_days_triggers_mobility_only_day" },
+    { "category": "sauna", "frequency_per_week": [2, 3], "duration_min": [15, 20], "temp_c": [80, 90] },
+    { "category": "cold", "frequency_per_week": 2, "duration_min": [2, 3], "temp_c": [10, 12], "rule": "not_within_4h_post_lift" },
+    { "category": "breathwork", "frequency_per_week": 3, "type": "nasal_only_before_bed", "duration_min": [5, 10] },
+    { "category": "concussion", "rule": "SLC17A7_CG_any_head_knock_14_days_no_training_min_plus_medical_clearance" }
+  ],
+
+  "metrics": [
+    { "name": "sleep_hours", "cadence": "daily", "type": "numeric" },
+    { "name": "energy_1_10", "cadence": "daily", "type": "numeric" },
+    { "name": "joint_tendon_feel_1_10", "cadence": "daily", "type": "numeric" },
+    { "name": "soreness_1_10", "cadence": "daily", "type": "numeric" },
+    { "name": "mood_1_10", "cadence": "daily", "type": "numeric" },
+    { "name": "hrv", "cadence": "daily", "type": "numeric" },
+    { "name": "weight_kg", "cadence": "daily_AM_fasted", "type": "numeric" },
+    { "name": "plan_deviations", "cadence": "weekly", "type": "text" },
+    { "name": "pickleball_rpe", "cadence": "monday", "type": "numeric" }
+  ],
+
+  "tests": [
+    { "name": "vertical_jump_cm", "cadence": "biweekly", "type": "numeric", "protocol": "3_attempts_best_score" },
+    { "name": "broad_jump_cm", "cadence": "phase_boundary", "type": "numeric", "protocol": "3_attempts_best_score" },
+    { "name": "sprint_20m_sec", "cadence": "phase_boundary", "type": "numeric" },
+    { "name": "3rm_trap_bar_dl", "cadence": "biweekly_rotating", "type": "numeric_kg" },
+    { "name": "3rm_bench", "cadence": "biweekly_rotating", "type": "numeric_kg" },
+    { "name": "3rm_back_squat", "cadence": "biweekly_rotating", "type": "numeric_kg" },
+    { "name": "3rm_weighted_pullup", "cadence": "biweekly_rotating", "type": "numeric_kg" }
+  ],
+
+  "scan_schedule": [
+    { "week": 0, "scan_type": "InBody_580", "status": "baseline_done_2026-04-17" },
+    { "week": 4, "scan_type": "InBody_580", "rule": "same_clinic_same_machine" },
+    { "week": 8, "scan_type": "InBody_580", "rule": "same_clinic_same_machine" },
+    { "week": 12, "scan_type": "InBody_580_plus_optional_Evolt_360", "rule": "close_block_baseline_next" }
+  ],
+
+  "bloods_schedule": [
+    { "week": 12, "panel": ["lipid_panel", "ApoB", "Lp(a)", "HbA1c", "fasting_insulin", "hsCRP", "ferritin", "Vit_D", "testosterone_total", "testosterone_free", "TSH"] },
+    { "cadence": "every_6_months_post_block_end", "panel": "repeat_above_plus_Omega3_index" }
+  ],
+
+  "emergency_protocols": [
+    { "trigger": "tendon_pain_over_3_10", "action": "drop_plyo_and_hsr_7_days_iso_only_then_retest" },
+    { "trigger": "sleep_under_6h_for_3_nights", "action": "immediate_deload_day_mobility_only_reassess_thu" },
+    { "trigger": "pickleball_minor_injury", "action": "pause_conditioning_5_days_gym_ok_if_pain_free" },
+    { "trigger": "pickleball_tendon_strain_suspected", "action": "14_days_min_no_loading_imaging_if_persistent" },
+    { "trigger": "head_knock", "action": "14_days_no_training_min_medical_clearance_SLC17A7_CG" },
+    { "trigger": "saturday_legs_trashed", "action": "street_session_2_rounds_skip_split_squat_drop_KB_swings" },
+    { "trigger": "high_life_stress_week", "action": "hold_current_phase_week_no_progression_extend_block_1_week" }
+  ]
+}

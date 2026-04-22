@@ -1,0 +1,190 @@
+{
+  "$schema": "dan-meal-plan-v1",
+  "generated_at": "2026-04-17",
+  "version": "1.0",
+  "athlete_id": "dan-osullivan",
+  "block_id": "dan-block-2026-04",
+
+  "framework": {
+    "style": "carnivore_near_carnivore",
+    "constraints": ["strict_gluten_free_DQ2_5", "no_seed_oils"],
+    "protein_g_per_kg": [1.9, 2.2],
+    "fish_meals_per_week_min": 3,
+    "fibre_daily": "1-2_tbsp_flax_or_chia_plus_5x_psyllium",
+    "hydration_l_min": 3.0,
+    "electrolytes": { "sodium_g": [4, 5], "potassium_g": [3, 4] },
+    "alcohol_policy": "max_1_per_fortnight"
+  },
+
+  "daily_calorie_targets_by_phase": {
+    "phase-1": { "training_day_kcal": 2750, "rest_day_kcal": 2450 },
+    "deload-a": { "training_day_kcal": 2550, "rest_day_kcal": 2300 },
+    "phase-2": { "training_day_kcal": 2850, "rest_day_kcal": 2500 },
+    "deload-b": { "training_day_kcal": 2550, "rest_day_kcal": 2300 },
+    "phase-3": { "training_day_kcal": 2900, "rest_day_kcal": 2500 },
+    "test-week": { "training_day_kcal": 2700, "rest_day_kcal": 2400 }
+  },
+
+  "meal_schedule_by_day_type": {
+    "monday_gym_and_pickleball": {
+      "kcal_target": 2900,
+      "protein_g_target": 200,
+      "meals": [
+        { "meal": "pre_gym_0430", "time": "04:30", "items": ["black coffee", "15g collagen + 50mg Vit C", "pinch salt"] },
+        { "meal": "post_gym_breakfast", "time": "06:30", "items": ["4 whole eggs cooked in ghee or butter", "200g beef mince", "salt to taste"], "protein_g": 55, "fat_g": 35 },
+        { "meal": "pre_pickleball_lunch", "time": "08:30", "items": ["250g ribeye", "bone broth 300ml", "1 tbsp chia soaked in water"], "protein_g": 55, "fat_g": 40 },
+        { "meal": "pickleball_snack", "time": "09:15", "items": ["1 banana", "pinch Himalayan salt", "300ml water"] },
+        { "meal": "post_pickleball_refuel", "time": "11:30", "items": ["1 scoop whey OR 2 eggs immediately post", "200g salmon + salted butter 30 min later"], "protein_g": 55, "fat_g": 30 },
+        { "meal": "dinner", "time": "18:30", "items": ["200g lamb OR beef", "3 eggs on side", "200g Greek yoghurt + berries + 1 tbsp flax"], "protein_g": 50, "fat_g": 25 }
+      ]
+    },
+    "tuesday_run_afternoon": {
+      "kcal_target": 2700,
+      "protein_g_target": 190,
+      "meals": [
+        { "meal": "breakfast", "time": "07:00", "items": ["3 eggs", "150g beef mince", "coffee"], "protein_g": 45, "fat_g": 25 },
+        { "meal": "mid_morning", "time": "10:00", "items": ["Greek yoghurt 200g + 1 tbsp chia + berries"], "protein_g": 20, "fat_g": 8 },
+        { "meal": "pre_run_lunch", "time": "13:00", "items": ["150g canned tuna OR chicken thigh 150g", "bone broth 200ml", "pinch salt + lemon"], "protein_g": 40, "fat_g": 10 },
+        { "meal": "post_run", "time": "15:30", "items": ["200g beef mince + 3 eggs", "salt generously"], "protein_g": 55, "fat_g": 30 },
+        { "meal": "dinner", "time": "19:00", "items": ["200g salmon OR mackerel", "butter 1 tbsp", "1 tsp psyllium in water"], "protein_g": 45, "fat_g": 25 }
+      ]
+    },
+    "wed_thu_fri_gym": {
+      "kcal_target": 2800,
+      "protein_g_target": 200,
+      "meals": [
+        { "meal": "pre_gym", "time": "morning_or_afternoon_60min_prior", "items": ["15g collagen + 50mg Vit C", "optional 1 tsp honey + pinch salt"] },
+        { "meal": "breakfast_or_mid_meal", "time": "varies", "items": ["4 eggs", "200g beef mince OR 150g ribeye", "50g liver once per week (add to Wed)"], "protein_g": 55, "fat_g": 35 },
+        { "meal": "lunch", "time": "12:30", "items": ["250g ribeye OR lamb chops", "bone broth", "1 tbsp ground flax"], "protein_g": 55, "fat_g": 45 },
+        { "meal": "post_gym", "time": "within_45min_post", "items": ["200-300g beef OR salmon", "salted butter", "optional extra 15g collagen on Wed + Fri (tendon days)"], "protein_g": 55, "fat_g": 30 },
+        { "meal": "dinner", "time": "19:00", "items": ["Fish day (pick salmon/sardines/mackerel) 200g + 2 eggs OR red meat 200g + butter"], "protein_g": 45, "fat_g": 25 },
+        { "meal": "optional_snack", "time": "20:30", "items": ["Greek yoghurt 200g + berries + chia"], "protein_g": 20, "fat_g": 8 }
+      ]
+    },
+    "saturday_street_session": {
+      "kcal_target": 2800,
+      "protein_g_target": 195,
+      "meals": [
+        { "meal": "pre_session", "time": "06:30", "items": ["15g collagen + Vit C + coffee", "2 eggs + 1 tsp honey"], "protein_g": 14, "fat_g": 10 },
+        { "meal": "post_street_breakfast", "time": "09:30", "items": ["4 eggs", "200g beef mince", "1 tbsp flax + Greek yoghurt 200g + berries"], "protein_g": 65, "fat_g": 35 },
+        { "meal": "lunch", "time": "13:00", "items": ["250g ribeye", "bone broth", "salt"], "protein_g": 55, "fat_g": 45 },
+        { "meal": "dinner", "time": "19:00", "items": ["200g salmon OR sardines", "2 eggs", "butter"], "protein_g": 50, "fat_g": 30 },
+        { "meal": "optional_snack", "time": "20:30", "items": ["Greek yoghurt 150g + 1 tsp psyllium"], "protein_g": 15, "fat_g": 5 }
+      ]
+    },
+    "sunday_rest": {
+      "kcal_target": 2450,
+      "protein_g_target": 175,
+      "meals": [
+        { "meal": "breakfast", "time": "08:00", "items": ["3 eggs", "150g beef mince OR 150g lamb", "Greek yoghurt + berries"], "protein_g": 50, "fat_g": 25 },
+        { "meal": "lunch", "time": "13:00", "items": ["200g chicken thigh OR lean beef", "bone broth", "1 tbsp chia"], "protein_g": 45, "fat_g": 20 },
+        { "meal": "dinner", "time": "19:00", "items": ["200g salmon OR mackerel (one of your fish meals)", "butter", "1 tsp psyllium"], "protein_g": 50, "fat_g": 25 }
+      ]
+    }
+  },
+
+  "weekly_fish_meals": {
+    "target_per_week": 4,
+    "recommended_split": {
+      "salmon": 2,
+      "sardines_or_mackerel": 1,
+      "tuna_or_white_fish": 1
+    },
+    "timing": ["tuesday_dinner", "thursday_dinner", "saturday_dinner", "sunday_dinner"]
+  },
+
+  "liver_schedule": {
+    "frequency": "1x_per_week",
+    "portion_g": 50,
+    "preferred_day": "wednesday_breakfast",
+    "source": "grass_fed_beef_or_lamb_liver"
+  },
+
+  "phase_adjustments": {
+    "phase-1": {
+      "notes": "Baseline macros. Focus fish ratio + fibre daily habits.",
+      "calorie_shift_from_baseline_kcal": 0
+    },
+    "deload-a": {
+      "notes": "Drop training-day kcal by ~200. More veg-adjacent (fibre emphasis).",
+      "calorie_shift_from_baseline_kcal": -200,
+      "emphasis": ["fibre_up", "fish_3_min"]
+    },
+    "phase-2": {
+      "notes": "Add ~100 kcal on heavy lift days (Wed/Fri) to support contrast work. Honey pre-lift becomes standard.",
+      "calorie_shift_from_baseline_kcal": 100,
+      "emphasis": ["pre_lift_honey_20g", "collagen_double_wed_fri"]
+    },
+    "deload-b": {
+      "notes": "Same as Deload A. Review bloods marker trends with next scan.",
+      "calorie_shift_from_baseline_kcal": -200
+    },
+    "phase-3": {
+      "notes": "Maintain kcal; pre-lift carb 30-40g (honey) on Wed/Fri to support peak intensity. Post-workout fish emphasis for recovery.",
+      "calorie_shift_from_baseline_kcal": 150,
+      "emphasis": ["pre_lift_honey_30_40g", "post_workout_fish_2x"]
+    },
+    "test-week": {
+      "notes": "Fuel for tests. Extra carbs on Tue (jump test) + Thu (3RM tests). Skip Sat street session this week, light meals Sat before InBody.",
+      "calorie_shift_from_baseline_kcal": 0,
+      "emphasis": ["honey_30g_pre_test_days", "light_sat_breakfast_before_scan"]
+    }
+  },
+
+  "weekly_meal_plan_12_weeks": [
+    {
+      "week": 1, "phase": "phase-1", "rotation": "A",
+      "meat_focus": ["beef_mince_ribeye_salmon_lamb"],
+      "fish_days": ["tue_dinner", "thu_dinner", "sat_dinner"],
+      "liver_day": "wed_breakfast",
+      "shopping_list": {
+        "proteins_kg": { "beef_mince": 1.5, "ribeye": 1.0, "salmon": 0.8, "lamb_chops": 0.6, "eggs_dozens": 3, "liver_g": 50, "chicken_thigh_g": 400, "canned_sardines_tins": 2, "greek_yoghurt_kg": 1.0 },
+        "pantry": ["ghee", "butter_grass_fed", "bone_broth_1L", "honey_raw", "himalayan_salt", "ground_flax", "chia_seeds", "psyllium_husk", "berries_frozen_500g", "lemons_6"]
+      }
+    },
+    { "week": 2, "phase": "phase-1", "rotation": "B", "meat_focus": ["beef_mince_lamb_mackerel_pork_shoulder"], "fish_days": ["tue", "thu", "sat", "sun"], "liver_day": "wed_breakfast", "shopping_adjust": "swap_ribeye_for_lamb_shoulder_swap_salmon_for_mackerel" },
+    { "week": 3, "phase": "phase-1", "rotation": "A", "meat_focus": ["beef_mince_ribeye_salmon_lamb"], "fish_days": ["tue", "thu", "sat"], "liver_day": "wed_breakfast" },
+
+    { "week": 4, "phase": "deload-a", "rotation": "deload", "kcal_adjustment": -200, "notes": "emphasis on fibre + 3 fish meals min", "fish_days": ["tue", "thu", "sun"], "liver_day": "wed_breakfast" },
+
+    { "week": 5, "phase": "phase-2", "rotation": "A", "kcal_adjustment": 100, "honey_pre_lift_g": 20, "fish_days": ["tue", "thu", "sat"] },
+    { "week": 6, "phase": "phase-2", "rotation": "B", "kcal_adjustment": 100, "honey_pre_lift_g": 20, "fish_days": ["tue", "thu", "sat", "sun"] },
+    { "week": 7, "phase": "phase-2", "rotation": "A", "kcal_adjustment": 100, "honey_pre_lift_g": 20, "fish_days": ["tue", "thu", "sat"] },
+
+    { "week": 8, "phase": "deload-b", "rotation": "deload", "kcal_adjustment": -200, "notes": "scan week — prep Wed InBody", "fish_days": ["tue", "thu", "sun"] },
+
+    { "week": 9, "phase": "phase-3", "rotation": "A", "kcal_adjustment": 150, "honey_pre_lift_g": 30, "fish_days": ["tue", "thu", "sat"], "notes": "peak intensity phase — protein ceiling 205g" },
+    { "week": 10, "phase": "phase-3", "rotation": "B", "kcal_adjustment": 150, "honey_pre_lift_g": 30, "fish_days": ["tue", "thu", "sat", "sun"] },
+    { "week": 11, "phase": "phase-3", "rotation": "A", "kcal_adjustment": 150, "honey_pre_lift_g": 40, "fish_days": ["tue", "thu", "sat"] },
+
+    { "week": 12, "phase": "test-week", "rotation": "test", "kcal_adjustment": 0, "notes": "test days get +30g honey pre-session; Saturday light breakfast before InBody scan", "fish_days": ["wed", "fri", "sun"] }
+  ],
+
+  "default_swap_options": {
+    "beef_mince_200g": ["lamb_mince_200g", "bison_mince_200g", "pork_mince_200g"],
+    "ribeye_250g": ["sirloin_250g", "rump_250g", "lamb_leg_steak_250g"],
+    "salmon_200g": ["mackerel_200g", "trout_200g", "barramundi_200g"],
+    "sardines_tin": ["tinned_salmon", "tinned_mackerel"],
+    "chicken_thigh": ["turkey_thigh", "pork_shoulder"],
+    "greek_yoghurt_200g": ["kefir_200ml", "cottage_cheese_150g"],
+    "eggs_replacement": "if_any_egg_sensitivity_use_extra_meat_or_fish_protein"
+  },
+
+  "restaurant_eating_guidance": {
+    "core_rule": "GF_protein_focused_choose_steak_fish_eggs_never_breaded_or_battered",
+    "safe_orders": ["steak_plain_with_salt_butter", "grilled_salmon", "grilled_lamb", "eggs_any_style", "bone_broth", "plain_cheese_platters"],
+    "always_avoid": ["fried_food_risk_GF_cross_contact", "soy_sauce", "breaded_or_battered", "anything_with_wheat_flour_thickeners", "seed_oil_dressings"],
+    "gluten_questions_to_ask": ["is_this_cooked_in_same_fryer_as_breaded_items", "does_the_sauce_contain_wheat_or_soy", "is_the_steak_floured_or_marinated"]
+  },
+
+  "sunday_meal_prep_checklist": [
+    "cook_1.5kg_beef_mince_batch",
+    "hard_boil_12_eggs",
+    "grill_600g_chicken_thigh_or_lamb_for_lunches",
+    "prep_bone_broth_1L",
+    "portion_greek_yoghurt_into_daily_containers_with_chia",
+    "freeze_portioned_salmon_fillets_200g_each",
+    "grind_flax_500g_store_in_glass_jar_fridge",
+    "prep_collagen_sachets_7x_15g_labelled"
+  ]
+}

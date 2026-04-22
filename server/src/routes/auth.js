@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../lib/config.js';
+import { allocateProgram } from '../lib/programAllocator.js';
 
 // Slow down brute-force login / register attempts. Keyed by IP — a
 // dedicated attacker can rotate IPs but this blocks the common case of
@@ -40,7 +41,7 @@ const router = Router();
 
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, onboarding } = req.body;
 
     if (!email || !password || !name || !role) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -63,11 +64,57 @@ router.post('/register', registerLimiter, async (req, res) => {
     );
 
     const user = result.rows[0];
+    await pool.query('INSERT INTO client_profiles (user_id) VALUES ($1)', [user.id]);
 
-    if (role === 'client') {
-      await pool.query('INSERT INTO client_profiles (user_id) VALUES ($1)', [user.id]);
-    } else {
-      await pool.query('INSERT INTO coach_profiles (user_id) VALUES ($1)', [user.id]);
+    // If the client came through the onboarding flow, save their answers,
+    // re-run the allocator server-side (client can't self-assign a program
+    // by tampering) and enrol them if the rules match one.
+    let allocation = null;
+    if (onboarding && typeof onboarding === 'object') {
+      allocation = allocateProgram(onboarding);
+
+      // Persist answers into the first-class columns + the full JSON blob.
+      pool.query(
+        `INSERT INTO onboarding_answers
+          (user_id, goal, experience, injuries, schedule, equipment, answers_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET
+           goal = excluded.goal,
+           experience = excluded.experience,
+           injuries = excluded.injuries,
+           schedule = excluded.schedule,
+           equipment = excluded.equipment,
+           answers_json = excluded.answers_json`,
+        [
+          user.id,
+          onboarding.goal || null,
+          onboarding.experience || null,
+          Array.isArray(onboarding.injuries) ? onboarding.injuries.join(',') : null,
+          onboarding.days != null ? String(onboarding.days) : null,
+          onboarding.equipment || null,
+          JSON.stringify(onboarding),
+        ],
+      );
+
+      // Store age on the client profile for coach-side filtering
+      if (typeof onboarding.age === 'number') {
+        pool.query('UPDATE client_profiles SET age = ? WHERE user_id = ?', [onboarding.age, user.id]);
+      }
+
+      // Auto-enrol in the matched program (if any). Review cases don't
+      // enrol — the coach will pick on their review pass.
+      if (allocation.program_id) {
+        const total = pool.query(
+          'SELECT COUNT(*) as c FROM workouts WHERE program_id = ?',
+          [allocation.program_id],
+        ).rows[0]?.c || 0;
+        pool.query(
+          `INSERT INTO client_programs
+            (user_id, program_id, current_week, current_day, started_at, completed_workouts, total_workouts)
+           VALUES (?, ?, 1, 1, ?, 0, ?)`,
+          [user.id, allocation.program_id, new Date().toISOString(), total],
+        );
+      }
     }
 
     const token = jwt.sign(
@@ -76,7 +123,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       { expiresIn: config.JWT_EXPIRES_IN }
     );
 
-    res.status(201).json({ user, token });
+    res.status(201).json({ user, token, allocation });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Server error' });

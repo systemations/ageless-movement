@@ -293,12 +293,16 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
         }}>
           <div style={{ padding: '16px 18px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>Today's Sessions</h3>
-              <span style={{
-                fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)',
-              }}>
-                {today.workouts.length} session{today.workouts.length !== 1 ? 's' : ''}
-              </span>
+              <h3 style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>
+                Today's Session{today.workouts.length !== 1 ? 's' : ''}
+              </h3>
+              {today.workouts.length > 1 && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)',
+                }}>
+                  {today.workouts.length} sessions
+                </span>
+              )}
             </div>
           </div>
 

@@ -49,10 +49,20 @@ router.get('/active', authenticateToken, (req, res) => {
        ORDER BY created_at DESC`
     ).rows;
 
+    // Account age gate: brand-new clients don't need a daily-check-in nag on
+    // their first login. Give them 24h to settle in before the habit prompt
+    // starts appearing. Only applies to kind='daily_checkin'.
+    const viewer = pool.query('SELECT created_at FROM users WHERE id = ?', [req.user.id]).rows[0];
+    const accountAgeHours = viewer?.created_at
+      ? (Date.now() - new Date(viewer.created_at + 'Z').getTime()) / 3600000
+      : Infinity;
+    const suppressDailyCheckin = accountAgeHours < 24;
+
     const out = [];
     for (const n of rows) {
       if (!isLiveOn(n, today)) continue;
       if (!matchesAudience(n, req.user.id)) continue;
+      if (suppressDailyCheckin && n.kind === 'daily_checkin') continue;
       const occurrence = n.recurrence === 'none' ? null : today;
       const read = pool.query(
         `SELECT dismissed_at, completed_at, seen_at FROM notification_reads

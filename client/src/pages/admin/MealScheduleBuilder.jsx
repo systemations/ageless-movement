@@ -3,9 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
 
 // Fullscreen meal schedule builder with three-pane layout:
-//   Left   — draggable meal plan library
-//   Center — scrollable week x day grid canvas
-//   Right  — day detail panel (meal slots, items, alternatives, swap plan)
+//   Left   - draggable meal plan library
+//   Center - scrollable week x day grid canvas
+//   Right  - day detail panel (meal slots, items, alternatives, swap plan)
 //
 // Clicking a day cell opens the detail panel. Drag-and-drop from library to
 // grid is supported. Explicit Save button batches all dirty changes.
@@ -373,7 +373,7 @@ export default function MealScheduleBuilder({ scheduleId, onClose, onSaved }) {
 }
 
 // =========================================================================
-// Day detail panel — shows full meal plan breakdown on the right
+// Day detail panel - shows full meal plan breakdown on the right
 // =========================================================================
 function DayDetailPanel({
   weekNum, dayNum, dayNames, planId, plan, detail, loading,

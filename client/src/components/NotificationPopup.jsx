@@ -98,7 +98,7 @@ export default function NotificationPopup({ notification, onDismiss, onCompleteC
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional — pain, mood, a thought for the coach…"
+                  placeholder="Optional - pain, mood, a thought for the coach…"
                   rows={2}
                   className="input-field"
                   style={{ fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}

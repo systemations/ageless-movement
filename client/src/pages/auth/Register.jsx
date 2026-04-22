@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 // and forward to the server so registration + program enrolment happen
 // in a single atomic call.
 //
-// Coaches are invite-only — they don't come through this screen.
+// Coaches are invite-only - they don't come through this screen.
 
 export default function Register() {
   const [name, setName] = useState('');

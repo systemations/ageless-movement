@@ -187,7 +187,7 @@ function LeaderboardView({ kind, title, subtitle, slug, unit, showTimeframe }) {
     if (kind === 'ageless_mover') return { ...e, primary: `${e.points} pts`, secondary: `${e.tested_count} tests · avg Lv ${e.avg_level}` };
     if (kind === 'streaks') return { ...e, primary: `${e.current_streak} day${e.current_streak === 1 ? '' : 's'}`, secondary: `Best ${e.best_streak}` };
     if (kind === 'steps') return { ...e, primary: `${(e.total_steps || 0).toLocaleString()} steps`, secondary: e.days_logged ? `${e.days_logged} day${e.days_logged === 1 ? '' : 's'} logged` : '' };
-    if (kind === 'benchmark') return { ...e, primary: fmt(unit || 'reps', e.best_value), secondary: e.age ? `${e.age} · ${e.gender || '—'}` : '' };
+    if (kind === 'benchmark') return { ...e, primary: fmt(unit || 'reps', e.best_value), secondary: e.age ? `${e.age} · ${e.gender || '-'}` : '' };
     return e;
   });
 
@@ -334,7 +334,7 @@ function ReviewQueue({ onQueueCount }) {
         <p style={{ color: 'var(--text-tertiary)', padding: 20 }}>Loading...</p>
       ) : !data || data.length === 0 ? (
         <p style={{ color: 'var(--text-tertiary)', padding: 20, textAlign: 'center', fontSize: 13 }}>
-          {scope === 'mine' ? 'All caught up — no pending submissions from your clients.' : 'All caught up — nothing pending anywhere.'}
+          {scope === 'mine' ? 'All caught up - no pending submissions from your clients.' : 'All caught up - nothing pending anywhere.'}
         </p>
       ) : (
         <div>
@@ -454,7 +454,7 @@ function ReviewModal({ item, token, onClose, onReviewed }) {
           </div>
         ) : (
           <p style={{ fontSize: 12, color: '#FF9500', marginBottom: 10 }}>
-            ⚠ No evidence attached — client did not provide a video or link.
+            ⚠ No evidence attached - client did not provide a video or link.
           </p>
         )}
 
@@ -536,7 +536,7 @@ function BenchmarksTable() {
                           padding: '3px 7px', borderRadius: 6, fontSize: 10,
                           background: 'rgba(255,255,255,0.04)', color: 'var(--text-tertiary)',
                           fontWeight: 700, minWidth: 54, textAlign: 'center',
-                        }}>L{n}: {L ? fmt(b.unit, L.male_threshold) : '—'}</span>
+                        }}>L{n}: {L ? fmt(b.unit, L.male_threshold) : '-'}</span>
                       );
                     })}
                   </div>
@@ -611,7 +611,7 @@ function BenchmarkEditModal({ benchmark: bm, token, onClose, onSaved }) {
       }}>
         <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>{bm.name}</h3>
         <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14 }}>
-          {bm.type === 'skill_ladder' ? 'Skill ladder — edit level titles & descriptions.' : `Numeric ladder — edit male/female thresholds (${bm.unit}).`}
+          {bm.type === 'skill_ladder' ? 'Skill ladder - edit level titles & descriptions.' : `Numeric ladder - edit male/female thresholds (${bm.unit}).`}
         </p>
 
         {!levels ? <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p> : levels.map((L, idx) => (

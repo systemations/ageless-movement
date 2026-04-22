@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-// Coach Home — landing dashboard for the admin area.
+// Coach Home - landing dashboard for the admin area.
 // KPI tiles + at-risk clients + priority inbox + upcoming events + 30d check-in sparkline.
 // All data is live from /api/coach/home.
 
@@ -35,7 +35,7 @@ export default function CoachHome({ onOpenClient }) {
   const greeting = getGreeting();
 
   // Greeting uses the coach's real first name. Users stored as "Coach Dan"
-  // should render as "Good afternoon, Dan" — strip the leading "Coach "
+  // should render as "Good afternoon, Dan" - strip the leading "Coach "
   // prefix (case-insensitive) before taking the first word.
   const displayName = (user?.name || '').replace(/^coach\s+/i, '').trim();
   const firstName = displayName.split(/\s+/)[0] || user?.name || 'Coach';
@@ -67,7 +67,7 @@ export default function CoachHome({ onOpenClient }) {
 
       {/* 3-col body */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 16 }}>
-        {/* Priority inbox — recent check-ins */}
+        {/* Priority inbox - recent check-ins */}
         <Panel title="Priority inbox" subtitle="Most recent client check-ins">
           {data.recent_checkins.length === 0 ? (
             <EmptyState text="No check-ins yet" />
@@ -152,7 +152,7 @@ export default function CoachHome({ onOpenClient }) {
           )}
         </Panel>
 
-        {/* Upcoming — merged 1:1 bookings + scheduled events, per-coach filterable */}
+        {/* Upcoming - merged 1:1 bookings + scheduled events, per-coach filterable */}
         <Panel
           title="Upcoming"
           subtitle={coachFilter ? 'Filtered to one coach' : 'All coaches, next 10'}

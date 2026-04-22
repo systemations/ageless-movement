@@ -6,17 +6,17 @@
 // this on /api/auth/register so a tampered client can't self-assign a
 // program they wouldn't otherwise qualify for.
 //
-// No AI / heuristics — just if/then rules mapped to existing programs.
+// No AI / heuristics - just if/then rules mapped to existing programs.
 // When adding new programs or changing rules, update the tests too (not
-// yet written — TODO when we add vitest).
+// yet written - TODO when we add vitest).
 
 // Program IDs as they exist in the seeded DB. If these IDs shift after a
 // reseed, update here. Keeping them as constants makes the rules readable.
 export const PROGRAM = {
-  AMS_GROUND_ZERO: 1,          // 8wk, 6x/wk, 13-28 min — beginner mobility-first
-  AMS_REBUILD: 38,             // 12wk, 3x/wk — intermediate strength+mobility
-  AMS_PRIME: 39,               // 12wk, 3x/wk — advanced
-  PICKLEBALL_DAILY: 40,        // 1wk loop, 5x/wk, 10-15 min — warm-up routines
+  AMS_GROUND_ZERO: 1,          // 8wk, 6x/wk, 13-28 min - beginner mobility-first
+  AMS_REBUILD: 38,             // 12wk, 3x/wk - intermediate strength+mobility
+  AMS_PRIME: 39,               // 12wk, 3x/wk - advanced
+  PICKLEBALL_DAILY: 40,        // 1wk loop, 5x/wk, 10-15 min - warm-up routines
   PICKLEBALL_HOME_3X: 41,      // 16wk, 3x/wk, 25-35 min
   PICKLEBALL_HOME_2X: 42,      // 16wk, 2x/wk, 25-35 min
   PICKLEBALL_GYM_3X: 45,       // 16wk, 3x/wk, 35-45 min
@@ -60,7 +60,7 @@ export function allocateProgram(answers = {}) {
   const injured = hasAnyInjury(injuries);
 
   // ── V1 alpha: universal default ─────────────────────────────────────
-  // Every new client starts on AMS Ground Zero — the mobility-first
+  // Every new client starts on AMS Ground Zero - the mobility-first
   // flagship. Once real signups land, Dan + Joonas can switch anyone to
   // Pickleball / ReBuild / Prime from the admin side. Keeping the rules
   // simple here means fewer wrong auto-assignments and a cleaner picture
@@ -70,7 +70,7 @@ export function allocateProgram(answers = {}) {
   //   - Anyone who flagged an injury → coach reviews before prescribing
   //   - Seniors (75+) → coach assigns a suitable gentle-track plan
   if (injured) {
-    return reviewResult('You mentioned some areas we should look at — a coach will review your answers and set you up personally within 24 hours.');
+    return reviewResult('You mentioned some areas we should look at - a coach will review your answers and set you up personally within 24 hours.');
   }
   if (bracket === 'senior') {
     return reviewResult('To make sure your plan fits, a coach will review your answers within 24 hours.');
@@ -79,7 +79,7 @@ export function allocateProgram(answers = {}) {
   return match(
     PROGRAM.AMS_GROUND_ZERO,
     'AMS Ground Zero™',
-    'Our mobility-first starting program — short daily sessions that rebuild the basics over 8 weeks. Your coach can move you to a different plan anytime.',
+    'Our mobility-first starting program. Short daily sessions that rebuild the basics over 8 weeks.',
   );
 }
 

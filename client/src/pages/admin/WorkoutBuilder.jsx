@@ -59,7 +59,7 @@ export default function WorkoutBuilder({
   const [programs, setPrograms] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
-  const [workoutForm, setWorkoutForm] = useState({ title: '', description: '', tags: '', program_id: '', week_number: 1, day_number: 1, duration_mins: 30, intensity: 'Medium', body_parts: '', workout_type: 'strength', image_url: '' });
+  const [workoutForm, setWorkoutForm] = useState({ title: '', description: '', tags: '', program_id: '', week_number: 1, day_number: 1, duration_mins: 30, intensity: 'Medium', body_parts: '', workout_type: 'strength', image_url: '', is_free_preview: false });
   const [blocks, setBlocks] = useState([]);
   const [creating, setCreating] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
@@ -129,6 +129,7 @@ export default function WorkoutBuilder({
         body_parts: w.body_parts || '',
         workout_type: w.workout_type,
         image_url: w.image_url || '',
+        is_free_preview: !!w.is_free_preview,
       });
 
       const sourceList = (data.override && Array.isArray(data.override.exercises))
@@ -167,13 +168,13 @@ export default function WorkoutBuilder({
   }, [isPersonalising, initialWorkoutId, overrideClientId, token]);
 
   const loadWorkout = async (workout) => {
-    // Follow-along workouts get a simpler dedicated editor — no blocks/exercises.
+    // Follow-along workouts get a simpler dedicated editor - no blocks/exercises.
     if (workout.workout_type === 'follow_along') {
       setEditingFollowAlong(workout.id);
       return;
     }
     setSelectedWorkout(workout);
-    setWorkoutForm({ title: workout.title, description: workout.description || '', tags: workout.body_parts || '', program_id: workout.program_id || '', week_number: workout.week_number, day_number: workout.day_number, duration_mins: workout.duration_mins, intensity: workout.intensity, body_parts: workout.body_parts || '', workout_type: workout.workout_type, image_url: workout.image_url || '' });
+    setWorkoutForm({ title: workout.title, description: workout.description || '', tags: workout.body_parts || '', program_id: workout.program_id || '', week_number: workout.week_number, day_number: workout.day_number, duration_mins: workout.duration_mins, intensity: workout.intensity, body_parts: workout.body_parts || '', workout_type: workout.workout_type, image_url: workout.image_url || '', is_free_preview: !!workout.is_free_preview });
     const res = await fetch(`/api/explore/workouts/${workout.id}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const data = await res.json();
@@ -514,7 +515,7 @@ export default function WorkoutBuilder({
     );
   }
 
-  // In personalise mode, never fall through to the workouts list — while the
+  // In personalise mode, never fall through to the workouts list - while the
   // async loader is working, show a small loading shim. Once the loader
   // flips `creating` true, the main editor takes over below.
   if (isPersonalising && !creating) {
@@ -568,7 +569,7 @@ export default function WorkoutBuilder({
             </div>
           </div>
 
-          {/* Coach note — personalise mode only. Lives above the (greyed-out)
+          {/* Coach note - personalise mode only. Lives above the (greyed-out)
               workout details since the rest of the details are template-level
               metadata that the override doesn't change. */}
           {isPersonalising && (
@@ -579,7 +580,7 @@ export default function WorkoutBuilder({
               <textarea
                 value={coachNote}
                 onChange={(e) => setCoachNote(e.target.value)}
-                placeholder="Why is this personalised? e.g. 'Wrist injury — floor press instead of bench'"
+                placeholder="Why is this personalised? e.g. 'Wrist injury - floor press instead of bench'"
                 rows={2}
                 style={{
                   width: '100%', padding: '8px 10px', borderRadius: 6,
@@ -621,6 +622,21 @@ export default function WorkoutBuilder({
                 <div style={{ flex: 1 }}><label style={labelStyle}>Week</label><input type="number" className="input-field" value={workoutForm.week_number} onChange={e => setWorkoutForm({ ...workoutForm, week_number: parseInt(e.target.value) })} /></div>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Day</label><input type="number" className="input-field" value={workoutForm.day_number} onChange={e => setWorkoutForm({ ...workoutForm, day_number: parseInt(e.target.value) })} /></div>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Mins</label><input type="number" className="input-field" value={workoutForm.duration_mins} onChange={e => setWorkoutForm({ ...workoutForm, duration_mins: parseInt(e.target.value) })} /></div>
+              </div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-primary)', borderRadius: 8, border: '1px solid var(--divider)' }}>
+                <input
+                  type="checkbox"
+                  id="wf-free-preview"
+                  checked={!!workoutForm.is_free_preview}
+                  onChange={e => setWorkoutForm({ ...workoutForm, is_free_preview: e.target.checked })}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="wf-free-preview" style={{ cursor: 'pointer', flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Free preview</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 8 }}>
+                    Accessible to Free-tier clients even if the parent program is locked
+                  </span>
+                </label>
               </div>
             </div>
           </div>
@@ -969,7 +985,7 @@ export default function WorkoutBuilder({
                             </div>
                           </div>
 
-                          {/* Interval / phase prescription — for cardio or any exercise
+                          {/* Interval / phase prescription - for cardio or any exercise
                               that needs a structured phase list (intervals, pyramids,
                               alternating intensities, fartlek, or steady state). */}
                           <div style={{ marginTop: 4 }}>
@@ -1040,7 +1056,7 @@ export default function WorkoutBuilder({
           </button>
         </div>
 
-        {/* Right sidebar — Manage Alternates (takes priority) or exercise inspector */}
+        {/* Right sidebar - Manage Alternates (takes priority) or exercise inspector */}
         <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--divider)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {manageAltsFor ? (
             <ManageAlternatesPanel
@@ -1080,7 +1096,7 @@ export default function WorkoutBuilder({
             background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--divider)',
             borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}>+ New Follow-Along</button>
-          <button onClick={() => { setCreating(true); setSelectedWorkout(null); setBlocks([]); setWorkoutForm({ title: '', description: '', tags: '', program_id: '', week_number: 1, day_number: 1, duration_mins: 30, intensity: 'Medium', body_parts: '', workout_type: 'strength', image_url: '' }); }} style={{
+          <button onClick={() => { setCreating(true); setSelectedWorkout(null); setBlocks([]); setWorkoutForm({ title: '', description: '', tags: '', program_id: '', week_number: 1, day_number: 1, duration_mins: 30, intensity: 'Medium', body_parts: '', workout_type: 'strength', image_url: '', is_free_preview: false }); }} style={{
             background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
           }}>+ New Workout</button>
         </div>
@@ -1259,7 +1275,7 @@ function ManageAlternatesPanel({ workoutExerciseId, token, onClose }) {
             id: a.id,
             enabled: !!a.enabled,
             sort_order: i,
-            // Per-alt metric overrides. All nullable — blank = inherit primary.
+            // Per-alt metric overrides. All nullable - blank = inherit primary.
             sets: Number.isFinite(a.sets) ? a.sets : null,
             reps: a.reps || null,
             duration_secs: Number.isFinite(a.duration_secs) ? a.duration_secs : null,
@@ -1330,7 +1346,7 @@ function ManageAlternatesPanel({ workoutExerciseId, token, onClose }) {
             ) : (
               data.alternates.map((alt, idx) => {
                 const isOpen = expandedAltId === alt.id;
-                // Display summary under the name — "3 sets · 40 min · Duration" or "5 phases · 15:00 total"
+                // Display summary under the name - "3 sets · 40 min · Duration" or "5 phases · 15:00 total"
                 const hasPhases = Array.isArray(alt.interval_structure) && alt.interval_structure.length > 0;
                 const totalPhaseSecs = hasPhases
                   ? alt.interval_structure.reduce((s, p) => s + (Number(p.duration_secs) || 0), 0)
@@ -1429,7 +1445,7 @@ function AlternateMetricEditor({ alt, onChange }) {
       borderTop: '1px solid var(--divider)',
     }}>
       <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-        Metric overrides — blank fields inherit the primary exercise
+        Metric overrides - blank fields inherit the primary exercise
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
@@ -1439,7 +1455,7 @@ function AlternateMetricEditor({ alt, onChange }) {
             type="number" min="1"
             value={alt.sets ?? ''}
             onChange={e => onChange({ sets: e.target.value === '' ? null : Number(e.target.value) })}
-            placeholder="—"
+            placeholder="-"
             style={miniInput}
           />
         </div>
@@ -1470,7 +1486,7 @@ function AlternateMetricEditor({ alt, onChange }) {
             onChange={e => onChange({ tracking_type: e.target.value || null })}
             style={miniInput}
           >
-            <option value="">— inherit</option>
+            <option value="">- inherit</option>
             <option value="Duration">Duration</option>
             <option value="Distance">Distance</option>
             <option value="Meters">Meters</option>
@@ -1492,7 +1508,7 @@ function AlternateMetricEditor({ alt, onChange }) {
       </div>
 
       <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-        Interval phases (optional) — overrides Duration / Rest above
+        Interval phases (optional) - overrides Duration / Rest above
       </p>
       <PhaseEditor
         value={alt.interval_structure || []}

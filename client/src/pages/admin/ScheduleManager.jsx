@@ -107,7 +107,7 @@ export default function ScheduleManager() {
     setWeekData({});
   };
 
-  // Reload just the current week view — cheaper than fetchData + used after
+  // Reload just the current week view - cheaper than fetchData + used after
   // drag-drop moves so the grid reflects the new dates without losing nav state.
   const refetchWeek = async () => {
     if (!selectedClient) return;
@@ -127,7 +127,7 @@ export default function ScheduleManager() {
   //    ad-hoc one-off workout on the target date. Does not touch any program.
   //  * source='user'       → PATCH the single ad-hoc row to the new date.
   //  * source='program'    → Shift the whole enrollment by (target - source)
-  //    days because a program IS the schedule — nudging one day cascades.
+  //    days because a program IS the schedule - nudging one day cascades.
   const handleDropOnDate = async (targetDate) => {
     if (!dragItem) return;
 
@@ -184,7 +184,7 @@ export default function ScheduleManager() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ days: deltaDays }),
       });
-      fetchData(); // enrollment started_at changed — refresh enrollment list card dates
+      fetchData(); // enrollment started_at changed - refresh enrollment list card dates
     }
     setDragItem(null);
     refetchWeek();
@@ -276,7 +276,7 @@ export default function ScheduleManager() {
         alignItems: 'start',
       }}>
 
-        {/* Client list — hidden once a client is selected */}
+        {/* Client list - hidden once a client is selected */}
         {!selectedClient && (
           <div style={{ background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--divider)' }}>
@@ -341,7 +341,7 @@ export default function ScheduleManager() {
             </div>
           ) : (
             <>
-              {/* Back-to-Clients escape — useful when the coach picked the
+              {/* Back-to-Clients escape - useful when the coach picked the
                   wrong client and wants to swap without having to scroll
                   the narrow sidebar. */}
               <button

@@ -20,6 +20,7 @@ import athleteRoutes from './routes/athlete.js';
 import notificationRoutes from './routes/notifications.js';
 import benchmarkRoutes from './routes/benchmarks.js';
 import { config } from './lib/config.js';
+import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 
 dotenv.config();
 
@@ -110,4 +111,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startPostSignupJobRunner();
 });

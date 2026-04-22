@@ -6,7 +6,7 @@
 }
 
 /* ===== DARK THEME (default) ===== */
-/* Ageless Movement Palette — deep navy base, mint + orange accents.
+/* Ageless Movement Palette - deep navy base, mint + orange accents.
    Matches the auth flow (Welcome / Login / Register / Onboarding) so the
    whole app feels continuous. Old pure-black theme lived at #0A0A0A. */
 :root, [data-theme="dark"] {
@@ -437,7 +437,7 @@ input, textarea, select {
   margin: 16px 0;
 }
 
-/* Ageless Movement logo mark — consistent grey stroke + soft mint glow
+/* Ageless Movement logo mark - consistent grey stroke + soft mint glow
    applied to every instance of the logo across the app. Auth pages have
    their own stronger inline treatment; this covers the rest (admin
    sidebar, home header, loading screen, program detail placeholder, etc). */

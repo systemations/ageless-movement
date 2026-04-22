@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
 import MealScheduleBuilder from './MealScheduleBuilder';
 
-// Admin manager for MEAL SCHEDULES — assignable timelines in the three-tier
+// Admin manager for MEAL SCHEDULES - assignable timelines in the three-tier
 // model. A schedule wraps a duration (N weeks) and references meal_plans for
 // each (week, day) slot via meal_schedule_entries.
 //
@@ -134,7 +134,7 @@ export default function MealScheduleManager() {
 }
 
 // -------------------------------------------------------------------------
-// Schedule editor — metadata + week/day grid
+// Schedule editor - metadata + week/day grid
 // -------------------------------------------------------------------------
 function ScheduleEditor({ schedule, token, onClose, onSaved }) {
   const isNew = !schedule;
@@ -325,7 +325,7 @@ function ScheduleEditor({ schedule, token, onClose, onSaved }) {
         )}
       </div>
 
-      {/* Week grid — only when schedule exists */}
+      {/* Week grid - only when schedule exists */}
       {detail?.schedule && (
         <>
           {/* Preview calorie target */}

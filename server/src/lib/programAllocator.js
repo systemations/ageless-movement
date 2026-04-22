@@ -79,7 +79,7 @@ export function allocateProgram(answers = {}) {
   return match(
     PROGRAM.AMS_GROUND_ZERO,
     'AMS Ground Zero™',
-    'Our mobility-first starting program — short daily sessions that rebuild the basics over 8 weeks. Your coach can move you to a different plan anytime.',
+    'Our mobility-first starting program. Short daily sessions that rebuild the basics over 8 weeks.',
   );
 }
 

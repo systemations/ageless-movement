@@ -60,7 +60,6 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     localStorage.setItem('am_token', data.token);
-    // Onboarding answers are consumed by the server; remove the local copy.
     localStorage.removeItem('am_onboarding_answers');
     setToken(data.token);
     setUser(data.user);

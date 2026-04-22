@@ -257,7 +257,7 @@ export default function Explore() {
             // the coach explicitly added, so no extra filter is needed here.
             const isWorkoutSection = sectionType === 'workout' || sectionType === 'follow_along';
 
-            // Courses section — show only the courses linked to this section,
+            // Courses section - show only the courses linked to this section,
             // looked up from the global courses list. Featured first, then sort_order.
             if (isCoursesSection) {
               // Preserve item_locked / tier_name from section.items since the
@@ -288,7 +288,7 @@ export default function Explore() {
                     )}
                   </div>
 
-                  {/* Full-width stacked cards — one course per row.
+                  {/* Full-width stacked cards - one course per row.
                       16:9 poster on top, title + meta below. Much more
                       presence than the old 220px cramped carousel. */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -304,7 +304,7 @@ export default function Explore() {
                             background: 'var(--bg-card)', display: 'flex', flexDirection: 'column',
                           }}
                         >
-                          {/* Poster — full-width 16:9 */}
+                          {/* Poster - full-width 16:9 */}
                           <div style={{
                             width: '100%', aspectRatio: '16/9',
                             background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
@@ -336,7 +336,7 @@ export default function Explore() {
                             {course.item_locked && <LockOverlay tierName={course.tier_name} />}
                           </div>
 
-                          {/* Info — comfortable padding, larger type */}
+                          {/* Info - comfortable padding, larger type */}
                           <div style={{ padding: '14px 16px 16px' }}>
                             <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{course.title}</h4>
                             {course.subtitle && (
@@ -370,7 +370,7 @@ export default function Explore() {
                   </div>
                   <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
                     {section.items.map((item) => {
-                      // Square thumbnails — matches the AMS placeholder images
+                      // Square thumbnails - matches the AMS placeholder images
                       // (1300x1289, ~1:1) so nothing is cropped.
                       const CARD_W = 200;
                       return (
@@ -689,7 +689,7 @@ export default function Explore() {
       <ExerciseDetailModal exercise={selectedExercise} onClose={() => setSelectedExercise(null)} />
     )}
 
-    {/* Tier comparison modal — opens when tapping a locked Explore item */}
+    {/* Tier comparison modal - opens when tapping a locked Explore item */}
     <TiersModal
       open={!!tiersModal}
       onClose={() => setTiersModal(null)}

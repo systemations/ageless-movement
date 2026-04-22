@@ -26,7 +26,7 @@ const CATEGORY_COLORS = {
   NUTRITION: '#34C759',
   SLEEP: '#AF52DE',
 };
-// Warm-to-cool level progression — same palette used on Home hero tiles.
+// Warm-to-cool level progression - same palette used on Home hero tiles.
 const LEVEL_COLORS = {
   0: '#94a3b8',
   1: '#fb7185',
@@ -263,11 +263,11 @@ function AgelessMoverBoard({ token, gender, age, currentUserId }) {
         primary: `${e.points} pts`,
         secondary: `${e.tested_count} tests · avg Lv ${e.avg_level}`,
       }))}
-      emptyText="No scores yet — be the first to test."
+      emptyText="No scores yet - be the first to test."
       currentUserId={currentUserId}
       footerNote={
         <>
-          <strong>Ageless Mover</strong> is the all-rounder leaderboard — the athlete most well-rounded across every benchmark.
+          <strong>Ageless Mover</strong> is the all-rounder leaderboard - the athlete most well-rounded across every benchmark.
           Each verified level you hold earns points: <strong>Lv 1 = 1 · Lv 2 = 3 · Lv 3 = 6 · Lv 4 = 10 · Lv 5 = 15</strong>.
           Only your best attempt on each test counts. Max {data.max_points} pts.
         </>
@@ -294,11 +294,11 @@ function StreaksBoard({ token, gender, age, currentUserId }) {
         primary: `${e.current_streak} day${e.current_streak === 1 ? '' : 's'}`,
         secondary: `Best ${e.best_streak}`,
       }))}
-      emptyText="No streaks yet — log a check-in to start one."
+      emptyText="No streaks yet - log a check-in to start one."
       currentUserId={currentUserId}
       footerNote={
         <>
-          Your streak counts the number of consecutive days you&apos;ve logged activity. Miss a day and it resets to zero — but your <strong>Best</strong> stays.
+          Your streak counts the number of consecutive days you&apos;ve logged activity. Miss a day and it resets to zero - but your <strong>Best</strong> stays.
         </>
       }
     />
@@ -352,14 +352,14 @@ function BenchmarkBoard({ token, slug, unit, gender, age, currentUserId }) {
       entries={data.entries.map(e => ({
         ...e,
         primary: fmt(unit || 'reps', e.best_value),
-        secondary: e.age ? `${e.age} · ${e.gender || '—'}` : '',
+        secondary: e.age ? `${e.age} · ${e.gender || '-'}` : '',
       }))}
       emptyText="No verified entries yet. Be first."
       currentUserId={currentUserId}
       footerNote={
         requiresVideo
           ? <>Entries require a short video or Strava/Garmin activity link. Coach reviews each submission before it appears here with a <strong>Verified</strong> tick. Self-reported attempts don&apos;t count until verified.</>
-          : <>Self-reported — no video required for this benchmark.</>
+          : <>Self-reported - no video required for this benchmark.</>
       }
     />
   );
@@ -391,7 +391,7 @@ function LeaderList({ entries, emptyText, currentUserId, footerNote }) {
         </div>
       )}
 
-      {/* User's own rank if outside the top 10 — always visible without expanding. */}
+      {/* User's own rank if outside the top 10 - always visible without expanding. */}
       {meBeyondTop && !expanded && (
         <>
           <div style={{
@@ -591,7 +591,7 @@ function BenchmarksHub({ token, onOpen }) {
         const avgLevel = cat.benchmarks.reduce((s, b) => s + (b.current_level || 0), 0) / total;
         return (
           <div key={cat.category} style={{ marginBottom: 18 }}>
-            {/* Bold category banner — full-width pill with strong tint and avg-level pill */}
+            {/* Bold category banner - full-width pill with strong tint and avg-level pill */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', marginBottom: 8, borderRadius: 12,

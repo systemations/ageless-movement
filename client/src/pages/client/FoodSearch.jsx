@@ -77,7 +77,7 @@ export default function FoodSearch({ mealType, onSelect, onBack }) {
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
       setScanning(true);
     } else {
-      // Unsupported browser — use manual barcode entry
+      // Unsupported browser - use manual barcode entry
       setShowManualBarcode(true);
     }
   };

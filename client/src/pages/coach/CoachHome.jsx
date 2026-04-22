@@ -46,7 +46,7 @@ export default function CoachHome() {
         <h1 style={{ fontSize: 22, fontWeight: 800 }}>{firstName}</h1>
       </div>
 
-      {/* KPI tiles — 2x2 */}
+      {/* KPI tiles - 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
         <Kpi label="Active clients" value={data.kpis.total_clients} sub={`+${data.kpis.new_clients_7d} in last 7d`} color="var(--accent)" />
         <Kpi label="At risk" value={data.kpis.at_risk_count} sub="No check-in 14+ days" color="#FF5E5E" />
@@ -121,7 +121,7 @@ export default function CoachHome() {
         )}
       </Section>
 
-      {/* Upcoming — 1:1 bookings + scheduled events merged chronologically */}
+      {/* Upcoming - 1:1 bookings + scheduled events merged chronologically */}
       <Section
         title="Upcoming"
         subtitle="All coaches"

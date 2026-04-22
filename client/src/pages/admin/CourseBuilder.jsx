@@ -770,7 +770,7 @@ function CourseSettingsModal({ course, tiers, onSave, onClose }) {
           <div><label style={labelStyle}>Duration</label><input style={inputStyle} value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 8 weeks" /></div>
           <div><label style={labelStyle}>Tier</label>
             <select style={inputStyle} value={form.tier_id} onChange={e => setForm({ ...form, tier_id: Number(e.target.value) })}>
-              {tiers.map(t => <option key={t.id} value={t.id}>{t.name} — {t.price_label}</option>)}
+              {tiers.map(t => <option key={t.id} value={t.id}>{t.name} - {t.price_label}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end' }}>

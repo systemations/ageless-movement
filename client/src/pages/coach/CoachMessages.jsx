@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { SearchIcon } from '../../components/Icons';
 import MessageThread from '../client/MessageThread';
 
-// Tier visuals — reused so the colour on the Messages avatar ring matches
+// Tier visuals - reused so the colour on the Messages avatar ring matches
 // the pill in the Clients table and everywhere else a tier is shown.
 const TIER_COLORS = {
   Free:    { bg: 'rgba(148,163,184,0.18)', fg: '#94a3b8' },
@@ -13,7 +13,7 @@ const TIER_COLORS = {
 };
 const TIER_ORDER = ['All', 'Free', 'Starter', 'Prime', 'Elite'];
 
-// CoachMessages — shared team inbox. All coaches see every client's
+// CoachMessages - shared team inbox. All coaches see every client's
 // thread. Unread count shown per conversation. Clicking a row opens the
 // thread. Tabs let the coach switch between Clients (shared team inboxes),
 // Direct (private side-threads), and Groups. Tier filter lets the coach
@@ -103,7 +103,7 @@ export default function CoachMessages() {
         ))}
       </div>
 
-      {/* Tier filter — only meaningful on the Clients scope */}
+      {/* Tier filter - only meaningful on the Clients scope */}
       {scope === 'team' && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
           {TIER_ORDER.map(tier => {
@@ -159,7 +159,7 @@ function ConversationRow({ conv, onClick }) {
   const name = conv.client?.name || conv.other_user?.name || conv.title || 'Untitled';
   const unread = conv.unread_count || 0;
   // For team inboxes we always want a tier pill (defaults to Free if no
-  // profile yet). Direct/group scopes don't have a tier — hide it.
+  // profile yet). Direct/group scopes don't have a tier - hide it.
   const tier = conv.scope === 'team' ? (conv.client?.tier_name || 'Free') : null;
   const tierColor = tier ? (TIER_COLORS[tier] || TIER_COLORS.Free) : null;
 
@@ -177,7 +177,7 @@ function ConversationRow({ conv, onClick }) {
         width: 44, height: 44, borderRadius: '50%', background: 'var(--accent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
-        // Tier-coloured ring around the avatar — fast visual triage
+        // Tier-coloured ring around the avatar - fast visual triage
         boxShadow: tierColor ? `0 0 0 2px var(--bg-primary), 0 0 0 4px ${tierColor.fg}` : 'none',
       }}>
         {name.charAt(0).toUpperCase()}

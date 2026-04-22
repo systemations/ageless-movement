@@ -52,7 +52,7 @@ import BottomNav from './components/BottomNav';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Welcome from './pages/auth/Welcome';
-// RolePicker removed — login handles coach-vs-client routing by the role
+// RolePicker removed - login handles coach-vs-client routing by the role
 // on the account, no need to ask the user which they are.
 import Privacy from './pages/legal/Privacy';
 import Terms from './pages/legal/Terms';
@@ -64,6 +64,7 @@ import Progress from './pages/client/Progress';
 import Challenges from './pages/client/Challenges';
 import BenchmarkDetail from './pages/client/BenchmarkDetail';
 import OnboardingQuestionnaire from './pages/client/OnboardingQuestionnaire';
+import PlansPage from './pages/client/PlansPage';
 import NutritionHub from './pages/client/NutritionHub';
 import Profile from './pages/client/Profile';
 import LogOtherWorkout from './pages/client/LogOtherWorkout';
@@ -174,7 +175,7 @@ function AppRoutes() {
         {/* Auth */}
         <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Welcome />} />
         <Route path="/welcome" element={user ? <Navigate to={defaultRoute} replace /> : <Welcome />} />
-        {/* /welcome/role redirect — role picker removed. Login handles
+        {/* /welcome/role redirect - role picker removed. Login handles
             coach-vs-client routing via the role on the account. */}
         <Route path="/welcome/role" element={<Navigate to="/onboarding" replace />} />
         <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
@@ -182,10 +183,11 @@ function AppRoutes() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 
-        {/* Onboarding — anonymous. Runs BEFORE signup so new users get a
+        {/* Onboarding - anonymous. Runs BEFORE signup so new users get a
             matched program before creating an account. Answers are held in
             localStorage and sent to the server as part of /register. */}
         <Route path="/onboarding" element={user ? <Navigate to={defaultRoute} replace /> : <OnboardingQuestionnaire />} />
+        <Route path="/plans" element={<ProtectedRoute><PlansPage /></ProtectedRoute>} />
 
         {/* Client Routes */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />

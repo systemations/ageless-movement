@@ -246,7 +246,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
             }}>
               <span style={{ fontSize: 13 }}>⏸</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#FF9500' }}>
-                Deload Week — Volume -40% / Intensity -15%
+                Deload Week - Volume -40% / Intensity -15%
               </span>
             </div>
           )}
@@ -532,7 +532,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
         </div>
       )}
 
-      {/* Daily check-in removed from homepage — will be notification-driven */}
+      {/* Daily check-in removed from homepage - will be notification-driven */}
     </>
   );
 }

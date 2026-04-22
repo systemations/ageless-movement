@@ -49,7 +49,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
   const [swappedExercises, setSwappedExercises] = useState({});
   const [showExDetail, setShowExDetail] = useState(null);
   // Client dose overrides keyed by workout_exercise_id. Non-null values are
-  // this-session-only duration targets the client picked for themselves —
+  // this-session-only duration targets the client picked for themselves -
   // they replace the coach's prescribed duration without touching modality.
   // Logged to workout_logs on complete so the coach sees what the client did.
   const [durationOverrides, setDurationOverrides] = useState({});
@@ -69,7 +69,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
     }
     // Apply client-side per-exercise overrides (swap + duration tweak) to
     // the exercise list before handing it to the player. The coach's
-    // template is untouched on the server — these mutations are session-
+    // template is untouched on the server - these mutations are session-
     // scoped and get logged alongside the completion.
     const exercisesForPlayer = (data.exercises || []).map(ex => {
       const swap = swappedExercises[ex.id];
@@ -264,7 +264,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
         }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        {/* Favourite heart — saves this workout to the client's Favourites tab */}
+        {/* Favourite heart - saves this workout to the client's Favourites tab */}
         <div style={{
           width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--divider)',
@@ -284,7 +284,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
         background: 'var(--bg-card)', borderRadius: 16,
         marginBottom: 20, position: 'relative', overflow: 'hidden',
       }}>
-        {/* Poster — full-width above the title. WorkoutThumb falls back to
+        {/* Poster - full-width above the title. WorkoutThumb falls back to
             a light coloured gradient card with the workout title if no image. */}
         <WorkoutThumb
           title={workout.title}
@@ -338,7 +338,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
           </div>
         )}
 
-        {/* Equipment — show as pills like body parts, more prominent than the old line */}
+        {/* Equipment - show as pills like body parts, more prominent than the old line */}
         {workout.equipment && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: workout.description ? 12 : 0, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginRight: 4 }}>
@@ -591,7 +591,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
         />
       )}
 
-      {/* Bottom action buttons — pinned above the nav.
+      {/* Bottom action buttons - pinned above the nav.
           In previewMode (opened from the calendar to decide on scheduling),
           the primary CTA is "Add to Schedule". Otherwise it's "Start". */}
       <div style={{
@@ -691,7 +691,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
                     setScheduleMsg(`Added to ${scheduleDate}`);
                     setTimeout(() => { setShowSchedule(false); setScheduleMsg(''); }, 900);
                   } else {
-                    setScheduleMsg('Failed to add — try again');
+                    setScheduleMsg('Failed to add - try again');
                   }
                 } catch (err) {
                   setScheduleMsg('Network error');

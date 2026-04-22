@@ -6,6 +6,7 @@ import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../lib/config.js';
 import { allocateProgram } from '../lib/programAllocator.js';
+import { queuePostSignupTasks } from '../jobs/post-signup-tasks.js';
 
 // Slow down brute-force login / register attempts. Keyed by IP — a
 // dedicated attacker can rotate IPs but this blocks the common case of
@@ -65,6 +66,10 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     const user = result.rows[0];
     await pool.query('INSERT INTO client_profiles (user_id) VALUES ($1)', [user.id]);
+
+    // Queue the deferred welcome DM + 24h plans nudge. Wrapped so any
+    // scheduler failure never blocks the register response.
+    try { queuePostSignupTasks(user.id); } catch (e) { console.error('queuePostSignupTasks failed:', e); }
 
     // If the client came through the onboarding flow, save their answers,
     // re-run the allocator server-side (client can't self-assign a program

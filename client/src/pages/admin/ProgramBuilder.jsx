@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
 
-// Program preset blocks — clicking one of these pre-fills duration_weeks.
+// Program preset blocks - clicking one of these pre-fills duration_weeks.
 // These are the common training cycle lengths we design programs around and
 // will later drive coach-side triggers (e.g. "client finished a 4 week block").
 const DURATION_PRESETS = [2, 4, 6, 8, 12];
@@ -28,7 +28,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [addingExercise, setAddingExercise] = useState(false);
   const [exerciseForm, setExerciseForm] = useState({ sets: 3, reps: '10', group_type: '', rest_secs: 30 });
-  // Program Builder scheduler state — the drag/drop calendar + search picker
+  // Program Builder scheduler state - the drag/drop calendar + search picker
   const [dragWorkoutId, setDragWorkoutId] = useState(null);
   const [librarySearch, setLibrarySearch] = useState('');
   const [showLibrary, setShowLibrary] = useState(false);
@@ -96,7 +96,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
     setSelectedWorkout({ ...selectedWorkout, exercises: updated.exercises });
   };
 
-  // Scheduler helpers — move a workout to a new (week, day) cell via the
+  // Scheduler helpers - move a workout to a new (week, day) cell via the
   // lightweight PATCH /slot endpoint, and clone a library workout into the
   // current program at a specific slot.
   const moveWorkoutToSlot = async (workoutId, week, day) => {
@@ -334,7 +334,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
             {selectedProgram.duration_weeks || totalWeeks} week block · {selectedProgram.workouts_per_week || '?'} workouts/week target · {programWorkouts.length} workouts placed
             <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text-tertiary)' }}>(drag cards between cells to move days)</span>
           </p>
-          {/* Day label toggle — flips column headers between abstract day numbers and Mon–Sun */}
+          {/* Day label toggle - flips column headers between abstract day numbers and Mon–Sun */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
             <span style={{ color: 'var(--text-tertiary)' }}>Day labels:</span>
             <button
@@ -502,7 +502,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
                       if (pendingSlot) {
                         cloneWorkoutIntoSlot(w.id, pendingSlot.week, pendingSlot.day);
                       } else {
-                        // No slot picked — default to the next empty day in week 1
+                        // No slot picked - default to the next empty day in week 1
                         let placed = false;
                         for (let wk = 1; wk <= totalWeeks && !placed; wk++) {
                           for (const d of DAYS) {
@@ -540,7 +540,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
   }
 
   // ===== PROGRAM LIST =====
-  // Program create/edit form — reused for both 'new' and editing an existing
+  // Program create/edit form - reused for both 'new' and editing an existing
   // program (editing = program.id). Exposes DURATION_PRESETS as one-tap buttons
   // to lock the program into a 2 / 4 / 6 / 8 / 12 week block; later phases will
   // read duration_weeks to trigger coach notifications at block boundaries.
@@ -593,6 +593,37 @@ export default function ProgramBuilder({ onEditWorkout }) {
             <input type="number" className="input-field" value={form.workouts_per_week || ''} onChange={e => setForm({ ...form, workouts_per_week: parseInt(e.target.value) || '' })} />
           </div>
         </div>
+        {!isNew && (() => {
+          const programWorkouts = workouts.filter(w => w.program_id === form.id);
+          const freeCount = programWorkouts.filter(w => w.is_free_preview).length;
+          const total = programWorkouts.length;
+          const allFree = total > 0 && freeCount === total;
+          const bulkSet = async (value) => {
+            await fetch(`/api/content/programs/${form.id}/free-preview`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ value: value ? 1 : 0 }),
+            });
+            fetchAll();
+          };
+          return (
+            <div className="input-group">
+              <label>Free preview</label>
+              <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: -4, marginBottom: 8 }}>
+                Free-tier clients can access preview workouts even if the program is tier-locked.
+                <span style={{ marginLeft: 6, color: 'var(--text-secondary)' }}>{freeCount} of {total} marked.</span>
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" disabled={allFree || total === 0} onClick={() => bulkSet(true)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--divider)', background: allFree ? 'var(--bg-card)' : 'transparent', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: allFree || total === 0 ? 'default' : 'pointer', opacity: allFree || total === 0 ? 0.5 : 1 }}>
+                  Mark all as free preview
+                </button>
+                <button type="button" disabled={freeCount === 0} onClick={() => bulkSet(false)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--divider)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: freeCount === 0 ? 'default' : 'pointer', opacity: freeCount === 0 ? 0.5 : 1 }}>
+                  Unmark all
+                </button>
+              </div>
+            </div>
+          );
+        })()}
         <button onClick={async () => { await saveProgram(); if (!isNew) setSelectedProgram({ ...selectedProgram, ...form }); }} style={{ marginTop: 8, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{isNew ? 'Create Program' : 'Save Changes'}</button>
       </div>
     );

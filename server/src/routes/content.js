@@ -46,10 +46,10 @@ router.get('/workouts', authenticateToken, requireRole('coach'), (req, res) => {
 
 router.post('/workouts', authenticateToken, requireRole('coach'), (req, res) => {
   try {
-    const { program_id, phase_id, week_number, day_number, title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, status } = req.body;
+    const { program_id, phase_id, week_number, day_number, title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, status, is_free_preview } = req.body;
     const result = pool.query(
-      'INSERT INTO workouts (program_id, phase_id, week_number, day_number, title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
-      [program_id || null, phase_id || null, week_number || 1, day_number || 1, title, description, duration_mins, intensity || 'Medium', body_parts, equipment, workout_type || 'strength', image_url || null, video_url || null, status || 'draft']
+      'INSERT INTO workouts (program_id, phase_id, week_number, day_number, title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, status, is_free_preview) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
+      [program_id || null, phase_id || null, week_number || 1, day_number || 1, title, description, duration_mins, intensity || 'Medium', body_parts, equipment, workout_type || 'strength', image_url || null, video_url || null, status || 'draft', is_free_preview ? 1 : 0]
     );
     res.json({ workout: result.rows[0] });
   } catch (err) {
@@ -60,16 +60,32 @@ router.post('/workouts', authenticateToken, requireRole('coach'), (req, res) => 
 
 router.put('/workouts/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
-    const { title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, week_number, day_number, program_id, status } = req.body;
+    const { title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url, week_number, day_number, program_id, status, is_free_preview } = req.body;
     pool.query(
-      'UPDATE workouts SET title=?, description=?, duration_mins=?, intensity=?, body_parts=?, equipment=?, workout_type=?, image_url=?, video_url=?, week_number=?, day_number=?, program_id=?, status=? WHERE id=?',
-      [title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url || null, week_number, day_number, program_id || null, status || 'draft', req.params.id]
+      'UPDATE workouts SET title=?, description=?, duration_mins=?, intensity=?, body_parts=?, equipment=?, workout_type=?, image_url=?, video_url=?, week_number=?, day_number=?, program_id=?, status=?, is_free_preview=COALESCE(?, is_free_preview) WHERE id=?',
+      [title, description, duration_mins, intensity, body_parts, equipment, workout_type, image_url, video_url || null, week_number, day_number, program_id || null, status || 'draft', typeof is_free_preview === 'undefined' ? null : (is_free_preview ? 1 : 0), req.params.id]
     );
     res.json({ success: true });
   } catch (err) {
     console.error('PUT /workouts/:id error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Bulk toggle is_free_preview on every workout in a program. Used by the
+// Program Builder "Mark all as free preview" / "Unmark all" buttons when
+// Dan wants an entire lead-magnet program accessible to Free-tier clients.
+router.post('/programs/:id/free-preview', authenticateToken, requireRole('coach'), (req, res) => {
+  const value = req.body.value ? 1 : 0;
+  pool.query(
+    'UPDATE workouts SET is_free_preview = ? WHERE program_id = ?',
+    [value, req.params.id]
+  );
+  const count = pool.query(
+    'SELECT COUNT(*) as c FROM workouts WHERE program_id = ? AND is_free_preview = 1',
+    [req.params.id]
+  ).rows[0]?.c || 0;
+  res.json({ success: true, free_preview_count: count, value });
 });
 
 router.delete('/workouts/:id', authenticateToken, requireRole('coach'), (req, res) => {
@@ -356,6 +372,13 @@ router.get('/exercises/no-video', authenticateToken, requireRole('coach'), (req,
 
 // ===== TIERS =====
 router.get('/tiers', authenticateToken, (req, res) => {
+  const tiers = pool.query('SELECT * FROM tiers ORDER BY level');
+  res.json({ tiers: tiers.rows });
+});
+
+// Public read of the tier list — used by the pre-register PackageSelection
+// step. Same payload as the auth'd endpoint, but callable before signup.
+router.get('/tiers/public', (req, res) => {
   const tiers = pool.query('SELECT * FROM tiers ORDER BY level');
   res.json({ tiers: tiers.rows });
 });

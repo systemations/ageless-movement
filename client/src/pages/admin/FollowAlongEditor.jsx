@@ -237,7 +237,7 @@ export default function FollowAlongEditor({ workoutId, onBack, onSaved }) {
                   onChange={e => update('program_id', e.target.value)}
                   style={inputStyle}
                 >
-                  <option value="">— Standalone (library) —</option>
+                  <option value="">- Standalone (library) -</option>
                   {programs.map(p => (
                     <option key={p.id} value={p.id}>{p.title}</option>
                   ))}

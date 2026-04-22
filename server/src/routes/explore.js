@@ -325,13 +325,17 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
     const workout = pool.query('SELECT w.*, t.level as tier_level FROM workouts w LEFT JOIN tiers t ON t.id = w.tier_id WHERE w.id = ?', [req.params.id]);
     if (workout.rows.length === 0) return res.status(404).json({ error: 'Workout not found' });
 
-    // Bypass tier guard if the workout belongs to a program the client is
-    // enrolled in (legitimate access). Otherwise enforce tier level.
+    // Access rules, in order:
+    //   1. Workout flagged is_free_preview → always accessible (lead-magnet
+    //      content for Free-tier signups).
+    //   2. Client is enrolled in the workout's program → accessible.
+    //   3. Otherwise → enforce tier level.
     const programId = workout.rows[0].program_id;
+    const isFreePreview = !!workout.rows[0].is_free_preview;
     const enrolled = programId
       ? pool.query('SELECT 1 FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, programId]).rows.length > 0
       : false;
-    if (!enrolled) {
+    if (!isFreePreview && !enrolled) {
       const guard = enforceTier(req.user.id, workout.rows[0].tier_level);
       if (!guard.ok) {
         return res.status(403).json({ error: 'Tier required', required_tier: guard.required_tier });

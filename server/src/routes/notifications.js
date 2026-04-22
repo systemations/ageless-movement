@@ -28,6 +28,9 @@ function matchesAudience(n, userId) {
     const prof = pool.query('SELECT tier_id FROM client_profiles WHERE user_id = ?', [userId]).rows[0];
     return prof?.tier_id === n.audience_tier_id;
   }
+  if (n.audience === 'user') {
+    return Number(n.audience_user_id) === Number(userId);
+  }
   return false;
 }
 

@@ -50,7 +50,7 @@ export default function AdminLayout() {
   const [expandedMenus, setExpandedMenus] = useState(['messages', 'fitness']);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editWorkoutId, setEditWorkoutId] = useState(null);
-  // Deep-link into a specific client — CoachHome sets this, ClientManager consumes it
+  // Deep-link into a specific client - CoachHome sets this, ClientManager consumes it
   const [pendingClientId, setPendingClientId] = useState(null);
 
   const handleEditWorkout = (workoutId) => {
@@ -86,7 +86,7 @@ export default function AdminLayout() {
       default: return (
         <div style={{ padding: 40, textAlign: 'center' }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{navItems.find(n => n.id === activePage)?.label}</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Coming soon — select Exercise Library or Programs to get started</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Coming soon - select Exercise Library or Programs to get started</p>
         </div>
       );
     }

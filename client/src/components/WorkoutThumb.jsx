@@ -3,7 +3,7 @@
 // Rendering priority:
 //   1. If `thumbnailUrl` is present → show the image
 //   2. Otherwise → show the workout title as bold white text on a rich
-//      solid colour (Sweat Session style — deterministic by title hash)
+//      solid colour (Sweat Session style - deterministic by title hash)
 //
 // Used anywhere a workout cover needs to appear: ProgramDetail workout list,
 // WorkoutOverview hero, Explore workout carousels, Home hero card, Favourites.

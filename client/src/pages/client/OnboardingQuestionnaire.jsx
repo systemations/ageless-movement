@@ -15,12 +15,12 @@ const STORAGE_KEY = 'am_onboarding_answers';
 
 // ── Questions ───────────────────────────────────────────────────────────
 // Structure:
-//   id        — key on the answers object
-//   title     — shown to user
-//   subtitle  — optional small copy
-//   type      — 'age' | 'single' | 'multi'
-//   options   — array of { value, label, hint? }
-//   optional  — true for q7 (can proceed with no selections)
+//   id        - key on the answers object
+//   title     - shown to user
+//   subtitle  - optional small copy
+//   type      - 'age' | 'single' | 'multi'
+//   options   - array of { value, label, hint? }
+//   optional  - true for q7 (can proceed with no selections)
 
 const QUESTIONS = [
   {
@@ -32,7 +32,7 @@ const QUESTIONS = [
   {
     id: 'goal',
     title: "What's your primary goal?",
-    subtitle: 'Pick what matters most right now — you can shift focus anytime.',
+    subtitle: 'Pick what matters most right now - you can shift focus anytime.',
     type: 'single',
     options: [
       { value: 'move_pain_free', label: 'Move without pain or restriction' },
@@ -72,8 +72,8 @@ const QUESTIONS = [
     title: 'Where do you train?',
     type: 'single',
     options: [
-      { value: 'home_bodyweight', label: 'Home — bodyweight only' },
-      { value: 'home_basics',     label: 'Home — bands, mat, maybe dumbbells' },
+      { value: 'home_bodyweight', label: 'Home - bodyweight only' },
+      { value: 'home_basics',     label: 'Home - bands, mat, maybe dumbbells' },
       { value: 'home_gym',        label: 'Home gym (barbell, rack, etc.)' },
       { value: 'full_gym',        label: 'Full commercial gym' },
     ],
@@ -95,7 +95,7 @@ const QUESTIONS = [
     type: 'multi',
     optional: true,
     options: [
-      { value: 'none',     label: 'None — good to go' },
+      { value: 'none',     label: 'None - good to go' },
       { value: 'knee',     label: 'Knee' },
       { value: 'back',     label: 'Back' },
       { value: 'shoulder', label: 'Shoulder' },
@@ -298,7 +298,7 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
                 <div style={{ fontSize: 26, marginBottom: 6 }}>👋</div>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>Coach review within 24 hours</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
-                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan — you'll get a notification when it's ready.
+                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan - you'll get a notification when it's ready.
                 </div>
               </div>
             </>
@@ -320,7 +320,7 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
 
         <div style={footer}>
           <button onClick={onContinue} style={ctaBtn}>
-            Create my account →
+            Try the app free →
           </button>
         </div>
       </div>

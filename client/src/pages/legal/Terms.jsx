@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-// Placeholder terms of service. Copy is scaffolding only — replace with
+// Placeholder terms of service. Copy is scaffolding only - replace with
 // lawyer-reviewed text before inviting real users. See Privacy.jsx comment.
 
 export default function Terms() {
@@ -9,7 +9,7 @@ export default function Terms() {
       <Link to="/" style={back}>&larr; Back</Link>
       <h1 style={h1}>Terms of Service</h1>
       <p style={meta}>
-        <strong>Draft — alpha placeholder.</strong> Pending legal review before
+        <strong>Draft - alpha placeholder.</strong> Pending legal review before
         general availability.
       </p>
 
@@ -25,7 +25,7 @@ export default function Terms() {
       </Section>
 
       <Section title="3. Medical disclaimer">
-        Ageless Movement provides fitness coaching and movement guidance — not
+        Ageless Movement provides fitness coaching and movement guidance - not
         medical advice. Consult a qualified medical professional before
         starting any exercise program, particularly if you have an injury,
         chronic condition, or are pregnant.

@@ -571,11 +571,12 @@ router.get('/clients-enriched', authenticateToken, requireRole('coach'), (req, r
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     const rows = pool.query(`
       SELECT u.id, u.name, u.email, u.avatar_url, u.created_at, u.last_active_at,
-        cp.age, cp.gender, cp.location, cp.tier_id,
+        cp.age, cp.gender, cp.location, cp.tier_id, cp.tier_requested_id,
         COALESCE(cp.profile_image_url, u.avatar_url) as photo_url,
         COALESCE(cp.status, 'active') as status,
         cp.status_changed_at, cp.status_note,
         t.name as tier_name, t.level as tier_level,
+        tr.name as tier_requested_name, tr.level as tier_requested_level,
         oa.goal,
         (SELECT date FROM checkins WHERE user_id = u.id ORDER BY date DESC LIMIT 1) as last_checkin,
         (SELECT date FROM workout_logs WHERE user_id = u.id AND completed = 1 ORDER BY date DESC LIMIT 1) as last_workout,
@@ -585,6 +586,7 @@ router.get('/clients-enriched', authenticateToken, requireRole('coach'), (req, r
       FROM users u
       LEFT JOIN client_profiles cp ON cp.user_id = u.id
       LEFT JOIN tiers t ON t.id = cp.tier_id
+      LEFT JOIN tiers tr ON tr.id = cp.tier_requested_id
       LEFT JOIN onboarding_answers oa ON oa.user_id = u.id
       WHERE u.role = 'client'
       ORDER BY u.name
@@ -613,7 +615,7 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
     const id = req.params.id;
     const client = pool.query(`
       SELECT u.id, u.name, u.email, u.avatar_url, u.created_at, u.last_active_at,
-        cp.age, cp.gender, cp.location, cp.tier_id,
+        cp.age, cp.gender, cp.location, cp.tier_id, cp.tier_requested_id,
         cp.calorie_target, cp.protein_target, cp.fat_target, cp.carbs_target, cp.water_target,
         cp.plan_title, cp.plan_cycle, cp.plan_started_at, cp.plan_next_renewal_at,
         cp.profile_image_url,
@@ -621,10 +623,12 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
         COALESCE(cp.status, 'active') as status,
         cp.status_changed_at, cp.status_note,
         t.name as tier_name, t.level as tier_level,
+        tr.name as tier_requested_name, tr.level as tier_requested_level,
         oa.goal, oa.experience, oa.injuries, oa.schedule, oa.equipment, oa.dietary, oa.sleep, oa.anything_else
       FROM users u
       LEFT JOIN client_profiles cp ON cp.user_id = u.id
       LEFT JOIN tiers t ON t.id = cp.tier_id
+      LEFT JOIN tiers tr ON tr.id = cp.tier_requested_id
       LEFT JOIN onboarding_answers oa ON oa.user_id = u.id
       WHERE u.id = ? AND u.role = 'client'
     `, [id]).rows[0];

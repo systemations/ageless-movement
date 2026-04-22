@@ -3,8 +3,8 @@ import { getVimeoEmbedUrl } from './VimeoEmbed';
 
 export default function ExerciseDetailModal({
   exercise, onClose, onSwap,
-  clientDurationOverride,    // number (secs) | null — session override
-  onSetDurationOverride,     // (secs | null) => void — sent to parent
+  clientDurationOverride,    // number (secs) | null - session override
+  onSetDurationOverride,     // (secs | null) => void - sent to parent
 }) {
   if (!exercise) return null;
 
@@ -79,7 +79,7 @@ export default function ExerciseDetailModal({
             </div>
           )}
 
-          {/* Back button — higher contrast so it's visible even when the
+          {/* Back button - higher contrast so it's visible even when the
               video area is empty/black. */}
           <button
             onClick={onClose}
@@ -205,7 +205,7 @@ export default function ExerciseDetailModal({
 
             {/* Dose-only customizer. Shown when the exercise is duration-
                 tracked AND has no phase plan (coach-prescribed intervals lock
-                this out — modality is the coach's call). Client can shorten
+                this out - modality is the coach's call). Client can shorten
                 or extend today's session without picking a new modality. */}
             {(() => {
               if (!onSetDurationOverride) return null;
@@ -226,12 +226,12 @@ export default function ExerciseDetailModal({
               );
             })()}
 
-            {/* Interval phase list — shown when the coach has prescribed a
+            {/* Interval phase list - shown when the coach has prescribed a
                 phase structure. Takes priority over simple sets/reps display. */}
             {Array.isArray(exercise.interval_structure) && exercise.interval_structure.length > 0 ? (
               <IntervalPhaseList phases={exercise.interval_structure} />
             ) : (
-              /* Tracking info — classic sets/reps/rest/tempo for non-interval exercises */
+              /* Tracking info - classic sets/reps/rest/tempo for non-interval exercises */
               <div style={{
                 background: 'var(--bg-card)', borderRadius: 12, padding: 16,
                 display: 'flex', gap: 16, flexWrap: 'wrap',
@@ -291,7 +291,7 @@ export default function ExerciseDetailModal({
 
 // Client-side dose customizer. Shows the coach's base duration, lets the
 // client bump it ± in 5-min steps or type a custom value. Never overrides
-// modality — that's the coach's domain. The override is session-scoped
+// modality - that's the coach's domain. The override is session-scoped
 // (parent stores it in-memory) and gets logged on workout complete so the
 // coach can see what the client actually did.
 function DurationCustomizer({ baseSecs, currentSecs, isOverridden, onChange, onReset }) {

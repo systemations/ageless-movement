@@ -329,7 +329,7 @@ function ChallengeEditor({ challenge, token, onClose, onSaved }) {
         </div>
       ))}
 
-      {/* Participants — per-client progress through the challenge levels */}
+      {/* Participants - per-client progress through the challenge levels */}
       {!isNew && (
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
           <label style={{ ...labelStyle, marginBottom: 10, display: 'block' }}>

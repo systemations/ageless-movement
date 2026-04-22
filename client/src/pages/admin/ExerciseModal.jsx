@@ -229,7 +229,7 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
           <input className="input-field" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="Push, Pull, Upper" />
         </div>
 
-        {/* Media — Video + Photo */}
+        {/* Media - Video + Photo */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           {/* Video */}
           <div>

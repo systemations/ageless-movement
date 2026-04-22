@@ -29,7 +29,7 @@ export default function FavouritesPage() {
 
   const addWorkoutToToday = async (fav) => {
     if (fav.item_type !== 'workout') {
-      // Programs aren't date-schedulable directly — send the user to the program page.
+      // Programs aren't date-schedulable directly - send the user to the program page.
       navigate(`/explore?program=${fav.item_id}`);
       return;
     }

@@ -313,7 +313,7 @@ function EditSupplementModal({ initial, saving, onSave, onDelete, onClose }) {
         </h3>
         {!editableAll && (
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14 }}>
-            Your coach prescribed this one — you can update the dose you actually take.
+            Your coach prescribed this one - you can update the dose you actually take.
           </p>
         )}
 

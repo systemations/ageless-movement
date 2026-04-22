@@ -430,7 +430,7 @@ export default function Home() {
         Today · {todayStr}
       </p>
 
-      {/* Week Calendar Strip — pinned at the top. Tap a day to see prescribed workouts. */}
+      {/* Week Calendar Strip - pinned at the top. Tap a day to see prescribed workouts. */}
       <div className="card" style={{ padding: '12px 8px', marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-around' }}>
           {weekDates.map((date, i) => {
@@ -1363,7 +1363,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Challenges & Levels hero card — sits below Activity */}
+      {/* Challenges & Levels hero card - sits below Activity */}
       <ChallengesCard token={token} onOpen={() => navigate('/challenges')} />
 
       {/* More Section */}
@@ -1403,7 +1403,7 @@ const CATEGORY_COLORS = {
   BURN: '#FF453A', LIFT: '#FF8C00', MOVE: '#85FFBA',
   FLEX: '#5AC8FA', NUTRITION: '#34C759', SLEEP: '#AF52DE',
 };
-// Colour per level — a warm-to-cool climb so the tile colour itself
+// Colour per level - a warm-to-cool climb so the tile colour itself
 // communicates the user's progress on that category at a glance.
 const LEVEL_COLORS = {
   0: '#94a3b8',  // slate (untested)
@@ -1411,7 +1411,7 @@ const LEVEL_COLORS = {
   2: '#fb923c',  // amber
   3: '#facc15',  // gold
   4: '#22c55e',  // emerald
-  5: '#8b5cf6',  // violet — mastery
+  5: '#8b5cf6',  // violet - mastery
 };
 const challengesCache = { data: null };
 

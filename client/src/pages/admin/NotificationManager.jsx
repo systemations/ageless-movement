@@ -230,7 +230,7 @@ export default function NotificationManager() {
           <div style={{ display: 'grid', gap: 14 }}>
             <Field label="Kind">
               <select value={form.kind} onChange={e => setForm(f => ({ ...f, kind: e.target.value }))} style={inputStyle}>
-                {KIND_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label} — {k.desc}</option>)}
+                {KIND_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label} - {k.desc}</option>)}
               </select>
             </Field>
 

@@ -14,7 +14,7 @@ const tabItems = [
 const sectionTypes = ['carousel', 'featured', 'grid'];
 const layouts = ['square', 'wide', 'tall', 'circular'];
 const parentTabs = ['fitness', 'nutrition', 'resources'];
-// Content types — single source of truth for what kind of items a section holds.
+// Content types - single source of truth for what kind of items a section holds.
 // Note: 'follow_along' and 'workout' both resolve to the workouts table at the
 // item-level (item_type='workout' in explore_section_items), but they filter
 // to mutually exclusive subsets based on workouts.workout_type. Keep in sync
@@ -126,7 +126,7 @@ export default function ExploreManager() {
 }
 
 // ═══════════════════════════════════════════════════════
-// SECTIONS TAB — Page Builder
+// SECTIONS TAB - Page Builder
 // ═══════════════════════════════════════════════════════
 function SectionsTab({ sections, setSections, tiers, programs, workouts, courses, recipes, mealPlans, headers, onRefresh }) {
   const [editing, setEditing] = useState(null);
@@ -349,7 +349,7 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
                             </div>
                             <p style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{item.item_title || `${item.item_type} #${item.item_id}`}</p>
                             <p style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>{item.item_type}{item.duration_weeks ? ` - ${item.duration_weeks}wk` : ''}</p>
-                            {/* Reorder arrows — move item left/right within its section */}
+                            {/* Reorder arrows - move item left/right within its section */}
                             <div style={{ display: 'flex', gap: 2, marginTop: 6 }}>
                               <button
                                 onClick={() => moveItem(section.id, item.id, 'up')}
@@ -447,7 +447,7 @@ function SectionForm({ initial, tiers, onSave, onCancel }) {
         <div>
           <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Content</label>
           <select style={inputStyle} value={form.content_type} onChange={e => setForm({ ...form, content_type: e.target.value })}>
-            <option value="">— Pick one —</option>
+            <option value="">- Pick one -</option>
             {contentTypes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
@@ -510,7 +510,7 @@ const lockedLabel = {
   exercise: 'Exercises',
 };
 
-// Item picker — choose programs/workouts/courses to add.
+// Item picker - choose programs/workouts/courses to add.
 // Sections are single-type: lockedType pins the picker to one content type.
 // 'follow_along' and 'workout' both save as item_type='workout' in the DB
 // but filter the workouts array to mutually exclusive subsets based on
@@ -667,7 +667,7 @@ function NewCourseForm({ tiers, onSave, onCancel }) {
         <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Duration</label><input style={inputStyle} value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 8 weeks" /></div>
         <div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Tier</label>
           <select style={inputStyle} value={form.tier_id} onChange={e => setForm({ ...form, tier_id: Number(e.target.value) })}>
-            {tiers.map(t => <option key={t.id} value={t.id}>{t.name} — {t.price_label}</option>)}
+            {tiers.map(t => <option key={t.id} value={t.id}>{t.name} - {t.price_label}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
@@ -743,7 +743,7 @@ function TiersTab({ tiers, headers, onRefresh }) {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
-              Features (one per line — shown as a checkmark list)
+              Features (one per line - shown as a checkmark list)
             </label>
             <textarea
               style={{ ...inputStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }}

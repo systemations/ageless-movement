@@ -196,14 +196,14 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
     intervalTimerRef.current = setInterval(() => {
       setIntervalPhaseSecsLeft(prev => {
         if (prev <= 1) {
-          // End of phase — advance.
+          // End of phase - advance.
           if (intervalPhaseIdx < currentPhases.length - 1) {
             const nextIdx = intervalPhaseIdx + 1;
             setIntervalPhaseIdx(nextIdx);
             if (settings.audioCues) playTone('beep');
             return Number(currentPhases[nextIdx]?.duration_secs) || 0;
           }
-          // End of last phase — move to next exercise via handleNext.
+          // End of last phase - move to next exercise via handleNext.
           // Defer the state transition so React can finish this tick first.
           setTimeout(() => handleNext(), 0);
           return 0;
@@ -469,12 +469,12 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
                 {currentPhase?.zone ? ` · Z${currentPhase.zone}` : ''}
                 {currentPhase?.notes ? ` · ${currentPhase.notes}` : ''}
               </p>
-              {/* Phase chip strip — dots for each phase, current highlighted */}
+              {/* Phase chip strip - dots for each phase, current highlighted */}
               <div style={{ display: 'flex', gap: 3, marginTop: 10, flexWrap: 'wrap' }}>
                 {currentPhases.map((p, i) => (
                   <span
                     key={i}
-                    title={`${p.label || 'Phase ' + (i + 1)} — ${Math.round((p.duration_secs || 0) / 60 * 10) / 10} min, ${p.intensity}`}
+                    title={`${p.label || 'Phase ' + (i + 1)} - ${Math.round((p.duration_secs || 0) / 60 * 10) / 10} min, ${p.intensity}`}
                     style={{
                       height: 6, flex: `${Math.max(1, p.duration_secs || 1)} 0 0`,
                       minWidth: 8, borderRadius: 3,

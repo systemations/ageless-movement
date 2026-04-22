@@ -310,7 +310,7 @@ export default function RecipeManager() {
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '8px 0', borderBottom: i < r.ingredients.length - 1 ? '1px solid var(--divider)' : 'none' }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3DFFD2', flexShrink: 0, marginTop: 6 }} />
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  <strong style={{ color: 'var(--text-primary)' }}>{ing.qty}{ing.unit ? ` ${ing.unit}` : ''}</strong> — {ing.name}
+                  <strong style={{ color: 'var(--text-primary)' }}>{ing.qty}{ing.unit ? ` ${ing.unit}` : ''}</strong> - {ing.name}
                 </span>
               </div>
             )) : <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No ingredients listed</p>}

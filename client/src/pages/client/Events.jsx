@@ -17,7 +17,7 @@ const formatTime = (iso) =>
   new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
 // ---------------------------------------------------------------------------
-// Main Events page — list of coaches + my upcoming/past bookings
+// Main Events page - list of coaches + my upcoming/past bookings
 // ---------------------------------------------------------------------------
 export default function Events() {
   const { token } = useAuth();
@@ -260,7 +260,7 @@ export default function Events() {
 
       {/* Scheduled Events (masterclasses, webinars, in-person) */}
       {!bookMode && scheduledEvents.length > 0 && (() => {
-        // Format filter chips — only show chips for formats that actually have events
+        // Format filter chips - only show chips for formats that actually have events
         const presentFormats = Array.from(new Set(scheduledEvents.map((e) => e.event_format).filter(Boolean)));
         const chipDefs = [
           { value: 'all',          label: 'All' },
@@ -590,7 +590,7 @@ function BookingCard({ booking, dim, token, onCancelled }) {
 // Per-format cards used on the coach profile page
 // ─────────────────────────────────────────────────────────────────────
 
-// Standard 1:1 session card — tapping opens the slot picker
+// Standard 1:1 session card - tapping opens the slot picker
 function SessionTypeCard({ st, accent, onBook }) {
   return (
     <div
@@ -635,7 +635,7 @@ function SessionTypeCard({ st, accent, onBook }) {
   );
 }
 
-// Follow-along session — async content, no slot picker needed. "Watch anytime"
+// Follow-along session - async content, no slot picker needed. "Watch anytime"
 // CTA. If a meeting_url is set we treat it as a direct content link (Vimeo,
 // YouTube unlisted, etc.), otherwise the client contacts the coach for access.
 function FollowAlongCard({ st, accent }) {
@@ -691,7 +691,7 @@ function FollowAlongCard({ st, accent }) {
   );
 }
 
-// Scheduled group event card (webinar / masterclass / in_person) — registers
+// Scheduled group event card (webinar / masterclass / in_person) - registers
 // or cancels via /events/:id/register|cancel. Shows capacity and format.
 function CoachEventCard({ event, accent, token }) {
   const [state, setState] = useState({
@@ -711,7 +711,7 @@ function CoachEventCard({ event, accent, token }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 402) {
-        setState(s => ({ ...s, loading: false, error: 'Paid event — contact your coach to register.' }));
+        setState(s => ({ ...s, loading: false, error: 'Paid event - contact your coach to register.' }));
         return;
       }
       const data = await res.json().catch(() => ({}));
@@ -916,7 +916,7 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
         <BackBar title={firstName} onBack={onBack} />
       </div>
 
-      {/* Hero — photo + name block mirroring the PDF cover */}
+      {/* Hero - photo + name block mirroring the PDF cover */}
       <div style={{
         position: 'relative',
         margin: '0 -16px',
@@ -1058,7 +1058,7 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
           </>
         )}
 
-        {/* Book Now CTA — tap to expand session options */}
+        {/* Book Now CTA - tap to expand session options */}
         <button
           type="button"
           onClick={() => setBookingOpen((v) => !v)}
@@ -1093,10 +1093,10 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
           </span>
         </button>
 
-        {/* Session types — split by format.
+        {/* Session types - split by format.
             - one_on_one (or legacy NULL) go through the slot-picker booking flow
             - follow_along renders as a "Watch anytime" info card (async content)
-            - webinar/masterclass/in_person come from coach_events, not here — hidden from this list */}
+            - webinar/masterclass/in_person come from coach_events, not here - hidden from this list */}
         {bookingOpen && (() => {
           const oneOnOne = data.session_types.filter(st => !st.event_format || st.event_format === 'one_on_one');
           const followAlong = data.session_types.filter(st => st.event_format === 'follow_along');
@@ -1133,7 +1133,7 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
         })()}
 
         {/* Upcoming group events from this coach (webinars, masterclasses, in-person).
-            These come from coach_events, not session_types — separate source-of-truth. */}
+            These come from coach_events, not session_types - separate source-of-truth. */}
         {data.events?.length > 0 && (
           <>
             <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '24px 0 10px' }}>

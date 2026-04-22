@@ -15,7 +15,7 @@ const INTENSITY_OPTIONS = [
 ];
 
 // Quick templates to avoid tedious manual entry. Each returns a fresh
-// phase list — the coach can then tweak before saving.
+// phase list - the coach can then tweak before saving.
 const TEMPLATES = {
   steady: () => [
     { label: 'Zone 2', duration_secs: 40 * 60, intensity: 'easy', zone: 2, notes: null },
@@ -50,7 +50,7 @@ const TEMPLATES = {
   },
   fartlek: () => [
     { label: 'Fartlek', duration_secs: 30 * 60, intensity: 'moderate', zone: 3,
-      notes: 'Vary intensity by feel — surge on hills / lampposts / straights. Keep total ~30 min.' },
+      notes: 'Vary intensity by feel - surge on hills / lampposts / straights. Keep total ~30 min.' },
   ],
 };
 
@@ -142,7 +142,7 @@ export default function PhaseEditor({ value, onChange, compact = false }) {
       {/* Summary */}
       <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
         {phases.length === 0
-          ? 'No phases — add one below, or pick a template.'
+          ? 'No phases - add one below, or pick a template.'
           : `${phases.length} phase${phases.length === 1 ? '' : 's'} · total ${formatSecs(totalSecs)}`}
       </div>
 
@@ -203,7 +203,7 @@ export default function PhaseEditor({ value, onChange, compact = false }) {
                 style={phaseInput}
                 title="Heart-rate zone (optional)"
               >
-                <option value="">—</option>
+                <option value="">-</option>
                 {[1, 2, 3, 4, 5].map(z => <option key={z} value={z}>Z{z}</option>)}
               </select>
             )}

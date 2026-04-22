@@ -100,7 +100,7 @@ export default function LogOtherWorkout({ onClose }) {
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Log {selectedType}</h1>
         </div>
 
-        {/* Track by toggle — only show for activities where distance is relevant */}
+        {/* Track by toggle - only show for activities where distance is relevant */}
         {allowDistance && (
           <div className="input-group">
             <label>Track by</label>

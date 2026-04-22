@@ -286,7 +286,7 @@ export default function Profile({ onBack }) {
         <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{user?.email}</p>
       </div>
 
-      {/* Active Plan — pulls from client_profiles.plan_title / plan_cycle / plan_next_renewal_at
+      {/* Active Plan - pulls from client_profiles.plan_title / plan_cycle / plan_next_renewal_at
           which the coach sets via the admin ClientProfile Membership card. */}
       <ActivePlanCard profile={profile} />
 
@@ -317,7 +317,7 @@ export default function Profile({ onBack }) {
       <div className="card" style={{ marginBottom: 12 }}>
         {[
           { icon: '👥', label: 'About Dan', action: () => navigate('/explore') },
-          { icon: '📋', label: 'Explore Plans', action: () => navigate('/explore') },
+          { icon: '📋', label: 'Explore Plans', action: () => navigate('/plans') },
         ].map(({ icon, label, action }, i) => (
           <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -530,7 +530,7 @@ function ActivePlanCard({ profile }) {
   // Format a date range: started - next renewal
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
   const range = started || next
-    ? [fmt(started), fmt(next)].filter(Boolean).join(' — ')
+    ? [fmt(started), fmt(next)].filter(Boolean).join(' - ')
     : null;
 
   const renewalLabel = next ? renewalStatus(next) : null;

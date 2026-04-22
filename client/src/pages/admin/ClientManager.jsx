@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ClientProfile from './ClientProfile';
 
-// ClientManager — coach admin Clients view. FitBudd-inspired clean table
+// ClientManager - coach admin Clients view. FitBudd-inspired clean table
 // with compliance columns + Kahunas-style at-risk / on-track pill. Clicking
 // a row opens ClientProfile (tabbed workspace). Filters: tier, status, search.
 
@@ -80,7 +80,7 @@ export default function ClientManager({ openClientId, onClearOpen }) {
   const filtered = useMemo(() => {
     const out = clients.filter((c) => {
       const cStatus = c.status || 'active';
-      // Lifecycle filter — Active view shows active+paused (engaged relationships),
+      // Lifecycle filter - Active view shows active+paused (engaged relationships),
       // Paused and Archived each show only their own status, All shows everything.
       if (lifecycleFilter === 'Active' && cStatus === 'archived') return false;
       if (lifecycleFilter === 'Paused' && cStatus !== 'paused') return false;
@@ -97,7 +97,7 @@ export default function ClientManager({ openClientId, onClearOpen }) {
       return true;
     });
 
-    // Sort — null timestamps always sink to the bottom when sorting desc
+    // Sort - null timestamps always sink to the bottom when sorting desc
     const cmpDate = (a, b, dir) => {
       if (!a && !b) return 0;
       if (!a) return dir === 'desc' ? 1 : -1;
@@ -130,7 +130,7 @@ export default function ClientManager({ openClientId, onClearOpen }) {
   }, [clients]);
 
   // If a client is open, render ClientProfile instead of the list.
-  // Pass showRail so Clients > client matches Messages > client — 2-column
+  // Pass showRail so Clients > client matches Messages > client - 2-column
   // layout with the always-visible client info rail, including on the Chats tab.
   if (openId != null) {
     return <ClientProfile clientId={openId} showRail onBack={() => setOpenId(null)} />;
@@ -165,7 +165,7 @@ export default function ClientManager({ openClientId, onClearOpen }) {
         </div>
       )}
 
-      {/* Lifecycle filter — Active / Paused / Archived */}
+      {/* Lifecycle filter - Active / Paused / Archived */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
         {LIFECYCLE_FILTERS.map((lc) => {
           const active = lifecycleFilter === lc;
@@ -326,17 +326,29 @@ export default function ClientManager({ openClientId, onClearOpen }) {
                 </div>
               </div>
 
-              <span style={{
-                display: 'inline-block', padding: '3px 9px', borderRadius: 10,
-                background: tierColor.bg, color: tierColor.fg,
-                fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4,
-                width: 'fit-content',
-              }}>
-                {c.tier_name || 'Free'}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+                <span style={{
+                  display: 'inline-block', padding: '3px 9px', borderRadius: 10,
+                  background: tierColor.bg, color: tierColor.fg,
+                  fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4,
+                }}>
+                  {c.tier_name || 'Free'}
+                </span>
+                {c.tier_requested_id && c.tier_requested_id !== c.tier_id && (
+                  <span style={{
+                    display: 'inline-block', padding: '2px 7px', borderRadius: 8,
+                    background: 'rgba(255,140,0,0.12)', color: 'var(--accent)',
+                    fontSize: 9, fontWeight: 700, letterSpacing: 0.3,
+                  }}
+                    title={`Requested ${c.tier_requested_name} during signup - awaiting payment`}
+                  >
+                    wants {c.tier_requested_name}
+                  </span>
+                )}
+              </div>
 
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {c.goal || '—'}
+                {c.goal || '-'}
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -4,14 +4,14 @@ import ClientProfile from './ClientProfile';
 import MessageThread from '../client/MessageThread';
 import GroupEditor from './GroupEditor';
 
-// CoachWorkspace — the FitBudd-style 3-column Messages workspace.
+// CoachWorkspace - the FitBudd-style 3-column Messages workspace.
 //   [ sidebar ] [ chat list ] [ client workspace with tabs + always-on rail ]
 //
 // When a coach picks a client conversation, the right pane always shows
 // the chat thread in the center AND a persistent client info rail on the
 // far right (Summary / Targets / Membership / Recent logins). The Overview,
 // Check-ins, Habits etc. tabs swap what's in the center without ever
-// removing the rail — coach never loses sight of client context.
+// removing the rail - coach never loses sight of client context.
 
 const TIER_COLORS = {
   Free:    { bg: 'rgba(148,163,184,0.18)', fg: '#94a3b8' },
@@ -36,7 +36,7 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
   // editing: null | { mode: 'new' } | { mode: 'edit', group }
   const [editing, setEditing] = useState(null);
   // Cache the last fetched group record so the editor has fresh metadata
-  // (description, visibility, access_tier_ids, etc.) — the conversations
+  // (description, visibility, access_tier_ids, etc.) - the conversations
   // list only carries the chat-row subset.
   const fetchGroupFull = async (id) => {
     try {
@@ -146,10 +146,10 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
             ))}
           </div>
 
-          {/* Scope tabs removed — Clients/Direct nav items gone; scope is
+          {/* Scope tabs removed - Clients/Direct nav items gone; scope is
               set by the parent (AdminLayout) via initialScope. */}
 
-          {/* Tier filter pills — only on team scope */}
+          {/* Tier filter pills - only on team scope */}
           {scope === 'team' && (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
               {TIER_ORDER.map(tier => {
@@ -232,7 +232,7 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
           </div>
         )}
         {!editing && selected && selected.conv.client?.id && (
-          // Team inbox selected — land on Overview so coaches see client
+          // Team inbox selected - land on Overview so coaches see client
           // context first; they tap Chats to drop into the thread.
           <ClientProfile
             key={selected.conv.client.id}
@@ -244,7 +244,7 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
           />
         )}
         {!editing && selected && !selected.conv.client?.id && (
-          // Direct or Group conversation — no client workspace context,
+          // Direct or Group conversation - no client workspace context,
           // just render the thread full-width
           <MessageThread
             conversationId={selected.conv.id}

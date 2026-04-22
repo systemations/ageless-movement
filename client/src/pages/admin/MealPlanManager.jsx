@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
 
-// Admin manager for MEAL PLANS — one reusable structured day in the three-tier
+// Admin manager for MEAL PLANS - one reusable structured day in the three-tier
 // model (Recipe → MealPlan → MealSchedule).
 //
 // Left pane : list of all meal plans as cards, showing title, target calories,
@@ -201,7 +201,7 @@ function MealPlanEditor({ plan, token, onClose, onSaved }) {
     });
     // Server rolls up macros automatically on update, but our meal_plan's
     // target_calories lives on the plans table and was set at seed time.
-    // We just need to reload the items list — the summary at the top uses
+    // We just need to reload the items list - the summary at the top uses
     // the items' own serving × recipe macros via the scaling helper.
     setPicking(null);
     setSearch('');
@@ -281,7 +281,7 @@ function MealPlanEditor({ plan, token, onClose, onSaved }) {
         )}
       </div>
 
-      {/* Day summary bar — only visible once saved */}
+      {/* Day summary bar - only visible once saved */}
       {detail?.plan && (
         <div style={{
           background: 'var(--bg-primary)', borderRadius: 10, padding: 12, marginBottom: 14,

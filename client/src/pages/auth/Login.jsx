@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-// Login for returning users — clients AND coaches. Role on the account
+// Login for returning users - clients AND coaches. Role on the account
 // decides where they land post-login. No more "are you a client or a
 // coach?" step up front.
 

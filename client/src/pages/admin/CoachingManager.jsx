@@ -9,7 +9,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Supported event formats for coach_session_types. The same Events surface
 // covers 1:1 calls, webinars, masterclasses, follow-along classes, and
-// in-person events — so the booking flow, admin UI, and future payment
+// in-person events - so the booking flow, admin UI, and future payment
 // integration can all branch off a single field.
 const EVENT_FORMATS = [
   { value: 'one_on_one',   label: '1:1 Session',        icon: '👤' },
@@ -119,7 +119,7 @@ export default function CoachingManager({ variant = 'team' } = {}) {
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
             {variant === 'events'
-              ? 'Manage every event your team runs — 1:1s, webinars, masterclasses, follow-alongs, and in-person'
+              ? 'Manage every event your team runs - 1:1s, webinars, masterclasses, follow-alongs, and in-person'
               : 'Manage your trainers, their profiles, availability, and tier classification'}
           </p>
         </div>
@@ -500,7 +500,7 @@ function ProfileTab({ coachId }) {
             onChange={(e) => setForm({ ...form, pricing_tier_id: e.target.value })}
             style={inputStyle}
           >
-            <option value="">— Not assigned —</option>
+            <option value="">- Not assigned -</option>
             {tiers.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -1094,7 +1094,7 @@ function AvailabilityTab({ coachId }) {
 // Bookings tab
 // =====================================================================
 // =====================================================================
-// Scheduled Events tab — create and manage dated events
+// Scheduled Events tab - create and manage dated events
 // =====================================================================
 const SCHED_FORMATS = [
   { value: 'masterclass',  label: 'Masterclass' },
@@ -1531,7 +1531,7 @@ function Pill({ text, tone }) {
 }
 
 // =====================================================================
-// Coach Tiers tab — classification only, no prices.
+// Coach Tiers tab - classification only, no prices.
 // Prices live on each session type so every event (30 min, 45 min, 90 min,
 // webinar, masterclass) can be individually priced.
 // =====================================================================
@@ -1583,7 +1583,7 @@ function PricingTiersTab() {
     <div style={{ maxWidth: 900 }}>
       <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
         Three classification tiers for coaches (Standard / Premium / Elite).
-        These are labels only — prices live on each individual session type so
+        These are labels only - prices live on each individual session type so
         you can charge anything you like per event (30 min, 45 min, 90 min,
         webinar, masterclass, in-person, etc.).
       </p>

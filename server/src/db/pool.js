@@ -742,6 +742,34 @@ const alterStatements = [
   "ALTER TABLE workout_logs ADD COLUMN prescribed_duration_mins INTEGER",
   "ALTER TABLE workout_logs ADD COLUMN customized INTEGER DEFAULT 0",
   "ALTER TABLE workouts ADD COLUMN status TEXT DEFAULT 'draft'",
+  // Free-preview flag on workouts: when set, Free-tier (tier_id=1) clients
+  // can access this workout even if its parent program is tier-locked.
+  // Used for the free-signup onboarding (Day 1 of Ground Zero + future
+  // lead-magnet programs).
+  "ALTER TABLE workouts ADD COLUMN is_free_preview INTEGER DEFAULT 0",
+  // Tier the client picked during onboarding (before payment lands). The
+  // active tier stays in client_profiles.tier_id; this column records intent
+  // so the coach can see "chose Prime, awaiting payment" in the admin.
+  "ALTER TABLE client_profiles ADD COLUMN tier_requested_id INTEGER",
+  // Per-user targeting on notifications: used by the post-signup "Explore
+  // Plans" nudge that fires 24h after a client registers. audience='user'
+  // with audience_user_id=<client id> means only that client sees it.
+  // NOTE: the table's CHECK (audience IN ('all','tier')) is relaxed below
+  // via a rebuild block because SQLite can't ALTER a CHECK constraint.
+  "ALTER TABLE in_app_notifications ADD COLUMN audience_user_id INTEGER",
+  // Deferred post-signup tasks (welcome DM, plans nudge, etc.). A small
+  // in-process scheduler polls this table every minute and dispatches tasks
+  // whose due_at has passed. Persistence guarantees restarts don't lose
+  // pending tasks. sent_at NULL = pending; non-null = done.
+  `CREATE TABLE IF NOT EXISTS post_signup_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    task_type TEXT NOT NULL,
+    due_at TEXT NOT NULL,
+    sent_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS post_signup_tasks_due_idx ON post_signup_tasks(due_at, sent_at)",
   // Workout reschedule overrides: lets clients move program workouts to
   // different days. Two modes:
   //   permanent=0  one-off override for a specific original_date only
@@ -836,6 +864,61 @@ db.exec(`
 `);
 for (const sql of alterStatements) {
   try { db.exec(sql); } catch (e) { /* column already exists */ }
+}
+
+// Relax the in_app_notifications.audience CHECK constraint so it accepts
+// 'user' (per-user nudges like the 24h post-signup plans banner). SQLite
+// can't ALTER a CHECK, so we detect the old constraint by inspecting
+// sqlite_master and rebuild the table only when needed. Idempotent:
+// subsequent boots see the relaxed CHECK and skip the block.
+try {
+  const notifSql = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='in_app_notifications'"
+  ).get()?.sql || '';
+  const needsRebuild = notifSql.includes("CHECK (audience IN ('all','tier'))");
+  if (needsRebuild) {
+    db.exec('BEGIN');
+    db.exec(`
+      CREATE TABLE in_app_notifications_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL DEFAULT 'announcement'
+          CHECK (kind IN ('announcement','offer','challenge','daily_checkin','custom')),
+        title TEXT NOT NULL,
+        body TEXT,
+        cta_label TEXT,
+        cta_url TEXT,
+        audience TEXT NOT NULL DEFAULT 'all'
+          CHECK (audience IN ('all','tier','user')),
+        audience_tier_id INTEGER,
+        audience_user_id INTEGER,
+        starts_at TEXT,
+        ends_at TEXT,
+        recurrence TEXT NOT NULL DEFAULT 'none'
+          CHECK (recurrence IN ('none','daily','weekly')),
+        active INTEGER NOT NULL DEFAULT 1,
+        created_by INTEGER REFERENCES users(id),
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+    db.exec(`
+      INSERT INTO in_app_notifications_new
+        (id, kind, title, body, cta_label, cta_url, audience, audience_tier_id,
+         audience_user_id, starts_at, ends_at, recurrence, active, created_by,
+         created_at, updated_at)
+      SELECT id, kind, title, body, cta_label, cta_url, audience, audience_tier_id,
+             audience_user_id, starts_at, ends_at, recurrence, active, created_by,
+             created_at, updated_at
+      FROM in_app_notifications
+    `);
+    db.exec('DROP TABLE in_app_notifications');
+    db.exec('ALTER TABLE in_app_notifications_new RENAME TO in_app_notifications');
+    db.exec('COMMIT');
+    console.log("Relaxed in_app_notifications.audience CHECK to allow 'user'");
+  }
+} catch (e) {
+  try { db.exec('ROLLBACK'); } catch {}
+  console.warn('in_app_notifications rebuild skipped:', e.message);
 }
 
 // =====================================================================

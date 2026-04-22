@@ -43,7 +43,7 @@ export default function NutritionHub({ onBack }) {
       {activeTab === 'Recipes' && <RecipeBrowser />}
       {activeTab === 'Supplements' && <SupplementPlan />}
 
-      {/* Sub-tabs — hidden on Supplements so the Add/Edit flow has the full screen. */}
+      {/* Sub-tabs - hidden on Supplements so the Add/Edit flow has the full screen. */}
       {activeTab !== 'Supplements' && (
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',

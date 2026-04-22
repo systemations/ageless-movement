@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 const COLLAGE = [
   // 2 × 4 grid filling the mid-screen. Mixing skill shots (dramatic)
   // with gym shots (accessible) keeps the pitch balanced. Swap file
-  // names to change the collage — images live under /public/welcome/.
+  // names to change the collage - images live under /public/welcome/.
   '/welcome/skill-flag.jpg',
   '/welcome/gym-explore.jpg',
   '/welcome/skill-backlever.jpg',
@@ -23,7 +23,7 @@ export default function Welcome() {
 
   return (
     <div style={page}>
-      {/* Full-bleed photo collage — behind everything */}
+      {/* Full-bleed photo collage - behind everything */}
       <div style={collageLayer} aria-hidden>
         <div style={collageGrid}>
           {COLLAGE.map((src) => (
@@ -47,7 +47,7 @@ export default function Welcome() {
         {/* Flex spacer pushes tagline toward vertical middle */}
         <div style={{ flex: 1 }} />
 
-        {/* Hero tagline — full-bleed, centered on the collage */}
+        {/* Hero tagline - full-bleed, centered on the collage */}
         <div style={taglineBlock}>
           <div style={taglineSmall}>TRAIN</div>
           <div style={taglineLarge}>

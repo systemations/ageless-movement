@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
-// Shown after the welcome screen. "How are you joining?" — funnels clients
+// Shown after the welcome screen. "How are you joining?" - funnels clients
 // into signup and coaches into login. Coaches are invite-only so there's
 // no "coach register" path; if a coach lands here and taps the card they
 // go to the login screen with their account already provisioned by admin.

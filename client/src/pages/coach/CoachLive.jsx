@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-// Coach Live — mobile/coach-app view of upcoming 1:1 bookings + group event
+// Coach Live - mobile/coach-app view of upcoming 1:1 bookings + group event
 // registrations. Replaces the old hardcoded placeholder. Pulls from the
 // existing admin endpoints so coaches see the same events the client
 // surface surfaces to clients. Status badges make it obvious whether a

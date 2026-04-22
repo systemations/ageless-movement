@@ -19,7 +19,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [menuMsgId, setMenuMsgId] = useState(null);
-  const [reactorsFor, setReactorsFor] = useState(null); // { messageId, emoji } — tapped chip → show names
+  const [reactorsFor, setReactorsFor] = useState(null); // { messageId, emoji } - tapped chip → show names
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
   const pollRef = useRef(null);
@@ -36,7 +36,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
 
   // On first non-empty render, force-scroll to the bottom. On subsequent
   // renders (polling) only auto-scroll if the user was already near the
-  // bottom — otherwise we'd yank them back down mid-scroll-up.
+  // bottom - otherwise we'd yank them back down mid-scroll-up.
   useEffect(() => {
     const el = messagesRef.current;
     if (!el || messages.length === 0) return;
@@ -186,7 +186,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
       height: hideBackButton ? '100%' : '100vh',
       background: 'var(--bg-primary)', minHeight: 0,
     }}>
-      {/* Header — omit the big avatar-coloured back button when we're embedded,
+      {/* Header - omit the big avatar-coloured back button when we're embedded,
           since the parent workspace already has a header with the client name. */}
       {!hideBackButton && (
         <div style={{
@@ -220,7 +220,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
         </div>
       )}
 
-      {/* Slim subtitle strip when embedded — explains that this is the team
+      {/* Slim subtitle strip when embedded - explains that this is the team
           inbox without visually competing with the client header above. */}
       {hideBackButton && subtitle && (
         <div style={{
@@ -354,7 +354,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
                     })}
                   </div>
                 )}
-                {/* Options menu — reactions for everyone; mark-unread only on others' messages */}
+                {/* Options menu - reactions for everyone; mark-unread only on others' messages */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setMenuMsgId(menuOpen ? null : item.id); }}
                   title="Message options"
@@ -453,7 +453,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
           flexShrink: 0, background: 'var(--bg-primary)',
         }}>
           <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginBottom: 10 }}>
-            Chat is read-only here — use the link below to contribute.
+            Chat is read-only here - use the link below to contribute.
           </p>
           {convo.cta_url ? (
             <a

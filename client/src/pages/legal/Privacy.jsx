@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-// Placeholder privacy policy. The copy below is scaffolding only — replace
+// Placeholder privacy policy. The copy below is scaffolding only - replace
 // every section with lawyer-reviewed text before inviting real users.
 // The goal of this file existing on day one is so the signup flow has a
 // link target and the consent record has something to point to.
@@ -11,7 +11,7 @@ export default function Privacy() {
       <Link to="/" style={back}>&larr; Back</Link>
       <h1 style={h1}>Privacy Policy</h1>
       <p style={meta}>
-        <strong>Draft — alpha placeholder.</strong> Pending legal review before
+        <strong>Draft - alpha placeholder.</strong> Pending legal review before
         general availability.
       </p>
 

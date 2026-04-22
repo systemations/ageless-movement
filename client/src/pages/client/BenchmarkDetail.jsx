@@ -14,7 +14,7 @@ const LEVEL_COLORS = {
 const UNIT_FORMATTERS = {
   seconds: v => {
     const n = Number(v);
-    if (!Number.isFinite(n)) return '—';
+    if (!Number.isFinite(n)) return '-';
     const m = Math.floor(n / 60);
     const s = Math.round(n % 60);
     return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`;
@@ -246,7 +246,7 @@ function LeaderboardTab({ slug, token, bm }) {
                 {e.name}
               </p>
               {e.age && (
-                <p style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{e.age} · {e.gender || '—'}</p>
+                <p style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{e.age} · {e.gender || '-'}</p>
               )}
             </div>
             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>{fmt(bm.unit, e.best_value)}</p>
@@ -313,7 +313,7 @@ function SubmitModal({ bm, token, onClose, onSaved }) {
     try {
       const form = new FormData();
       form.append('file', file);
-      // fetch doesn't expose upload progress natively — keep it simple with
+      // fetch doesn't expose upload progress natively - keep it simple with
       // XHR so we can show a progress bar for longer uploads.
       const xhr = new XMLHttpRequest();
       xhr.upload.onprogress = (e) => {

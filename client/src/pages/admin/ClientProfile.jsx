@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import MessageThread from '../client/MessageThread';
 import WorkoutBuilder from './WorkoutBuilder';
 
-// ClientProfile — tabbed workspace shown when a coach clicks a client from
+// ClientProfile - tabbed workspace shown when a coach clicks a client from
 // the ClientManager list. Tabs: Overview, Check-ins, Chats, Habits,
 // Workout, Nutrition, Gallery, Notes, Calendar, Settings.
 //
@@ -34,7 +34,7 @@ export default function ClientProfile({
 
   // Scroll every scrolling ancestor back to the top whenever we switch
   // client or tab. Runs on the next frame so React has painted the new
-  // content first — without that, resetting scroll here and then adding
+  // content first - without that, resetting scroll here and then adding
   // new tall content can leave the browser somewhere mid-page.
   const rootRef = useRef(null);
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function ClientProfile({
       }
       window.scrollTo(0, 0);
     };
-    // Reset immediately and again next frame — covers layout shifts caused
+    // Reset immediately and again next frame - covers layout shifts caused
     // by the new tab's content loading in.
     reset();
     const raf = requestAnimationFrame(reset);
@@ -161,7 +161,7 @@ export default function ClientProfile({
         ))}
       </div>
 
-      {/* Tab content — wrap in 2-col grid when we need the always-visible info rail */}
+      {/* Tab content - wrap in 2-col grid when we need the always-visible info rail */}
       {showRail ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
@@ -206,7 +206,7 @@ export default function ClientProfile({
   );
 }
 
-// Embedded chat — tuned for inline use inside ClientProfile. Drops the
+// Embedded chat - tuned for inline use inside ClientProfile. Drops the
 // MessageThread's own header (we already have the client header + tabs
 // above it) and sizes to a reasonable viewport so the page still scrolls
 // cleanly. Renders inside a rounded bordered frame so it reads as a
@@ -241,17 +241,17 @@ function OverviewTab({ data, railMode = false }) {
 
   const mainCol = (
     <div style={{ display: 'grid', gap: 16 }}>
-        {/* Tags row — freeform labels for the client */}
+        {/* Tags row - freeform labels for the client */}
         <ClientTags clientId={c.id} tags={data.tags || []} />
 
-        {/* Daily tasks — what the client set for themselves today */}
+        {/* Daily tasks - what the client set for themselves today */}
         <DailyTasksCard
           tasks={data.tasks || []}
           clientId={c.id}
           onChange={data._refetch}
         />
 
-        {/* Weekly Trends — FitBudd-style Workout / Nutrition / Water compliance */}
+        {/* Weekly Trends - FitBudd-style Workout / Nutrition / Water compliance */}
         <WeeklyTrendsCard data={data} />
 
         {/* Goal + experience */}
@@ -313,10 +313,10 @@ function OverviewTab({ data, railMode = false }) {
   );
 }
 
-// ClientInfoRail — the compact right-side summary rail used by CoachWorkspace
+// ClientInfoRail - the compact right-side summary rail used by CoachWorkspace
 // next to the chat thread (and rendered inside the Overview tab when used
 // standalone). Mirrors FitBudd's Account / Summary / Macros / Payment /
-// Notes column. Recent logins intentionally omitted — it lives inside the
+// Notes column. Recent logins intentionally omitted - it lives inside the
 // Settings tab for when coaches need it, but clutters the rail.
 function ClientInfoRail({ data, onChange }) {
   const c = data.client;
@@ -326,17 +326,17 @@ function ClientInfoRail({ data, onChange }) {
       <Card title="Summary">
         <Stat label="Streak" value={`${data.streak?.current_streak || 0}🔥`} />
         <Stat label="Best streak" value={data.streak?.best_streak || 0} />
-        <Stat label="Last check-in" value={lastCheckin ? formatRelative(lastCheckin.date) : '—'} />
-        <Stat label="Last seen" value={c.last_active_at ? formatRelative(c.last_active_at) : '—'} />
+        <Stat label="Last check-in" value={lastCheckin ? formatRelative(lastCheckin.date) : '-'} />
+        <Stat label="Last seen" value={c.last_active_at ? formatRelative(c.last_active_at) : '-'} />
         <Stat label="Member since" value={formatDate(c.created_at)} />
       </Card>
 
       <Card title="Targets">
-        <Stat label="Calories" value={`${c.calorie_target || '—'} kcal`} />
-        <Stat label="Protein" value={`${c.protein_target || '—'} g`} />
-        <Stat label="Fat" value={`${c.fat_target || '—'} g`} />
-        <Stat label="Carbs" value={`${c.carbs_target || '—'} g`} />
-        <Stat label="Water" value={`${c.water_target || '—'} ml`} />
+        <Stat label="Calories" value={`${c.calorie_target || '-'} kcal`} />
+        <Stat label="Protein" value={`${c.protein_target || '-'} g`} />
+        <Stat label="Fat" value={`${c.fat_target || '-'} g`} />
+        <Stat label="Carbs" value={`${c.carbs_target || '-'} g`} />
+        <Stat label="Water" value={`${c.water_target || '-'} ml`} />
       </Card>
 
       {data.activeProgram && (
@@ -355,7 +355,7 @@ function ClientInfoRail({ data, onChange }) {
   );
 }
 
-// NotesRailCard — compact notes preview for the right rail. Pinned notes
+// NotesRailCard - compact notes preview for the right rail. Pinned notes
 // first, then most recent. Inline "+ Add" so a coach can drop a quick note
 // while they're in the middle of a chat.
 function NotesRailCard({ clientId, notes, onChange }) {
@@ -486,7 +486,7 @@ const railBtnSecondary = {
   borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
 };
 
-// Daily tasks — bidirectional. The client manages these from their app,
+// Daily tasks - bidirectional. The client manages these from their app,
 // and coaches can add / edit / remove here too. Tasks created by a coach
 // are marked "SET BY COACH" so the client knows it was pushed to them.
 function DailyTasksCard({ tasks, clientId, onChange }) {
@@ -657,7 +657,7 @@ function DailyTasksCard({ tasks, clientId, onChange }) {
   );
 }
 
-// Tier editor — coach-controlled. Drives Explore visibility gating (programs,
+// Tier editor - coach-controlled. Drives Explore visibility gating (programs,
 // workouts, courses, explore sections can all require min_tier_id).
 // PUT /api/content/clients/:id/tier accepts {tier_id} and has no return body beyond {success:true}.
 function TierEditorCard({ client, onChange }) {
@@ -737,7 +737,7 @@ function TierEditorCard({ client, onChange }) {
   );
 }
 
-// Membership editor — inline fields in the right rail. No floating modal.
+// Membership editor - inline fields in the right rail. No floating modal.
 // Saves on blur (and on Enter for title). PATCH /api/coach/clients/:id/membership
 // accepts partials so we can save one field at a time.
 function MembershipEditorCard({ client, onChange }) {
@@ -770,7 +770,7 @@ function MembershipEditorCard({ client, onChange }) {
   };
 
   const cycleOptions = [
-    { value: '', label: '—' },
+    { value: '', label: '-' },
     { value: 'monthly', label: 'Monthly' },
     { value: 'quarterly', label: 'Quarterly' },
     { value: 'annual', label: 'Annual' },
@@ -1033,13 +1033,13 @@ function CheckinCard({ c, clientName, teamConversationId, onReplied }) {
               {m.label}
             </p>
             <p style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
-              {m.val != null ? `${m.val}${m.unit}` : <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>—</span>}
+              {m.val != null ? `${m.val}${m.unit}` : <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>-</span>}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Q&A (collapsible — can be long) */}
+      {/* Q&A (collapsible - can be long) */}
       {hasAnswers && (
         <>
           <button
@@ -1066,7 +1066,7 @@ function CheckinCard({ c, clientName, teamConversationId, onReplied }) {
         </>
       )}
 
-      {/* Reply-to-check-in — posts into the client's team inbox so the
+      {/* Reply-to-check-in - posts into the client's team inbox so the
           whole coach team sees the response alongside the check-in context. */}
       <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
         {!replyOpen ? (
@@ -1089,7 +1089,7 @@ function CheckinCard({ c, clientName, teamConversationId, onReplied }) {
             <textarea
               value={replyDraft}
               onChange={(e) => setReplyDraft(e.target.value)}
-              placeholder="Write your reply — this goes straight into the team inbox."
+              placeholder="Write your reply - this goes straight into the team inbox."
               rows={6}
               autoFocus
               style={{
@@ -1191,7 +1191,7 @@ function HabitHistoryCard({ clientId }) {
   const recent = entries.slice(0, 7);
   const avg = (key) => {
     const vals = recent.map(e => e[key]).filter(v => v != null);
-    if (vals.length === 0) return '—';
+    if (vals.length === 0) return '-';
     const n = vals.reduce((s, v) => s + v, 0) / vals.length;
     return Number.isInteger(n) ? n : n.toFixed(1);
   };
@@ -1230,7 +1230,7 @@ function HabitStat({ label, value, suffix }) {
     <div style={{ textAlign: 'center', padding: '10px 4px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
       <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</p>
       <p style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
-        {value}<span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>{value !== '—' ? suffix : ''}</span>
+        {value}<span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>{value !== '-' ? suffix : ''}</span>
       </p>
     </div>
   );
@@ -1238,7 +1238,7 @@ function HabitStat({ label, value, suffix }) {
 
 function HabitCell({ value, suffix }) {
   if (value == null) {
-    return <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>—</p>;
+    return <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</p>;
   }
   return (
     <p style={{ fontSize: 13, fontWeight: 600 }}>
@@ -1344,7 +1344,7 @@ function WorkoutTab({ data }) {
         </p>
       </Card>
 
-      {/* Workout logs history — keep the old table below the assigned list */}
+      {/* Workout logs history - keep the old table below the assigned list */}
       {data.workoutLogs.length > 0 && (
         <Card title={`${data.workoutLogs.length} completed workouts (last 30 days)`}>
           <div style={{ overflowX: 'auto' }}>
@@ -1367,7 +1367,7 @@ function WorkoutTab({ data }) {
                       <td style={{ padding: '10px 4px' }}>{formatDate(w.date)}</td>
                       <td style={{ padding: '10px 4px' }}>{w.workout_title || `Workout #${w.workout_id || w.id}`}</td>
                       <td style={{ padding: '10px 4px', whiteSpace: 'nowrap' }}>
-                        {w.duration_mins ? `${w.duration_mins} min` : '—'}
+                        {w.duration_mins ? `${w.duration_mins} min` : '-'}
                         {hasDelta && (
                           <span
                             title={`Coach prescribed ${w.prescribed_duration_mins} min. Client did ${w.duration_mins} min.`}
@@ -1437,7 +1437,7 @@ function NutritionTab({ data }) {
                       <td style={{ padding: '10px 4px' }}>{Math.round(n.fat)}g</td>
                       <td style={{ padding: '10px 4px' }}>{Math.round(n.carbs)}g</td>
                       <td style={{ padding: '10px 4px', color: diff == null ? 'var(--text-tertiary)' : diff > 0 ? '#f59e0b' : '#3DFFD2' }}>
-                        {diff == null ? '—' : diff > 0 ? `+${diff}` : diff}
+                        {diff == null ? '-' : diff > 0 ? `+${diff}` : diff}
                       </td>
                     </tr>
                   );
@@ -2219,7 +2219,7 @@ function SettingsTab({ data }) {
     <div style={{ maxWidth: 600, display: 'grid', gap: 16 }}>
       <Card title="Client settings">
         <Row label="Email" value={data.client.email} />
-        <Row label="Timezone" value="—" />
+        <Row label="Timezone" value="-" />
         <Row label="Check-ins enabled" value="Yes" />
         <Row label="Workout intensity" value="Use coach default" />
       </Card>
@@ -2228,7 +2228,7 @@ function SettingsTab({ data }) {
       <AccountLifecycleCard client={data.client} onChange={data._refetch} />
       <ResetPasswordCard client={data.client} />
 
-      {/* Recent logins moved here from the rail — useful context but too
+      {/* Recent logins moved here from the rail - useful context but too
           noisy to show alongside every tab. */}
       <RecentLoginsCard logins={data.recentLogins || []} />
     </div>
@@ -2249,7 +2249,7 @@ function AccountLifecycleCard({ client, onChange }) {
 
   const STATUSES = [
     { value: 'active', label: 'Active', desc: 'Normal coaching relationship.', color: 'var(--accent-mint)' },
-    { value: 'paused', label: 'Paused', desc: 'On hold — missed payment, break, etc. Client sees a banner.', color: 'var(--accent)' },
+    { value: 'paused', label: 'Paused', desc: 'On hold - missed payment, break, etc. Client sees a banner.', color: 'var(--accent)' },
     { value: 'archived', label: 'Archived', desc: 'Coaching ended. Hidden from your main client list; data preserved.', color: '#FF5E5E' },
   ];
 
@@ -2421,7 +2421,7 @@ function ResetPasswordCard({ client }) {
             >Copy</button>
           </div>
           <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8, fontStyle: 'italic' }}>
-            SMTP not configured yet — forward this URL manually for now.
+            SMTP not configured yet - forward this URL manually for now.
           </p>
         </div>
       )}
@@ -2460,7 +2460,7 @@ function Row({ label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', gap: 16 }}>
       <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{label}</span>
-      <span style={{ fontSize: 13, textAlign: 'right', flex: 1 }}>{value || <span style={{ color: 'var(--text-tertiary)' }}>—</span>}</span>
+      <span style={{ fontSize: 13, textAlign: 'right', flex: 1 }}>{value || <span style={{ color: 'var(--text-tertiary)' }}>-</span>}</span>
     </div>
   );
 }
@@ -2540,7 +2540,7 @@ function MembershipPill({ planTitle, nextRenewalAt }) {
   );
 }
 
-// Tag editor — chip list + inline add-tag input. Tags are coach-applied
+// Tag editor - chip list + inline add-tag input. Tags are coach-applied
 // context markers (e.g. "Boston", "AMS", "Performer"). Fires through to
 // /api/coach/clients/:id/tags, which is idempotent on (client_id, label).
 function ClientTags({ clientId, tags }) {
@@ -2558,7 +2558,7 @@ function ClientTags({ clientId, tags }) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ label: v }),
     });
-    // Optimistic refresh — re-fetch just the tags via profile endpoint
+    // Optimistic refresh - re-fetch just the tags via profile endpoint
     const p = await fetch(`/api/coach/clients/${clientId}/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => r.json());
@@ -2606,14 +2606,14 @@ function ClientTags({ clientId, tags }) {
   );
 }
 
-// Weekly trends card — last 7 days of workouts / nutrition logs / water.
+// Weekly trends card - last 7 days of workouts / nutrition logs / water.
 // Shows compliance % in FitBudd's chunky number-over-label style.
 function WeeklyTrendsCard({ data }) {
   const workoutDays = uniqueDays(data.workoutLogs.filter(w => w.completed), 'date', 7);
   const nutritionDays = uniqueDays(data.nutritionTotals, 'date', 7);
   const waterDays = uniqueDays(data.waterTotals, 'date', 7);
 
-  // Target cals/water from client profile — used to pluralize the label
+  // Target cals/water from client profile - used to pluralize the label
   const target = data.client;
   const latestNutrition = data.nutritionTotals.find(n => n.date) || {};
   const latestWater = data.waterTotals.find(w => w.date) || {};
@@ -2630,14 +2630,14 @@ function WeeklyTrendsCard({ data }) {
         />
         <TrendCell
           label="Nutrition"
-          top={latestNutrition.calories ? `${Math.round(latestNutrition.calories)}` : '—'}
+          top={latestNutrition.calories ? `${Math.round(latestNutrition.calories)}` : '-'}
           bottom={target.calorie_target ? `of ${target.calorie_target} cals` : 'latest log'}
           pct={Math.round((nutritionDays / 7) * 100)}
           color="#3DFFD2"
         />
         <TrendCell
           label="Water"
-          top={latestWater.ml ? `${latestWater.ml}` : '—'}
+          top={latestWater.ml ? `${latestWater.ml}` : '-'}
           bottom={target.water_target ? `of ${target.water_target} ml` : 'latest log'}
           pct={Math.round((waterDays / 7) * 100)}
           color="#38bdf8"
@@ -2670,7 +2670,7 @@ function TrendCell({ label, top, bottom, pct, color }) {
 
 // Measurements with earliest→latest deltas. For weight/body-fat/waist a
 // downward delta reads as improvement (green); for sleep/recovery upward
-// is better. Shows a "—" when there aren't two data points yet.
+// is better. Shows a "-" when there aren't two data points yet.
 function MeasurementsCard({ trends, latestCheckin }) {
   const rows = [
     { key: 'weight', label: 'Weight', unit: 'kg', downIsGood: true },
@@ -2703,7 +2703,7 @@ function MeasurementsCard({ trends, latestCheckin }) {
                 {r.label}
               </p>
               <p style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
-                {latest != null ? `${latest}${r.unit}` : '—'}
+                {latest != null ? `${latest}${r.unit}` : '-'}
               </p>
               {months > 0 && (
                 <p style={{ fontSize: 10, color: deltaColor, fontWeight: 600, marginTop: 2 }}>

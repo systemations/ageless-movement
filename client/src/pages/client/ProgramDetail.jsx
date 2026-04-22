@@ -34,7 +34,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
         body: JSON.stringify({ force }),
       });
       if (res.status === 409) {
-        // Server blocked because another program is active — show confirmation
+        // Server blocked because another program is active - show confirmation
         const result = await res.json();
         setConfirmReplace(result.current_program || { title: 'your current program' });
         setEnrolling(false);
@@ -220,7 +220,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
             </h3>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 20 }}>
               You're already doing <strong style={{ color: 'var(--text-primary)' }}>{confirmReplace.program_title || confirmReplace.title}</strong>.
-              Starting a new program will override your current one — all scheduled program workouts will be replaced.
+              Starting a new program will override your current one - all scheduled program workouts will be replaced.
               Individual workouts you've added to your schedule will stay.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>

@@ -137,7 +137,7 @@ export default function CoachHome({ onOpenClient }) {
                 >
                   <Avatar name={c.name} photoUrl={c.photo_url} small />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
                     <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                       {c.last_checkin ? `Last check-in ${formatRelative(c.last_checkin)}` : 'No check-ins yet'}
                     </p>

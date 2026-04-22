@@ -43,6 +43,10 @@ export default function ScheduleManager() {
   const [libraryTab, setLibraryTab] = useState('programs'); // 'programs' | 'workouts'
   const [librarySearch, setLibrarySearch] = useState('');
   const [workoutsCatalog, setWorkoutsCatalog] = useState([]);
+  // "Repeat week N times" inline control
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatWeeks, setRepeatWeeks] = useState(3);
+  const [repeatBusy, setRepeatBusy] = useState(false);
 
   // Fetch all workouts once so the library panel can search across every
   // workout in the system (not just the selected program's).
@@ -188,6 +192,32 @@ export default function ScheduleManager() {
     }
     setDragItem(null);
     refetchWeek();
+  };
+
+  const duplicateWeek = async () => {
+    if (!selectedClient) return;
+    const n = parseInt(repeatWeeks, 10);
+    if (!Number.isFinite(n) || n < 1) { setMsg('Enter 1 or more weeks'); return; }
+    setRepeatBusy(true);
+    setMsg('');
+    const start = getWeekStart(weekOffset);
+    try {
+      const res = await fetch(`/api/coach/schedules/${selectedClient}/week/duplicate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start, weeks: n }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg(data.error || 'Failed to duplicate'); return; }
+      if (data.copied === 0) setMsg('No ad-hoc workouts in this week to repeat');
+      else setMsg(`Copied ${data.copied} workout${data.copied === 1 ? '' : 's'} across ${n} week${n === 1 ? '' : 's'}`);
+      setRepeatOpen(false);
+      refetchWeek();
+    } catch (e) {
+      setMsg('Failed to duplicate');
+    } finally {
+      setRepeatBusy(false);
+    }
   };
 
   const clientEnrollments = (clientId) => enrollments.filter(e => e.user_id === clientId);
@@ -438,10 +468,78 @@ export default function ScheduleManager() {
                       }}>Today</button>
                     )}
                   </div>
-                  <button onClick={() => setWeekOffset(o => o + 1)} style={navBtnStyle}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {!repeatOpen ? (
+                      <button
+                        onClick={() => setRepeatOpen(true)}
+                        title="Repeat this week's workouts forward N weeks"
+                        style={{
+                          fontSize: 12, fontWeight: 600, color: 'var(--accent)',
+                          background: 'rgba(61,255,210,0.08)', border: '1px solid rgba(61,255,210,0.3)',
+                          borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                        </svg>
+                        Repeat week
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Repeat for</span>
+                        <input
+                          type="number" min={1} max={52}
+                          value={repeatWeeks}
+                          onChange={e => setRepeatWeeks(e.target.value)}
+                          disabled={repeatBusy}
+                          style={{
+                            width: 54, padding: '6px 8px', fontSize: 13, fontWeight: 600,
+                            background: 'var(--bg-primary)', color: 'var(--text-primary)',
+                            border: '1px solid var(--divider)', borderRadius: 6, textAlign: 'center',
+                          }}
+                        />
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>more weeks</span>
+                        <button
+                          onClick={duplicateWeek}
+                          disabled={repeatBusy}
+                          style={{
+                            fontSize: 12, fontWeight: 700, color: '#000', background: 'var(--accent)',
+                            border: 'none', borderRadius: 6, padding: '6px 12px',
+                            cursor: repeatBusy ? 'default' : 'pointer', opacity: repeatBusy ? 0.6 : 1,
+                          }}
+                        >
+                          {repeatBusy ? '...' : 'Apply'}
+                        </button>
+                        <button
+                          onClick={() => { setRepeatOpen(false); setMsg(''); }}
+                          disabled={repeatBusy}
+                          style={{
+                            fontSize: 12, color: 'var(--text-secondary)', background: 'none',
+                            border: 'none', cursor: 'pointer', padding: '6px 4px',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                    <button onClick={() => setWeekOffset(o => o + 1)} style={navBtnStyle}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Feedback strip for repeat-week action */}
+                {msg && (
+                  <div style={{
+                    padding: '8px 16px', fontSize: 12, fontWeight: 600,
+                    color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('no ad-hoc')
+                      ? '#FFB340' : 'var(--accent)',
+                    background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--divider)',
+                  }}>
+                    {msg}
+                  </div>
+                )}
 
                 {/* Day columns */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minHeight: 200 }}>

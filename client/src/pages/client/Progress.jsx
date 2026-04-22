@@ -83,6 +83,14 @@ export default function Progress() {
     setCompareView({ left, right });
   };
 
+  // Auto-compare the very first check-in photo (baseline) against the latest.
+  // This is the primary "Before & After" flow — no manual picking needed.
+  const openBeforeAfter = () => {
+    if (photoCheckins.length < 2) return;
+    const sorted = [...photoCheckins].sort((a, b) => new Date(a.date) - new Date(b.date));
+    setCompareView({ left: sorted[0], right: sorted[sorted.length - 1] });
+  };
+
   const handleAddGoal = () => {
     if (!newGoal.title.trim()) return;
     setGoals([...goals, { id: Date.now(), ...newGoal, progress: 0 }]);
@@ -109,18 +117,6 @@ export default function Progress() {
             <h2>Goals</h2>
             <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
           </div>
-
-          {/* Add Goal Form */}
-          {showAddGoal && (
-            <div className="card" style={{ marginBottom: 12, border: '1px solid var(--accent-mint)' }}>
-              <input placeholder="Goal title (e.g. Touch toes)" value={newGoal.title} onChange={e => setNewGoal({...newGoal, title: e.target.value})} className="input-field" style={{ marginBottom: 8, fontSize: 14 }} />
-              <input placeholder="Target description" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} className="input-field" style={{ marginBottom: 8, fontSize: 14 }} />
-              <select value={newGoal.category} onChange={e => setNewGoal({...newGoal, category: e.target.value})} className="input-field" style={{ marginBottom: 12, fontSize: 14 }}>
-                {['Mobility', 'Flexibility', 'Consistency', 'Body Comp', 'Strength', 'Nutrition', 'General'].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <button className="btn-primary" onClick={handleAddGoal} style={{ fontSize: 14 }}>Add Goal</button>
-            </div>
-          )}
 
           {/* Active Goals */}
           {goals.map((goal) => (
@@ -291,18 +287,21 @@ export default function Progress() {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 12 }}>
-            <div className="card" onClick={() => {
-              if (photoCheckins.length < 2) {
-                alert('Add at least two check-ins with photos to compare side-by-side.');
-                return;
-              }
-              setCompareMode(true);
-              setCompareSelection([]);
-            }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+            <div
+              className="card"
+              onClick={() => {
+                if (photoCheckins.length < 2) {
+                  alert('Add at least two check-ins with photos to see your before & after.');
+                  return;
+                }
+                openBeforeAfter();
+              }}
+              style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
+            >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
                 <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
               </svg>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>Compare</p>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>Before &amp; After</p>
             </div>
             <div className="card" onClick={() => { if (navigator.share) navigator.share({ title: 'My Ageless Movement Progress', text: 'Check out my progress!' }); else alert('Share your progress via screenshot or social media'); }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
@@ -311,6 +310,18 @@ export default function Progress() {
               <p style={{ fontSize: 13, fontWeight: 600 }}>Share</p>
             </div>
           </div>
+          {photoCheckins.length >= 2 && !compareMode && (
+            <button
+              onClick={() => { setCompareMode(true); setCompareSelection([]); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--accent)',
+                fontSize: 12, fontWeight: 600, padding: '10px 0 2px', cursor: 'pointer',
+                width: '100%', textAlign: 'center',
+              }}
+            >
+              Compare any two photos
+            </button>
+          )}
 
           {/* Measurements */}
           <div className="section-header">
@@ -431,6 +442,71 @@ export default function Progress() {
           </button>
         ))}
       </div>
+
+      {/* Add Goal bottom sheet */}
+      {showAddGoal && (
+        <div
+          onClick={() => setShowAddGoal(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
+            display: 'flex', alignItems: 'flex-end',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+              width: '100%', maxWidth: 480, margin: '0 auto', padding: '16px 16px 32px',
+              maxHeight: '80vh', overflow: 'auto',
+            }}
+          >
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Set a Goal</h3>
+            <input
+              placeholder="Goal title (e.g. Touch toes)"
+              value={newGoal.title}
+              onChange={e => setNewGoal({ ...newGoal, title: e.target.value })}
+              className="input-field"
+              style={{ marginBottom: 10, fontSize: 14 }}
+              autoFocus
+            />
+            <input
+              placeholder="Target description"
+              value={newGoal.target}
+              onChange={e => setNewGoal({ ...newGoal, target: e.target.value })}
+              className="input-field"
+              style={{ marginBottom: 10, fontSize: 14 }}
+            />
+            <select
+              value={newGoal.category}
+              onChange={e => setNewGoal({ ...newGoal, category: e.target.value })}
+              className="input-field"
+              style={{ marginBottom: 16, fontSize: 14 }}
+            >
+              {['Mobility', 'Flexibility', 'Consistency', 'Body Comp', 'Strength', 'Nutrition', 'General'].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowAddGoal(false)}
+                style={{ flex: 1, fontSize: 14 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleAddGoal}
+                disabled={!newGoal.title.trim()}
+                style={{ flex: 2, fontSize: 14 }}
+              >
+                Add Goal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

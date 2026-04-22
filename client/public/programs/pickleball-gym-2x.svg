@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1289">
+  <defs>
+    <linearGradient id="bgG2" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1"/>
+      <stop offset="55%" style="stop-color:#FFEED8;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#FF8F33;stop-opacity:1"/>
+    </linearGradient>
+    <radialGradient id="vignG2" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.95)"/>
+      <stop offset="70%" style="stop-color:rgba(255,255,255,0.35)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+    </radialGradient>
+    <linearGradient id="paddleG2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1"/>
+    </linearGradient>
+    <radialGradient id="ballG2" cx="35%" cy="35%" r="60%">
+      <stop offset="0%" style="stop-color:#FFF176"/>
+      <stop offset="100%" style="stop-color:#E8C400"/>
+    </radialGradient>
+    <filter id="shadG2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
+      <feOffset dx="0" dy="8"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.28"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1300" height="1289" fill="url(#bgG2)"/>
+  <circle cx="650" cy="645" r="480" fill="rgba(255,255,255,0.55)" stroke="rgba(255,255,255,0.95)" stroke-width="8"/>
+  <circle cx="650" cy="645" r="480" fill="url(#vignG2)"/>
+  <text x="180" y="840" font-family="Arial Black, system-ui, -apple-system, sans-serif" font-size="700" font-weight="900" fill="#E06A10" filter="url(#shadG2)">4</text>
+  <g filter="url(#shadG2)">
+    <!-- Crossed paddles -->
+    <g transform="translate(680,700) rotate(-30)">
+      <rect x="-14" y="95" width="28" height="150" rx="8" fill="#2d2d44"/>
+      <rect x="-10" y="102" width="20" height="136" rx="6" fill="#3d3d5c"/>
+      <ellipse cx="0" cy="0" rx="115" ry="135" fill="url(#paddleG2)" stroke="#444" stroke-width="3"/>
+      <circle cx="-50" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="0" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="50" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="-25" cy="-12" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="25" cy="-12" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="-50" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="0" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="50" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+    </g>
+    <g transform="translate(770,700) rotate(30)">
+      <rect x="-14" y="95" width="28" height="150" rx="8" fill="#2d2d44"/>
+      <rect x="-10" y="102" width="20" height="136" rx="6" fill="#3d3d5c"/>
+      <ellipse cx="0" cy="0" rx="115" ry="135" fill="url(#paddleG2)" stroke="#444" stroke-width="3"/>
+      <circle cx="-50" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="0" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="50" cy="-50" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="-25" cy="-12" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="25" cy="-12" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="-50" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="0" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+      <circle cx="50" cy="26" r="8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+    </g>
+    <!-- Yellow pickleball at top intersection -->
+    <g transform="translate(725, 480)">
+      <circle cx="0" cy="0" r="68" fill="url(#ballG2)" stroke="#C9A500" stroke-width="3"/>
+      <circle cx="-22" cy="-22" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="18" cy="-28" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="30" cy="10" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="-8" cy="16" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="-30" cy="8" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="8" cy="-8" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="22" cy="28" r="6" fill="rgba(145,110,0,0.55)"/>
+      <circle cx="-18" cy="32" r="6" fill="rgba(145,110,0,0.55)"/>
+    </g>
+  </g>
+  <!-- Barbell with plates + GYM label -->
+  <g transform="translate(1070,690)">
+    <!-- Bar -->
+    <rect x="-100" y="-8" width="200" height="16" rx="4" fill="#E06A10"/>
+    <!-- Inner collars -->
+    <rect x="-58" y="-14" width="10" height="28" fill="#8F3F00"/>
+    <rect x="48" y="-14" width="10" height="28" fill="#8F3F00"/>
+    <!-- Plates outer -->
+    <rect x="-76" y="-32" width="18" height="64" rx="3" fill="#E06A10"/>
+    <rect x="58" y="-32" width="18" height="64" rx="3" fill="#E06A10"/>
+    <!-- Plates inner-small -->
+    <rect x="-95" y="-24" width="14" height="48" rx="3" fill="#E06A10"/>
+    <rect x="81" y="-24" width="14" height="48" rx="3" fill="#E06A10"/>
+    <text x="0" y="115" text-anchor="middle" font-family="Arial Black, system-ui, sans-serif" font-size="56" font-weight="900" fill="#E06A10" letter-spacing="4">GYM</text>
+  </g>
+</svg>

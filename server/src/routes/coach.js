@@ -351,6 +351,62 @@ router.delete('/schedules/:id', authenticateToken, requireRole('coach'), (req, r
   }
 });
 
+// POST /api/coach/schedules/:clientId/week/duplicate
+// Body: { start: 'YYYY-MM-DD', weeks: N }
+// Copy every user-scheduled workout in the source week (start .. start+6d) forward
+// N weeks, preserving weekday + sort order. Program-driven workouts already repeat
+// via the program's built-in schedule, so we only duplicate ad-hoc user rows.
+router.post('/schedules/:clientId/week/duplicate', authenticateToken, requireRole('coach'), requireCoachOwnsClient('clientId'), (req, res) => {
+  try {
+    const { start, weeks } = req.body;
+    const n = parseInt(weeks, 10);
+    if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return res.status(400).json({ error: 'start (YYYY-MM-DD) required' });
+    if (!Number.isFinite(n) || n < 1 || n > 52) return res.status(400).json({ error: 'weeks must be between 1 and 52' });
+
+    const base = new Date(start + 'T00:00:00');
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
+    const placeholders = dates.map(() => '?').join(',');
+
+    const sourceRows = pool.query(
+      `SELECT workout_id, scheduled_date, sort_order
+       FROM user_scheduled_workouts
+       WHERE user_id = ? AND scheduled_date IN (${placeholders})
+       ORDER BY scheduled_date, sort_order, id`,
+      [req.params.clientId, ...dates]
+    ).rows;
+
+    if (!sourceRows.length) return res.json({ success: true, copied: 0, weeks: n });
+
+    // Add N days to a YYYY-MM-DD string without timezone drift.
+    const addDays = (ymd, days) => {
+      const [y, m, d] = ymd.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      dt.setUTCDate(dt.getUTCDate() + days);
+      return dt.toISOString().split('T')[0];
+    };
+
+    let copied = 0;
+    for (let w = 1; w <= n; w++) {
+      for (const row of sourceRows) {
+        const targetDate = addDays(row.scheduled_date, 7 * w);
+        pool.query(
+          `INSERT INTO user_scheduled_workouts (user_id, workout_id, scheduled_date, sort_order) VALUES (?, ?, ?, ?)`,
+          [req.params.clientId, row.workout_id, targetDate, row.sort_order]
+        );
+        copied++;
+      }
+    }
+
+    res.json({ success: true, copied, weeks: n });
+  } catch (err) {
+    console.error('Coach duplicate week error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/coach/schedules/:clientId/week?start=YYYY-MM-DD
 // View a client's weekly schedule (same logic as the client schedule route but for any client)
 router.get('/schedules/:clientId/week', authenticateToken, requireRole('coach'), requireCoachOwnsClient('clientId'), (req, res) => {

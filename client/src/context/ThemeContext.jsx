@@ -3,7 +3,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(localStorage.getItem('am_theme') || 'light');
+  // Dark navy is the designed-for default. Users can toggle to light via
+  // the ☾ button on Profile, and that choice persists in localStorage.
+  const [theme, setTheme] = useState(localStorage.getItem('am_theme') || 'dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

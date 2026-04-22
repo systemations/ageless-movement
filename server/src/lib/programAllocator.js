@@ -54,81 +54,33 @@ function hasAnyInjury(injuries) {
  * @param {string[]} answers.injuries  e.g. ['knee','back'] or ['none']
  */
 export function allocateProgram(answers = {}) {
-  const {
-    age, goal, sport, experience, equipment, days,
-    injuries = [],
-  } = answers;
+  const { age, injuries = [] } = answers;
 
   const bracket = ageBracket(age);
   const injured = hasAnyInjury(injuries);
 
-  // ── Hard routes to coach review ─────────────────────────────────────
-  // Anything that needs a human eye before we assign a program.
+  // ── V1 alpha: universal default ─────────────────────────────────────
+  // Every new client starts on AMS Ground Zero — the mobility-first
+  // flagship. Once real signups land, Dan + Joonas can switch anyone to
+  // Pickleball / ReBuild / Prime from the admin side. Keeping the rules
+  // simple here means fewer wrong auto-assignments and a cleaner picture
+  // of who actually signs up before we codify the real mapping.
+  //
+  // Two safety nets still route to coach review rather than auto-enrol:
+  //   - Anyone who flagged an injury → coach reviews before prescribing
+  //   - Seniors (75+) → coach assigns a suitable gentle-track plan
   if (injured) {
-    return reviewResult('You mentioned some areas we should look at — a coach will review your answers and set you up personally.');
+    return reviewResult('You mentioned some areas we should look at — a coach will review your answers and set you up personally within 24 hours.');
   }
   if (bracket === 'senior') {
     return reviewResult('To make sure your plan fits, a coach will review your answers within 24 hours.');
   }
-  if (sport === 'other') {
-    return reviewResult("We don't have a program for that sport yet — a coach will recommend the closest fit.");
-  }
-  // Obvious contradictions
-  if (experience === 'advanced' && bracket === 'active_senior' && days === 2) {
-    return reviewResult('Your answers look great — a coach will set up the right plan for you.');
-  }
 
-  // ── Pickleball track ───────────────────────────────────────────────
-  // Sport-specific programs take priority over generic goals.
-  if (sport === 'pickleball') {
-    const atGym = equipment === 'full_gym' || equipment === 'home_gym';
-    const threeDays = days >= 3;
-    if (atGym && threeDays)  return match(PROGRAM.PICKLEBALL_GYM_3X,  'Pickleball Performance — Gym, 3x per week', 'You play pickleball and have gym access for 3+ days a week.');
-    if (atGym && !threeDays) return match(PROGRAM.PICKLEBALL_GYM_2X,  'Pickleball Performance — Gym, 2x per week', 'You play pickleball and have gym access for 2 days a week.');
-    if (threeDays)           return match(PROGRAM.PICKLEBALL_HOME_3X, 'Pickleball Performance — Home, 3x per week', 'You play pickleball and train from home for 3+ days a week.');
-    return                          match(PROGRAM.PICKLEBALL_HOME_2X, 'Pickleball Performance — Home, 2x per week', 'You play pickleball and train from home for 2 days a week.');
-  }
-
-  // ── AMS core track — based on experience + goal ────────────────────
-  // Goals:
-  //   move_pain_free / mobility / active_healthy → mobility-first programs
-  //   strength                                    → strength programs
-  //   (sport + other tennis/golf/running)         → coach review for now
-  if (sport === 'tennis' || sport === 'golf' || sport === 'running') {
-    // We don't have dedicated programs for these yet — route to coach so
-    // they can pick the closest fit (usually AMS Prime + sport-specific
-    // notes in the coach note).
-    return reviewResult(`We don't have a dedicated ${sport} program yet — a coach will pick the closest fit.`);
-  }
-
-  const mobilityGoal = goal === 'move_pain_free' || goal === 'mobility' || goal === 'active_healthy';
-  const strengthGoal = goal === 'strength';
-
-  // Beginner / returning — Ground Zero is the right starting point for
-  // anyone, regardless of equipment. Short sessions, 6x/wk frequency
-  // keeps consistency high.
-  if (experience === 'just_starting' || experience === 'occasional') {
-    return match(PROGRAM.AMS_GROUND_ZERO, 'AMS Ground Zero™', "You're returning to training — Ground Zero rebuilds the basics over 8 weeks with short daily sessions.");
-  }
-
-  // Consistent trainers
-  if (experience === 'consistent') {
-    if (strengthGoal && (equipment === 'full_gym' || equipment === 'home_gym')) {
-      return match(PROGRAM.AMS_REBUILD, 'AMS ReBuild™', 'Strength-focused, 12 weeks, 3x/wk — uses the gym equipment you have.');
-    }
-    if (mobilityGoal) {
-      return match(PROGRAM.AMS_REBUILD, 'AMS ReBuild™', '12-week mobility+strength rebuild — 3x/wk, any equipment.');
-    }
-    return match(PROGRAM.AMS_REBUILD, 'AMS ReBuild™', 'A solid 12-week foundation you can run anywhere.');
-  }
-
-  // Advanced
-  if (experience === 'advanced') {
-    return match(PROGRAM.AMS_PRIME, 'AMS Prime™', 'Advanced 12-week progression across mobility, strength and skill work.');
-  }
-
-  // Fallthrough — shouldn't hit, but be safe.
-  return reviewResult("A coach will review your answers and set up your program.");
+  return match(
+    PROGRAM.AMS_GROUND_ZERO,
+    'AMS Ground Zero™',
+    'Our mobility-first starting program — short daily sessions that rebuild the basics over 8 weeks. Your coach can move you to a different plan anytime.',
+  );
 }
 
 function match(program_id, title, reason) {

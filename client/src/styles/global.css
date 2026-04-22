@@ -6,12 +6,14 @@
 }
 
 /* ===== DARK THEME (default) ===== */
-/* Handsdan Palette: #FF9C33 / #85FFBA / #EDEDED / #0A0A0A */
+/* Ageless Movement Palette — deep navy base, mint + orange accents.
+   Matches the auth flow (Welcome / Login / Register / Onboarding) so the
+   whole app feels continuous. Old pure-black theme lived at #0A0A0A. */
 :root, [data-theme="dark"] {
-  --bg-primary: #0A0A0A;
-  --bg-card: #161618;
-  --bg-card-hover: #222226;
-  --bg-input: #161618;
+  --bg-primary: #0A1428;
+  --bg-card: #1C3049;
+  --bg-card-hover: #253A57;
+  --bg-input: #1C3049;
   --accent: #FF9C33;
   --accent-hover: #E88A1F;
   --accent-active: #D47A10;
@@ -19,10 +21,10 @@
   --mint-read: #6FA88B;
   --accent-orange: #FF9C33;
   --text-primary: #FFFFFF;
-  --text-secondary: #9A9A9F;
-  --text-tertiary: #636366;
+  --text-secondary: #9AA8BB;
+  --text-tertiary: #6B7B93;
   --logo-bg: #1E1A2E;
-  --divider: #222226;
+  --divider: #253A57;
   --success: #30D158;
   --error: #FF453A;
   --water-blue: #64D2FF;
@@ -433,6 +435,18 @@ input, textarea, select {
   height: 2px;
   background: var(--accent-mint);
   margin: 16px 0;
+}
+
+/* Ageless Movement logo mark — consistent grey stroke + soft mint glow
+   applied to every instance of the logo across the app. Auth pages have
+   their own stronger inline treatment; this covers the rest (admin
+   sidebar, home header, loading screen, program detail placeholder, etc). */
+img[src="/am-logo.png"],
+img[src="/am-logo-192.png"],
+img[src="/logo.png"] {
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 20px rgba(133, 255, 186, 0.18);
 }
 
 /* Loading spinner */

@@ -2,11 +2,20 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "server",
+      "runtimeExecutable": "/Users/dannyosullivan/.local/bin/node",
+      "runtimeArgs": ["src/index.js"],
+      "port": 3001,
+      "cwd": "server",
+      "env": { "PATH": "/Users/dannyosullivan/.local/bin:/usr/local/bin:/usr/bin:/bin", "NODE": "/Users/dannyosullivan/.local/bin/node" }
+    },
+    {
       "name": "client",
       "runtimeExecutable": "/Users/dannyosullivan/.local/bin/npx",
       "runtimeArgs": ["vite", "--host"],
       "port": 5173,
-      "cwd": "client"
+      "cwd": "client",
+      "env": { "PATH": "/Users/dannyosullivan/.local/bin:/usr/local/bin:/usr/bin:/bin", "NODE": "/Users/dannyosullivan/.local/bin/node" }
     }
   ]
 }

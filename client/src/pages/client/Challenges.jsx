@@ -90,12 +90,23 @@ function LeaderboardsTab({ token, currentUserId }) {
   const [gender, setGender] = useState('all');
   const [age, setAge] = useState('all');
   const [timeframe, setTimeframe] = useState('week'); // only for Steps
+  // Server returns only buckets that actually have at least one client in
+  // them. We filter AGE_OPTIONS down to those to avoid showing empty chips.
+  const [populatedAgeBuckets, setPopulatedAgeBuckets] = useState(null);
 
   useEffect(() => {
     fetch('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setBoardsIndex(d.categories || []))
+      .then(r => r.json()).then(d => {
+        setBoardsIndex(d.categories || []);
+        setPopulatedAgeBuckets(d.populated_age_buckets || []);
+      })
       .catch(() => {});
   }, [token]);
+
+  // Filter the static AGE_OPTIONS to just "All ages" plus the populated ones.
+  const visibleAgeOptions = populatedAgeBuckets == null
+    ? AGE_OPTIONS // pre-load: show all until we know
+    : [AGE_OPTIONS[0], ...AGE_OPTIONS.slice(1).filter(o => populatedAgeBuckets.some(b => b.key === o.key))];
 
   return (
     <>
@@ -126,7 +137,9 @@ function LeaderboardsTab({ token, currentUserId }) {
       </button>
 
       <ChipRow value={gender} onChange={setGender} options={GENDERS} />
-      <ChipRow value={age} onChange={setAge} options={AGE_OPTIONS} />
+      {visibleAgeOptions.length > 1 && (
+        <ChipRow value={age} onChange={setAge} options={visibleAgeOptions} />
+      )}
 
       {selected.kind === 'steps' && (
         <ChipRow

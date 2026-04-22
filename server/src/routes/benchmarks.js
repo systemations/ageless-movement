@@ -199,9 +199,26 @@ router.get('/', authenticateToken, (req, res) => {
       if (!CATEGORY_ORDER.includes(c)) categories.push({ category: c, benchmarks: byCategory[c] });
     }
 
+    // Only surface age buckets that actually have at least one client in
+    // them — the client-side chip row hides empty buckets so leaderboards
+    // never show "no athletes yet" dead ends for an alpha with ~6 real
+    // clients.
+    const ageCounts = pool.query(
+      "SELECT cp.age FROM client_profiles cp JOIN users u ON u.id = cp.user_id WHERE u.role = 'client' AND cp.age IS NOT NULL"
+    ).rows;
+    const populatedBucketKeys = new Set();
+    for (const { age } of ageCounts) {
+      const b = AGE_BUCKETS.find(b => age >= b.min && age <= b.max);
+      if (b) populatedBucketKeys.add(b.key);
+    }
+    const populatedBuckets = AGE_BUCKETS
+      .filter(b => populatedBucketKeys.has(b.key))
+      .map(b => ({ key: b.key, label: b.label }));
+
     res.json({
       user_gender: userGender,
       age_buckets: AGE_BUCKETS.map(b => ({ key: b.key, label: b.label })),
+      populated_age_buckets: populatedBuckets,
       categories,
     });
   } catch (err) {

@@ -265,60 +265,69 @@ export default function ScheduleManager() {
         </div>
       )}
 
-      {/* Three-column layout: client list + calendar + drag-from library */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 20, alignItems: 'start' }}>
+      {/* Layout: three-column with Clients list when nothing selected,
+          two-column (calendar + library) when a client is selected so the
+          calendar fills ~2/3 instead of being cramped. A "Back to Clients"
+          button lets coach swap the selection if they picked wrong. */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: selectedClient ? '1fr 280px' : '280px 1fr 280px',
+        gap: 20,
+        alignItems: 'start',
+      }}>
 
-        {/* Client list */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--divider)' }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700 }}>Clients</h3>
-          </div>
-          {clients.length === 0 ? (
-            <p style={{ padding: 20, color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center' }}>No clients yet</p>
-          ) : (
-            clients.map(c => {
-              const ce = clientEnrollments(c.id);
-              const isActive = selectedClient === c.id;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedClient(isActive ? null : c.id)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    background: isActive ? 'rgba(255,140,0,0.1)' : 'transparent',
-                    borderBottom: '1px solid var(--divider)',
-                  }}
-                >
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                    background: isActive ? 'var(--accent)' : 'var(--bg-primary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 700, color: isActive ? '#000' : 'var(--text-secondary)',
-                  }}>
-                    {c.name?.charAt(0) || '?'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--accent)' : 'var(--text-primary)' }}>{c.name}</p>
-                    {ce.length > 0 ? (
-                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {ce.map(e => e.program_title).join(', ')}
-                      </p>
-                    ) : (
-                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No program assigned</p>
+        {/* Client list — hidden once a client is selected */}
+        {!selectedClient && (
+          <div style={{ background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--divider)' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Clients</h3>
+            </div>
+            {clients.length === 0 ? (
+              <p style={{ padding: 20, color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center' }}>No clients yet</p>
+            ) : (
+              clients.map(c => {
+                const ce = clientEnrollments(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedClient(c.id)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: 'transparent',
+                      borderBottom: '1px solid var(--divider)',
+                    }}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      background: 'var(--bg-primary)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)',
+                    }}>
+                      {c.name?.charAt(0) || '?'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</p>
+                      {ce.length > 0 ? (
+                        <p style={{ fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ce.map(e => e.program_title).join(', ')}
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No program assigned</p>
+                      )}
+                    </div>
+                    {ce.length > 0 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                        background: 'rgba(10,132,255,0.15)', color: '#0A84FF',
+                      }}>{ce.length}</span>
                     )}
-                  </div>
-                  {ce.length > 0 && (
-                    <span style={{
-                      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-                      background: 'rgba(10,132,255,0.15)', color: '#0A84FF',
-                    }}>{ce.length}</span>
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
 
         {/* Right panel: enrollments + calendar */}
         <div>
@@ -332,6 +341,22 @@ export default function ScheduleManager() {
             </div>
           ) : (
             <>
+              {/* Back-to-Clients escape — useful when the coach picked the
+                  wrong client and wants to swap without having to scroll
+                  the narrow sidebar. */}
+              <button
+                onClick={() => setSelectedClient(null)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', marginBottom: 16,
+                  background: 'var(--bg-card)', color: 'var(--text-secondary)',
+                  border: '1px solid var(--divider)', borderRadius: 8,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ← Back to Clients
+              </button>
+
               {/* Enrollments for selected client */}
               {(() => {
                 const ce = clientEnrollments(selectedClient);

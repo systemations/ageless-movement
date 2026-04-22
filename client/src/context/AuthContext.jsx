@@ -51,15 +51,17 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (email, password, name, role) => {
+  const register = async (email, password, name, role, onboarding) => {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, role }),
+      body: JSON.stringify({ email, password, name, role, onboarding }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     localStorage.setItem('am_token', data.token);
+    // Onboarding answers are consumed by the server; remove the local copy.
+    localStorage.removeItem('am_onboarding_answers');
     setToken(data.token);
     setUser(data.user);
     return data;

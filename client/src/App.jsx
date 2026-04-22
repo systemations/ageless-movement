@@ -51,6 +51,9 @@ class RouteErrorBoundary extends Component {
 import BottomNav from './components/BottomNav';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import Welcome from './pages/auth/Welcome';
+// RolePicker removed — login handles coach-vs-client routing by the role
+// on the account, no need to ask the user which they are.
 import Privacy from './pages/legal/Privacy';
 import Terms from './pages/legal/Terms';
 import Home from './pages/client/Home';
@@ -169,20 +172,20 @@ function AppRoutes() {
       <RouteErrorBoundary key={location.pathname}>
       <Routes>
         {/* Auth */}
+        <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Welcome />} />
+        <Route path="/welcome" element={user ? <Navigate to={defaultRoute} replace /> : <Welcome />} />
+        {/* /welcome/role redirect — role picker removed. Login handles
+            coach-vs-client routing via the role on the account. */}
+        <Route path="/welcome/role" element={<Navigate to="/onboarding" replace />} />
         <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 
-        {/* Onboarding */}
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
-            <OnboardingQuestionnaire onComplete={(answers) => {
-              localStorage.setItem('am_onboarded', 'true');
-              window.location.href = '/home';
-            }} />
-          </ProtectedRoute>
-        } />
+        {/* Onboarding — anonymous. Runs BEFORE signup so new users get a
+            matched program before creating an account. Answers are held in
+            localStorage and sent to the server as part of /register. */}
+        <Route path="/onboarding" element={user ? <Navigate to={defaultRoute} replace /> : <OnboardingQuestionnaire />} />
 
         {/* Client Routes */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -210,7 +213,7 @@ function AppRoutes() {
         <Route path="/coach/more" element={<ProtectedRoute><CoachMore /></ProtectedRoute>} />
 
         {/* Catch-all */}
-        <Route path="*" element={<Navigate to={user ? defaultRoute : '/login'} replace />} />
+        <Route path="*" element={<Navigate to={user ? defaultRoute : '/welcome'} replace />} />
       </Routes>
       </RouteErrorBoundary>
 

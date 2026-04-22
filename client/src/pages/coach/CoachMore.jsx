@@ -23,6 +23,15 @@ export default function CoachMore() {
   const [clients, setClients] = useState([]);
   const [inviteForm, setInviteForm] = useState({ name: '', email: '' });
   const [inviteMsg, setInviteMsg] = useState('');
+  const [feedback, setFeedback] = useState([]);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/athlete/feedback', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { feedback: [] })
+      .then(d => setFeedback(d.feedback || []))
+      .catch(() => {});
+  }, [token]);
 
   const fetchActivity = async () => {
     try {
@@ -119,7 +128,7 @@ export default function CoachMore() {
           <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Clients</h1>
           <button onClick={() => setShowInvite(!showInvite)} style={{
             background: 'var(--accent)', border: 'none', borderRadius: 20,
-            padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#000',
+            padding: '6px 14px', fontSize: 13, fontWeight: 600, color: '#fff',
           }}>+ Invite</button>
         </div>
 
@@ -160,7 +169,7 @@ export default function CoachMore() {
         <div style={{
           width: 80, height: 80, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 12px', fontSize: 32, fontWeight: 700, color: '#000',
+          margin: '0 auto 12px', fontSize: 32, fontWeight: 700, color: '#fff',
         }}>
           {user?.name?.charAt(0)?.toUpperCase() || 'C'}
         </div>
@@ -218,6 +227,44 @@ export default function CoachMore() {
             <ChevronRight />
           </div>
         ))}
+      </div>
+
+      {/* App feedback from clients */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <div
+          onClick={() => setShowFeedback(s => !s)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', cursor: 'pointer' }}
+        >
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 500 }}>Client App Feedback</p>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              {feedback.length === 0
+                ? 'No ratings yet'
+                : `${feedback.length} rating${feedback.length === 1 ? '' : 's'} · avg ${(feedback.reduce((s, f) => s + f.rating, 0) / feedback.length).toFixed(1)}★`}
+            </p>
+          </div>
+          <ChevronRight />
+        </div>
+        {showFeedback && feedback.length > 0 && (
+          <div style={{ borderTop: '1px solid var(--divider)', maxHeight: 300, overflow: 'auto' }}>
+            {feedback.map(f => (
+              <div key={f.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--divider)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>{f.name || 'Unknown'}</p>
+                  <span style={{ color: '#FFD60A', fontSize: 13 }}>
+                    {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
+                  </span>
+                </div>
+                {f.message && (
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{f.message}</p>
+                )}
+                <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                  {new Date(f.created_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Support */}

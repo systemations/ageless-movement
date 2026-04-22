@@ -213,7 +213,7 @@ export default function ContentManager({ onBack }) {
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>Content Manager</h1>
         <button onClick={() => { setEditing('new'); setForm({}); }} style={{
           background: 'var(--accent)', border: 'none', borderRadius: 20,
-          padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#000',
+          padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#fff',
         }}>+ New</button>
       </div>
 

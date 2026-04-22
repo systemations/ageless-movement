@@ -1,11 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import CoachHome from './CoachHome';
+import CoachWorkspace from './CoachWorkspace';
 import ExerciseLibrary from './ExerciseLibrary';
 import ProgramBuilder from './ProgramBuilder';
 import ClientManager from './ClientManager';
 import WorkoutBuilder from './WorkoutBuilder';
+import RecipeManager from './RecipeManager';
+import ExploreManager from './ExploreManager';
+import ScheduleManager from './ScheduleManager';
+import ChallengeManager from './ChallengeManager';
+import ChallengesAdmin from './ChallengesAdmin';
+import MealPlanManager from './MealPlanManager';
+import MealScheduleManager from './MealScheduleManager';
+import CoachingManager from './CoachingManager';
+import NotificationManager from './NotificationManager';
 
 const navItems = [
+  { id: 'home', label: 'Home', icon: '🏠' },
+  { id: 'messages', label: 'Messages', icon: '💬', children: [
+    { id: 'messages-clients', label: 'Clients' },
+    { id: 'messages-groups', label: 'Groups' },
+    { id: 'notifications', label: 'Notifications' },
+  ]},
+  { id: 'clients', label: 'Clients', icon: '👥' },
   { id: 'fitness', label: 'Fitness', icon: '💪', children: [
     { id: 'exercises', label: 'Exercises' },
     { id: 'programs', label: 'Programs' },
@@ -14,25 +33,56 @@ const navItems = [
   ]},
   { id: 'nutrition', label: 'Nutrition', icon: '🍽️', children: [
     { id: 'recipes', label: 'Recipes' },
-    { id: 'meals', label: 'Meal Plans' },
+    { id: 'meal-plans', label: 'Meal Plans' },
+    { id: 'meal-schedules', label: 'Meal Schedules' },
   ]},
-  { id: 'clients', label: 'Clients', icon: '👥' },
+  { id: 'team', label: 'Team', icon: '🧑‍🏫' },
+  { id: 'coaching', label: 'Events', icon: '📅' },
   { id: 'explore', label: 'Explore', icon: '🔍' },
-  { id: 'challenges', label: 'Challenges', icon: '🏆' },
+  { id: 'challenges-old', label: 'Social Challenges', icon: '🎯' },
+  { id: 'challenges', label: 'Levels & Leaderboards', icon: '🏆' },
 ];
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
-  const [activePage, setActivePage] = useState('exercises');
-  const [expandedMenus, setExpandedMenus] = useState(['fitness']);
+  const { theme, toggleTheme } = useTheme();
+  const [activePage, setActivePage] = useState('home');
+  const [expandedMenus, setExpandedMenus] = useState(['messages', 'fitness']);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [editWorkoutId, setEditWorkoutId] = useState(null);
+  // Deep-link into a specific client — CoachHome sets this, ClientManager consumes it
+  const [pendingClientId, setPendingClientId] = useState(null);
+
+  const handleEditWorkout = (workoutId) => {
+    setEditWorkoutId(workoutId);
+    setActivePage('workouts');
+  };
+
+  const handleOpenClient = (clientId) => {
+    setPendingClientId(clientId);
+    setActivePage('clients');
+  };
 
   const renderPage = () => {
     switch (activePage) {
+      case 'home': return <CoachHome onOpenClient={handleOpenClient} />;
+      case 'messages': return <CoachWorkspace initialScope="team" />;
+      case 'messages-clients': return <CoachWorkspace initialScope="team" />;
+      case 'messages-groups': return <CoachWorkspace initialScope="group" />;
       case 'exercises': return <ExerciseLibrary />;
-      case 'programs': return <ProgramBuilder />;
-      case 'workouts': return <WorkoutBuilder />;
-      case 'clients': return <ClientManager />;
+      case 'programs': return <ProgramBuilder onEditWorkout={handleEditWorkout} />;
+      case 'workouts': return <WorkoutBuilder initialWorkoutId={editWorkoutId} onClearInitial={() => setEditWorkoutId(null)} />;
+      case 'recipes': return <RecipeManager />;
+      case 'meal-plans': return <MealPlanManager />;
+      case 'meal-schedules': return <MealScheduleManager />;
+      case 'schedules': return <ScheduleManager />;
+      case 'explore': return <ExploreManager />;
+      case 'clients': return <ClientManager openClientId={pendingClientId} onClearOpen={() => setPendingClientId(null)} />;
+      case 'challenges': return <ChallengesAdmin />;
+      case 'challenges-old': return <ChallengeManager />;
+      case 'team': return <CoachingManager variant="team" />;
+      case 'coaching': return <CoachingManager variant="events" />;
+      case 'notifications': return <NotificationManager />;
       default: return (
         <div style={{ padding: 40, textAlign: 'center' }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{navItems.find(n => n.id === activePage)?.label}</h2>
@@ -118,7 +168,7 @@ export default function AdminLayout() {
           <div style={{
             width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 700, color: '#000', flexShrink: 0,
+            fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
           }}>
             {user?.name?.charAt(0) || 'C'}
           </div>
@@ -127,6 +177,21 @@ export default function AdminLayout() {
               <p style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
               <button onClick={logout} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11, padding: 0, cursor: 'pointer' }}>Logout</button>
             </div>
+          )}
+          {sidebarOpen && (
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: 'rgba(255,140,0,0.12)', border: '1px solid var(--divider)',
+                color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 15, padding: 0,
+              }}
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
           )}
         </div>
 

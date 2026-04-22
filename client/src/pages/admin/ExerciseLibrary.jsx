@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
+import ExerciseThumb from '../../components/ExerciseThumb';
 import ExerciseModal from './ExerciseModal';
 
 export default function ExerciseLibrary() {
@@ -156,13 +157,8 @@ export default function ExerciseLibrary() {
               background: selected?.id === ex.id ? 'rgba(255,140,0,0.1)' : 'transparent',
               border: selected?.id === ex.id ? '1px solid var(--accent)' : '1px solid transparent',
             }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid var(--divider)', position: 'relative',
-              }}>
-                {ex.thumbnail_url ? <img src={ex.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 18, opacity: 0.3 }}>💪</span>}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <ExerciseThumb name={ex.name} thumbnailUrl={ex.thumbnail_url} size={52} borderRadius={8} style={{ border: '1px solid var(--divider)' }} />
                 {ex.demo_video_url && (
                   <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21"/></svg>
@@ -247,7 +243,7 @@ export default function ExerciseLibrary() {
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Thumbnail</label>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    {form.thumbnail_url && <img src={form.thumbnail_url} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />}
+                    {form.thumbnail_url && <img src={form.thumbnail_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} />}
                     <label style={{ padding: '8px 16px', background: 'var(--bg-card)', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: 'var(--accent)', border: '1px solid var(--divider)' }}>
                       {uploading ? 'Uploading...' : 'Upload Thumbnail'}<input type="file" accept="image/*" onChange={handleUploadThumb} style={{ display: 'none' }} />
                     </label>
@@ -259,9 +255,7 @@ export default function ExerciseLibrary() {
               <>
                 {/* Header with thumbnail + name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {selected?.thumbnail_url ? <img src={selected.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 28, opacity: 0.3 }}>💪</span>}
-                  </div>
+                  <ExerciseThumb name={selected?.name} thumbnailUrl={selected?.thumbnail_url} size={64} borderRadius={10} />
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 800 }}>{selected?.name}</h2>
                     {selected?.display_name && selected.display_name !== selected.name && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{selected.display_name}</p>}
@@ -332,7 +326,7 @@ export default function ExerciseLibrary() {
                         {exercises.filter(e => e.id !== selected?.id && e.demo_video_url && altSearch && e.name.toLowerCase().includes(altSearch.toLowerCase())).slice(0, 15).map(ex => (
                           <div key={ex.id} onClick={() => addAlternative(ex.id)} style={{ padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,140,0,0.08)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            {ex.thumbnail_url ? <img src={ex.thumbnail_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ fontSize: 14, opacity: 0.3 }}>💪</span>}
+                            <ExerciseThumb name={ex.name} thumbnailUrl={ex.thumbnail_url} size={32} borderRadius={6} />
                             <span>{ex.name}</span>
                           </div>
                         ))}
@@ -345,8 +339,8 @@ export default function ExerciseLibrary() {
                     {alternatives.map((alt, ai) => (
                       <div key={alt.id} style={{ background: 'var(--bg-card)', borderRadius: 10, padding: 10, position: 'relative', textAlign: 'center' }}>
                         <button onClick={() => removeAlternative(alt.alternative_id)} style={{ position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 12, opacity: 0.6 }}>×</button>
-                        <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 6px', overflow: 'hidden', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 18, opacity: 0.3 }}>💪</span>}
+                        <div style={{ margin: '0 auto 6px', width: 52 }}>
+                          <ExerciseThumb name={alt.name} thumbnailUrl={alt.thumbnail_url} size={52} borderRadius={8} />
                         </div>
                         <p style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alt.name}</p>
                         {/* Reorder */}

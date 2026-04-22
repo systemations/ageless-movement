@@ -22,13 +22,25 @@ function fetchJSON(url) {
 
 async function fetchVimeoThumbnail(vimeoUrl) {
   try {
-    // Use Vimeo oEmbed to get thumbnail
+    // Skip streaming/player URLs -- oEmbed doesn't support them
+    if (vimeoUrl.includes('player.vimeo.com/external/')) return null;
+
+    // Normalise: strip /manage/videos/ prefix
     const cleanUrl = vimeoUrl.replace('/manage/videos/', '/');
-    const match = cleanUrl.match(/vimeo\.com\/(\d+)/);
+
+    // Extract video ID and optional privacy hash
+    // Matches: vimeo.com/413798520/b09f49067f  OR  vimeo.com/768740602
+    const match = cleanUrl.match(/vimeo\.com\/(\d+)(?:\/([a-f0-9]+))?/);
     if (!match) return null;
 
     const videoId = match[1];
-    const oembedUrl = `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}`;
+    const hash = match[2];
+
+    // Include privacy hash in oEmbed URL if present -- required for unlisted videos
+    const embedTarget = hash
+      ? `https://vimeo.com/${videoId}/${hash}`
+      : `https://vimeo.com/${videoId}`;
+    const oembedUrl = `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(embedTarget)}&width=1280`;
     const data = await fetchJSON(oembedUrl);
     return data.thumbnail_url || null;
   } catch (err) {
@@ -36,43 +48,56 @@ async function fetchVimeoThumbnail(vimeoUrl) {
   }
 }
 
-async function main() {
-  const exercises = db.prepare(
-    "SELECT id, name, demo_video_url FROM exercises WHERE demo_video_url IS NOT NULL AND (thumbnail_url IS NULL OR thumbnail_url = '')"
-  ).all();
-
-  console.log(`Exercises needing thumbnails: ${exercises.length}`);
-
+async function fetchBatch(items, urlField, thumbField, table, label) {
+  console.log(`\n${label} needing thumbnails: ${items.length}`);
   let updated = 0;
   let failed = 0;
-  const batchSize = 5; // Fetch 5 at a time to be polite to Vimeo
+  const batchSize = 5;
 
-  for (let i = 0; i < exercises.length; i += batchSize) {
-    const batch = exercises.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map(async (ex) => {
-        const thumb = await fetchVimeoThumbnail(ex.demo_video_url);
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (item) => {
+        const thumb = await fetchVimeoThumbnail(item[urlField]);
         if (thumb) {
-          db.prepare('UPDATE exercises SET thumbnail_url = ? WHERE id = ?').run(thumb, ex.id);
+          db.prepare(`UPDATE ${table} SET ${thumbField} = ? WHERE id = ?`).run(thumb, item.id);
           updated++;
-          return true;
+        } else {
+          failed++;
         }
-        failed++;
-        return false;
       })
     );
 
-    if ((i + batchSize) % 50 === 0 || i + batchSize >= exercises.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, exercises.length)}/${exercises.length} (${updated} thumbnails, ${failed} failed)`);
+    if ((i + batchSize) % 50 === 0 || i + batchSize >= items.length) {
+      console.log(`  ${label}: ${Math.min(i + batchSize, items.length)}/${items.length} (${updated} ok, ${failed} failed)`);
     }
 
-    // Small delay between batches
     await new Promise(r => setTimeout(r, 200));
   }
 
-  console.log(`\nDone! Updated ${updated} thumbnails, ${failed} failed.`);
-  const total = db.prepare("SELECT COUNT(*) as c FROM exercises WHERE thumbnail_url IS NOT NULL AND thumbnail_url != ''").get();
-  console.log(`Total exercises with thumbnails: ${total.c}`);
+  console.log(`${label}: ${updated} thumbnails fetched, ${failed} failed.`);
+  return { updated, failed };
+}
+
+async function main() {
+  // 1. Exercises
+  const exercises = db.prepare(
+    "SELECT id, name, demo_video_url FROM exercises WHERE demo_video_url IS NOT NULL AND (thumbnail_url IS NULL OR thumbnail_url = '')"
+  ).all();
+  const exResult = await fetchBatch(exercises, 'demo_video_url', 'thumbnail_url', 'exercises', 'Exercises');
+
+  // 2. Follow-along workouts
+  const workouts = db.prepare(
+    "SELECT id, title, video_url FROM workouts WHERE video_url IS NOT NULL AND (image_url IS NULL OR image_url = '')"
+  ).all();
+  const wkResult = await fetchBatch(workouts, 'video_url', 'image_url', 'workouts', 'Workouts');
+
+  // Summary
+  const exTotal = db.prepare("SELECT COUNT(*) as c FROM exercises WHERE thumbnail_url IS NOT NULL AND thumbnail_url != ''").get();
+  const wkTotal = db.prepare("SELECT COUNT(*) as c FROM workouts WHERE image_url IS NOT NULL AND image_url != ''").get();
+  console.log(`\nTotal exercises with thumbnails: ${exTotal.c}`);
+  console.log(`Total workouts with thumbnails: ${wkTotal.c}`);
+  console.log(`Updated: ${exResult.updated + wkResult.updated} total, ${exResult.failed + wkResult.failed} failed`);
 }
 
 main().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); });

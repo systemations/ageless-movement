@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
+import ExerciseThumb from '../../components/ExerciseThumb';
 
 const BODY_PARTS = [
   'Shoulders', 'Front Delts', 'Rear Delts', 'Lateral Delts', 'Back', 'Traps', 'Lats',
@@ -409,9 +410,7 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
                   display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 4px',
                   background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--divider)',
                 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {alt.thumbnail_url ? <img src={alt.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 10, opacity: 0.3 }}>💪</span>}
-                  </div>
+                  <ExerciseThumb name={alt.name} size={28} borderRadius={6} />
                   <span style={{ fontSize: 12, fontWeight: 500, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alt.name}</span>
                   <button onClick={() => removeAlt(alt.alternative_id || alt.id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 12, padding: 0 }}>×</button>
                 </div>
@@ -428,7 +427,7 @@ export default function ExerciseModal({ exercise, onClose, onSaved }) {
                 <div key={ex.id} onClick={() => addAlt(ex)} style={{ padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,140,0,0.08)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  {ex.thumbnail_url ? <img src={ex.thumbnail_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ fontSize: 12, opacity: 0.3 }}>💪</span>}
+                  <ExerciseThumb name={ex.name} size={28} borderRadius={6} />
                   <span>{ex.name}</span>
                 </div>
               ))}

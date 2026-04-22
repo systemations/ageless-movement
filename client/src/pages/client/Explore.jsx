@@ -1,160 +1,236 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { BookmarkIcon, SearchIcon } from '../../components/Icons';
 import FavButton from '../../components/FavButton';
 import { useAuth } from '../../context/AuthContext';
 import CourseDetail from './CourseDetail';
 import ProgramDetail from './ProgramDetail';
 import WorkoutOverview from './WorkoutOverview';
+import RecipeBrowser from './RecipeBrowser';
+import WorkoutThumb, { MiniThumb } from '../../components/WorkoutThumb';
+import ExerciseDetailModal from '../../components/ExerciseDetailModal';
+import ExerciseBrowser from './ExerciseBrowser';
+import ChallengeDetail from './ChallengeDetail';
+import MealPlanView from './MealPlanView';
+import TiersModal from '../../components/TiersModal';
+
+// Dark veil + lock icon + tier-name chip overlay, rendered on top of any
+// thumbnail. Replaces the old bare 🔒 emoji so locked content reads
+// unambiguously as "unlock to access" rather than just "favourited".
+function LockOverlay({ tierName, compact }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 6, color: '#fff',
+    }}>
+      <div style={{ fontSize: compact ? 20 : 26 }}>🔒</div>
+      {tierName && (
+        <div style={{
+          fontSize: compact ? 9 : 10, fontWeight: 800, letterSpacing: 0.8,
+          padding: '3px 8px', borderRadius: 10, background: 'var(--accent)', color: '#000',
+          textTransform: 'uppercase',
+        }}>{tierName}</div>
+      )}
+    </div>
+  );
+}
 
 const tabs = ['Workouts', 'Nutrition', 'Resources'];
 
-const courses = [
-  {
-    id: 1,
-    title: 'Mobility Fundamentals',
-    subtitle: 'Your starting point for pain-free movement',
-    modules: 5,
-    lessons: 18,
-    duration: '2 hrs 30 mins',
-    difficulty: 'Beginner',
-    tier: 'free',
-    progress: 0,
-    image: null,
-    description: 'Learn the foundations of mobility training. This course covers joint health basics, daily movement routines, and how to assess your own range of motion. Perfect for beginners or anyone returning to movement after a break.',
-    moduleList: [
-      { title: 'Welcome & Assessment', lessons: 3, duration: '25 mins', completed: false },
-      { title: 'Hip Mobility Basics', lessons: 4, duration: '35 mins', completed: false },
-      { title: 'Spine & Thoracic Health', lessons: 4, duration: '30 mins', completed: false },
-      { title: 'Shoulder Freedom', lessons: 4, duration: '35 mins', completed: false },
-      { title: 'Building Your Daily Routine', lessons: 3, duration: '25 mins', completed: false },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Ground Zero Program',
-    subtitle: 'The complete 8-week mobility overhaul',
-    modules: 8,
-    lessons: 48,
-    duration: '12 hrs',
-    difficulty: 'All Levels',
-    tier: 'paid',
-    progress: 0,
-    image: null,
-    description: 'Our flagship program. 8 weeks of progressive mobility training that takes you through every plane of motion. Built over two 28-day phases with follow-along workouts you can do at your own pace.',
-    moduleList: [
-      { title: 'Phase 1: Week 1 - Foundations', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 1: Week 2 - Hip Focus', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 1: Week 3 - Spine & Shoulders', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 1: Week 4 - Integration', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 2: Week 5 - Advanced Mobility', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 2: Week 6 - Strength + Mobility', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 2: Week 7 - Flow States', lessons: 6, duration: '1 hr 30 mins', completed: false },
-      { title: 'Phase 2: Week 8 - Mastery', lessons: 6, duration: '1 hr 30 mins', completed: false },
-    ],
-  },
-  {
-    id: 3,
-    title: '30-Day Movement Reset',
-    subtitle: 'Daily 15-min routines to transform how you move',
-    modules: 4,
-    lessons: 30,
-    duration: '7 hrs 30 mins',
-    difficulty: 'Beginner',
-    tier: 'paid',
-    progress: 0,
-    image: null,
-    description: 'Commit to 15 minutes a day for 30 days and feel the difference. Each day builds on the last with progressive mobility drills, stretches, and movement flows.',
-    moduleList: [
-      { title: 'Week 1: Wake Up Your Body', lessons: 7, duration: '1 hr 45 mins', completed: false },
-      { title: 'Week 2: Build Range', lessons: 7, duration: '1 hr 45 mins', completed: false },
-      { title: 'Week 3: Add Strength', lessons: 7, duration: '1 hr 45 mins', completed: false },
-      { title: 'Week 4: Flow & Integrate', lessons: 9, duration: '2 hrs 15 mins', completed: false },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Desk Worker Recovery',
-    subtitle: 'Undo the damage of sitting all day',
-    modules: 3,
-    lessons: 12,
-    duration: '1 hr 30 mins',
-    difficulty: 'Beginner',
-    tier: 'free',
-    image: null,
-    progress: 0,
-    description: 'Designed for anyone who spends hours at a desk. Quick, targeted routines to open your hips, decompress your spine, and restore shoulder mobility.',
-    moduleList: [
-      { title: 'Understanding Desk Posture', lessons: 4, duration: '30 mins', completed: false },
-      { title: 'Mid-Day Movement Breaks', lessons: 4, duration: '30 mins', completed: false },
-      { title: 'End-of-Day Recovery', lessons: 4, duration: '30 mins', completed: false },
-    ],
-  },
-];
-
-const workoutCarousels = [
-  {
-    title: 'Mobility - Follow Alongs',
-    items: [
-      { name: 'Mobility Routine', duration: '5 mins', tag: 'Full Body' },
-      { name: 'Hip Mobility Routine', duration: '7 mins', tag: 'Hips' },
-      { name: 'CAR Routine', duration: '8 mins', tag: 'Full Body' },
-    ],
-  },
-  {
-    title: 'Sweat Sessions',
-    items: [
-      { name: 'Sweat Session #01', duration: '1 hr', tag: 'Full Body' },
-      { name: 'Sweat Session #02', duration: '1 hr', tag: 'Lower Body' },
-      { name: 'Sweat Session #03', duration: '45 mins', tag: 'Upper Body' },
-    ],
-  },
-  {
-    title: 'Prehab | Preparation & Rehab',
-    items: [
-      { name: 'Shoulder Recovery', duration: '15 mins', tag: 'Shoulders' },
-      { name: 'Hip Opening', duration: '12 mins', tag: 'Hips' },
-      { name: 'Spine Decompression', duration: '10 mins', tag: 'Back' },
-    ],
-  },
-];
-
-const courseColors = [
-  'var(--bg-card)',
-  'var(--bg-card)',
-  'var(--bg-card)',
-  'var(--bg-card)',
-];
-
 export default function Explore() {
   const { token } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('Workouts');
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [selectedChallenge, setSelectedChallenge] = useState(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState(null);
+  const [selectedMealPlanId, setSelectedMealPlanId] = useState(null);
   const [apiData, setApiData] = useState(null);
+  const [challenges, setChallenges] = useState([]);
+  // Locked-tap triggers the tier comparison modal. We pass the item title
+  // and required tier level so the modal can frame the upgrade nudge.
+  const [tiersModal, setTiersModal] = useState(null);
+  const openTiersModal = (item) => {
+    setTiersModal({
+      itemTitle: item.title || item.name,
+      requiredTierLevel: item.tier_level ?? null,
+    });
+  };
+  const [mealSchedules, setMealSchedules] = useState([]);
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [exerciseBrowserSection, setExerciseBrowserSection] = useState(null);
+  const [showChallengesList, setShowChallengesList] = useState(false);
 
   useEffect(() => {
     fetch('/api/explore/content', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setApiData)
       .catch(console.error);
+
+    fetch('/api/challenges', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setChallenges(d.challenges || []))
+      .catch(console.error);
+
+    fetch('/api/nutrition/meal-schedules', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setMealSchedules(d.schedules || []))
+      .catch(console.error);
   }, []);
 
+  // Open a specific program / workout when navigated with ?program=<id> or ?workout=<id>
+  useEffect(() => {
+    const programId = searchParams.get('program');
+    const workoutId = searchParams.get('workout');
+    if (programId) setSelectedProgram(Number(programId));
+    if (workoutId) setSelectedWorkout(Number(workoutId));
+  }, [searchParams]);
+
+  const closeProgram = () => {
+    setSelectedProgram(null);
+    if (searchParams.get('program')) {
+      searchParams.delete('program');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
+
+  const closeWorkout = () => {
+    if (searchParams.get('workout')) {
+      // User came via deep link (e.g. from Home page) -- go back to where they were
+      navigate(-1);
+    } else {
+      setSelectedWorkout(null);
+    }
+  };
+
   if (selectedWorkout) {
-    return <WorkoutOverview workoutId={selectedWorkout} onBack={() => setSelectedWorkout(null)} />;
+    const from = searchParams.get('from');
+    const prefillDate = searchParams.get('date');
+    return (
+      <WorkoutOverview
+        workoutId={selectedWorkout}
+        onBack={closeWorkout}
+        previewMode={from === 'calendar'}
+        prefillScheduleDate={prefillDate}
+      />
+    );
   }
 
   if (selectedProgram) {
-    return <ProgramDetail programId={selectedProgram} onBack={() => setSelectedProgram(null)} onSelectWorkout={setSelectedWorkout} />;
+    return <ProgramDetail programId={selectedProgram} onBack={closeProgram} onSelectWorkout={setSelectedWorkout} />;
   }
 
   if (selectedCourse) {
     return <CourseDetail course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
   }
 
-  const featured = courses[0];
+  if (selectedChallenge) {
+    return <ChallengeDetail challengeId={selectedChallenge} onBack={() => setSelectedChallenge(null)} />;
+  }
+
+  if (exerciseBrowserSection) {
+    return <ExerciseBrowser initialFilter={exerciseBrowserSection} onBack={() => setExerciseBrowserSection(null)} />;
+  }
+
+  if (showChallengesList) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', paddingBottom: 100 }}>
+        <div style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <button onClick={() => setShowChallengesList(false)} style={{
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <h1 style={{ fontSize: 20, fontWeight: 800 }}>Challenges</h1>
+        </div>
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {challenges.map(ch => {
+            const progressPct = ch.level_count > 0 && ch.completed_levels
+              ? Math.round((JSON.parse(ch.completed_levels || '[]').length / ch.level_count) * 100)
+              : 0;
+            const isEnrolled = !!ch.enrolled_at;
+            return (
+              <div
+                key={ch.id}
+                onClick={() => { setShowChallengesList(false); setSelectedChallenge(ch.id); }}
+                style={{
+                  cursor: 'pointer', borderRadius: 14, overflow: 'hidden',
+                  background: 'var(--bg-card)', position: 'relative',
+                }}
+              >
+                <div style={{
+                  height: 160,
+                  background: ch.image_url ? `url(${ch.image_url}) center/cover` : 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 10, left: 10,
+                    fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 10,
+                    background: 'rgba(0,0,0,0.6)', color: '#fff', letterSpacing: 0.5,
+                  }}>CHALLENGE</div>
+                  {isEnrolled && progressPct > 0 && (
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.3)' }}>
+                      <div style={{ width: `${progressPct}%`, height: '100%', background: 'var(--accent-mint)' }} />
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '12px 14px 14px' }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{ch.title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    {ch.level_count} levels{isEnrolled ? ` - ${progressPct}% done` : ''}
+                  </p>
+                  {ch.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>{ch.description}</p>}
+                </div>
+              </div>
+            );
+          })}
+          {challenges.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>No challenges yet</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedMealPlanId) {
+    // MealPlanView is designed as a standalone view; for Explore we just render it
+    // (it'll fetch and show the plan + let user enrol). We pass a special prop so
+    // it knows to pre-select that plan id. For now it'll find it via the list fetch.
+    return (
+      <div>
+        <div style={{ padding: '16px 16px 0' }}>
+          <button
+            onClick={() => setSelectedMealPlanId(null)}
+            style={{
+              width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-card)',
+              border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+        </div>
+        <MealPlanView initialScheduleId={selectedMealPlanId} />
+      </div>
+    );
+  }
+
+  const fitnessSections = apiData?.sections?.filter(s => s.parent_tab === 'fitness') || [];
+  const nutritionSections = apiData?.sections?.filter(s => s.parent_tab === 'nutrition') || [];
+  const resourcesSections = apiData?.sections?.filter(s => s.parent_tab === 'resources') || [];
+  const courses = apiData?.courses || [];
+
+  // Find featured course
+  const featuredCourse = courses.find(c => c.featured === 1) || courses[0];
 
   return (
+    <>
     <div className="page-content">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -167,149 +243,303 @@ export default function Explore() {
 
       {activeTab === 'Workouts' && (
         <>
-          {/* ===== COURSES SECTION ===== */}
-          <div style={{ marginBottom: 28 }}>
-            <div className="section-header" style={{ marginTop: 0 }}>
-              <h2 style={{ fontSize: 18 }}>Courses</h2>
-              <button style={{ background: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, border: 'none' }}>See All &gt;</button>
-            </div>
+          {/* ===== DYNAMIC SECTIONS ===== */}
+          {fitnessSections.map((section) => {
+            // Prefer the explicit content_type set by the coach; fall back to item inspection.
+            const sectionType = section.content_type
+              || (section.items?.[0]?.item_type ?? null);
+            const isCoursesSection = sectionType === 'course';
+            const isProgramSection = sectionType === 'program';
+            // Both 'workout' and 'follow_along' sections render as horizontal
+            // workout carousels. 'follow_along' is a sub-filter of workouts
+            // (workouts.workout_type='follow_along'). The section's render
+            // code uses section.items which already carries only the workouts
+            // the coach explicitly added, so no extra filter is needed here.
+            const isWorkoutSection = sectionType === 'workout' || sectionType === 'follow_along';
 
-            {/* Featured Course Hero */}
-            <div
-              onClick={() => setSelectedCourse(featured)}
-              style={{
-                background: courseColors[0], borderRadius: 16, padding: 0, marginBottom: 16,
-                overflow: 'hidden', cursor: 'pointer', position: 'relative',
-              }}
-            >
-              <div style={{
-                padding: '24px 20px', minHeight: 180, display: 'flex', flexDirection: 'column',
-                justifyContent: 'flex-end', position: 'relative',
-              }}>
-                {/* Decorative circles */}
-                <div style={{
-                  position: 'absolute', top: -20, right: -20, width: 120, height: 120,
-                  borderRadius: '50%', border: '1px solid rgba(61,255,210,0.1)',
-                }} />
-                <div style={{
-                  position: 'absolute', top: 20, right: 20, width: 60, height: 60,
-                  borderRadius: '50%', border: '1px solid rgba(61,255,210,0.08)',
-                }} />
+            // Courses section — show only the courses linked to this section,
+            // looked up from the global courses list. Featured first, then sort_order.
+            if (isCoursesSection) {
+              // Preserve item_locked / tier_name from section.items since the
+              // `courses` global array doesn't carry viewer-specific flags.
+              const itemsByCourseId = new Map(
+                (section.items || [])
+                  .filter(i => i.item_type === 'course')
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                  .map(i => [i.item_id, i])
+              );
+              const sortedCourses = [...itemsByCourseId.keys()]
+                .map(id => {
+                  const c = courses.find(x => x.id === id);
+                  if (!c) return null;
+                  const sectionItem = itemsByCourseId.get(id);
+                  return { ...c, item_locked: sectionItem.item_locked, tier_name: c.tier_name || sectionItem.tier_name, tier_level: sectionItem.tier_level };
+                })
+                .filter(Boolean)
+                .sort((a, b) => (b.featured || 0) - (a.featured || 0));
+              if (sortedCourses.length === 0) return null;
+              return (
+                <div key={section.id} style={{ marginBottom: 28 }}>
+                  <div className="section-header" style={{ marginTop: 0 }}>
+                    <h2 style={{ fontSize: 18 }}>{section.title}</h2>
+                    {/* Only show See All when there's actually more than one item worth paginating into */}
+                    {sortedCourses.length > 1 && (
+                      <button style={{ background: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, border: 'none' }}>See All &gt;</button>
+                    )}
+                  </div>
 
-                {/* Free badge */}
-                <div style={{
-                  position: 'absolute', top: 16, right: 20,
-                  background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700,
-                  padding: '4px 12px', borderRadius: 20, letterSpacing: 0.5,
-                }}>
-                  FREE
-                </div>
+                  {/* Full-width stacked cards — one course per row.
+                      16:9 poster on top, title + meta below. Much more
+                      presence than the old 220px cramped carousel. */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {sortedCourses.map((course) => {
+                      const isFeatured = course.featured === 1;
+                      const isFree = course.tier_name === 'Free';
+                      return (
+                        <div
+                          key={course.id}
+                          onClick={() => course.item_locked ? openTiersModal(course) : setSelectedCourse(course)}
+                          style={{
+                            width: '100%', borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
+                            background: 'var(--bg-card)', display: 'flex', flexDirection: 'column',
+                          }}
+                        >
+                          {/* Poster — full-width 16:9 */}
+                          <div style={{
+                            width: '100%', aspectRatio: '16/9',
+                            background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                            position: 'relative', overflow: 'hidden',
+                          }}>
+                            {course.image_url ? (
+                              <img src={course.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: 40, opacity: 0.4 }}>📚</span>
+                              </div>
+                            )}
+                            {/* Tier badge */}
+                            <div style={{
+                              position: 'absolute', top: 10, right: 10,
+                              background: isFree ? 'var(--accent)' : 'rgba(0,0,0,0.6)',
+                              color: '#fff', fontSize: 10, fontWeight: 700,
+                              padding: '4px 10px', borderRadius: 12, letterSpacing: 0.5,
+                            }}>
+                              {isFree ? 'FREE' : course.tier_name?.toUpperCase()}
+                            </div>
+                            {isFeatured && (
+                              <div style={{
+                                position: 'absolute', top: 10, left: 10,
+                                background: 'var(--accent)', color: '#fff',
+                                fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 12,
+                              }}>FEATURED</div>
+                            )}
+                            {course.item_locked && <LockOverlay tierName={course.tier_name} />}
+                          </div>
 
-                <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, lineHeight: 1.2, marginTop: 8 }}>
-                  {featured.title}
-                </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>
-                  {featured.subtitle}
-                </p>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {featured.modules} modules · {featured.lessons} lessons
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {featured.duration}
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div style={{ marginTop: 12, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${featured.progress}%`, background: 'var(--accent)', borderRadius: 2 }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Course Carousel */}
-            <div className="hide-scrollbar" style={{
-              display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px',
-            }}>
-              {courses.slice(1).map((course, i) => (
-                <div
-                  key={course.id}
-                  onClick={() => setSelectedCourse(course)}
-                  style={{
-                    minWidth: 220, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                    background: courseColors[i + 1] || courseColors[0],
-                  }}
-                >
-                  <div style={{ padding: '16px 16px 14px', position: 'relative' }}>
-                    {/* Tier badge */}
-                    <div style={{
-                      position: 'absolute', top: 12, right: 12,
-                      background: course.tier === 'free' ? 'var(--accent-mint)' : 'rgba(255,255,255,0.15)',
-                      color: course.tier === 'free' ? '#000' : 'var(--text-primary)',
-                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
-                      letterSpacing: 0.5,
-                    }}>
-                      {course.tier === 'free' ? 'FREE' : 'PRO'}
-                    </div>
-
-                    {/* Difficulty badge */}
-                    <div style={{
-                      fontSize: 10, color: 'var(--accent)', fontWeight: 600,
-                      marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5,
-                    }}>
-                      {course.difficulty}
-                    </div>
-
-                    <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, lineHeight: 1.3, paddingRight: 30 }}>
-                      {course.title}
-                    </h4>
-                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.3 }}>
-                      {course.subtitle}
-                    </p>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                      {course.modules} modules · {course.duration}
-                    </div>
-
-                    {/* Progress */}
-                    <div style={{ marginTop: 10, height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }}>
-                      <div style={{ height: '100%', width: `${course.progress}%`, background: 'var(--accent)', borderRadius: 2 }} />
-                    </div>
+                          {/* Info — comfortable padding, larger type */}
+                          <div style={{ padding: '14px 16px 16px' }}>
+                            <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{course.title}</h4>
+                            {course.subtitle && (
+                              <p style={{
+                                fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.4,
+                                overflow: 'hidden', textOverflow: 'ellipsis',
+                                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                              }}>{course.subtitle}</p>
+                            )}
+                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                              {course.modules} modules · {course.lessons} lessons
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              );
+            }
 
-          {/* Divider */}
-          <div style={{ height: 1, background: 'var(--accent)', opacity: 0.2, margin: '4px 0 20px' }} />
+            // Programs section
+            if (isProgramSection) {
+              const itemCount = section.items?.length || 0;
+              return (
+                <div key={section.id} style={{ marginBottom: 24 }}>
+                  <div className="section-header">
+                    <h2 style={{ fontSize: 16 }}>
+                      {section.title}{itemCount > 1 ? ' >' : ''}
+                    </h2>
+                  </div>
+                  <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+                    {section.items.map((item) => {
+                      // Square thumbnails — matches the AMS placeholder images
+                      // (1300x1289, ~1:1) so nothing is cropped.
+                      const CARD_W = 200;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => item.item_locked ? openTiersModal(item) : setSelectedProgram(item.item_id)}
+                          style={{
+                            width: CARD_W, minWidth: CARD_W, maxWidth: CARD_W, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-card)',
+                            position: 'relative', display: 'flex', flexDirection: 'column', flexShrink: 0,
+                          }}
+                        >
+                          <div style={{
+                            width: CARD_W, height: CARD_W,
+                            position: 'relative', overflow: 'hidden', flexShrink: 0,
+                          }}>
+                            <WorkoutThumb
+                              title={item.title}
+                              thumbnailUrl={item.image_url}
+                              aspectRatio="1/1"
+                              borderRadius={0}
+                              titleFontSize={16}
+                            />
+                            {item.item_locked && <LockOverlay tierName={item.tier_name} />}
+                          </div>
+                          <div style={{ padding: '12px 14px 14px' }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.title}</h4>
+                            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.duration_weeks} weeks · {item.workouts_per_week} workouts/wk</p>
+                            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{item.min_duration} - {item.max_duration}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
 
-          {/* ===== PROGRAMS ===== */}
-          {apiData?.programs && apiData.programs.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div className="section-header">
-                <h2 style={{ fontSize: 16 }}>Programs &gt;</h2>
-              </div>
-              <div className="hide-scrollbar" style={{
-                display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px',
-              }}>
-                {apiData.programs.map((prog) => (
+            // Workout carousel section
+            if (isWorkoutSection) {
+              const itemCount = section.items?.length || 0;
+              return (
+                <div key={section.id} style={{ marginBottom: 24 }}>
+                  <div className="section-header">
+                    <h2 style={{ fontSize: 16 }}>
+                      {section.title}{itemCount > 1 ? ' >' : ''}
+                    </h2>
+                  </div>
+                  {itemCount === 0 ? (
+                    <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+                      Coming soon
+                    </div>
+                  ) : (
+                  <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, margin: '0 -16px', padding: '0 16px' }}>
+                    {section.items.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => item.item_locked ? openTiersModal(item) : setSelectedWorkout(item.item_id)}
+                        style={{ minWidth: 150, cursor: 'pointer', position: 'relative' }}
+                      >
+                        <div style={{ width: 150, marginBottom: 8, position: 'relative', borderRadius: 12, overflow: 'hidden' }}>
+                          <WorkoutThumb
+                            title={item.title}
+                            thumbnailUrl={item.image_url}
+                            aspectRatio="1/1"
+                            borderRadius={12}
+                            titleFontSize={13}
+                          />
+                          {!item.item_locked && (
+                            <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                              <FavButton itemType="workout" itemId={item.item_id} itemTitle={item.title} itemMeta={`${item.duration || ''} · ${item.body_parts || ''}`} />
+                            </div>
+                          )}
+                          {item.item_locked && <LockOverlay tierName={item.tier_name} compact />}
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{item.title}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.duration ? `${item.duration} mins` : ''} · {item.body_parts || ''}</p>
+                      </div>
+                    ))}
+                  </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Exercise Library -- single tappable card that opens the full browser
+            if (sectionType === 'exercise') {
+              return (
+                <div key={section.id} style={{ marginBottom: 24 }}>
                   <div
-                    key={prog.id}
-                    onClick={() => setSelectedProgram(prog.id)}
+                    onClick={() => setExerciseBrowserSection('All')}
                     style={{
-                      minWidth: 200, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                      background: 'var(--bg-card)',
+                      background: 'linear-gradient(135deg, #1B6B3A, #0D9488)',
+                      borderRadius: 14, padding: '24px 20px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}
                   >
-                    <div style={{ padding: '16px 16px 14px' }}>
-                      <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: '50%', marginBottom: 8, opacity: 0.7 }} />
-                      <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{prog.title}</h4>
-                      <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                        {prog.duration_weeks} weeks · {prog.workouts_per_week} workouts/wk
+                    <div>
+                      <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{section.title}</h2>
+                      <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>Browse 447 exercises with video demos</p>
+                    </div>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })}
+
+          {/* Challenges */}
+          {challenges.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div
+                onClick={() => setShowChallengesList(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #7C3AED, #4338CA)',
+                  borderRadius: 14, padding: '24px 20px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Challenges</h2>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>{challenges.length} challenge{challenges.length !== 1 ? 's' : ''} available</p>
+                </div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+          )}
+
+        </>
+      )}
+
+      {activeTab === 'Nutrition' && (
+        <>
+          {/* Meal Schedules carousel */}
+          {mealSchedules.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div className="section-header" style={{ marginTop: 0 }}>
+                <h2 style={{ fontSize: 16 }}>Meal Schedules</h2>
+              </div>
+              <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+                {mealSchedules.map(sched => (
+                  <div
+                    key={sched.id}
+                    onClick={() => setSelectedMealPlanId(sched.id)}
+                    style={{
+                      minWidth: 240, maxWidth: 240, cursor: 'pointer',
+                      borderRadius: 14, overflow: 'hidden', background: 'var(--bg-card)', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      height: 130,
+                      background: sched.image_url
+                        ? `url(${sched.image_url}) center/cover`
+                        : 'linear-gradient(135deg, #1A2E1E, #243D26)',
+                    }} />
+                    <div style={{ padding: '10px 12px 12px' }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{sched.title}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                        {sched.duration_weeks ? `${sched.duration_weeks}w` : ''}{sched.duration_days ? ` ${sched.duration_days} days` : ''}
+                        {sched.calorie_target_min && sched.calorie_target_max ? ` - ${sched.calorie_target_min}-${sched.calorie_target_max} kcal` : ''}
                       </p>
-                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                        {prog.min_duration} - {prog.max_duration}
-                      </p>
+                      {sched.category && (
+                        <span style={{
+                          display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 600,
+                          padding: '2px 8px', borderRadius: 6,
+                          background: 'rgba(255,149,0,0.12)', color: 'var(--accent)',
+                        }}>{sched.category}</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -317,116 +547,72 @@ export default function Explore() {
             </div>
           )}
 
-          {/* ===== WORKOUT CAROUSELS (from API + static fallback) ===== */}
-          {(apiData?.carousels || workoutCarousels).map((carousel) => (
-            <div key={carousel.title} style={{ marginBottom: 24 }}>
-              <div className="section-header">
-                <h2 style={{ fontSize: 16 }}>{carousel.title} &gt;</h2>
-              </div>
-              <div className="hide-scrollbar" style={{
-                display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, margin: '0 -16px', padding: '0 16px',
-              }}>
-                {(carousel.items || []).map((item, itemIdx) => (
-                  <div
-                    key={item.id || item.name}
-                    onClick={() => item.id && setSelectedWorkout(item.id)}
-                    style={{ minWidth: 150, cursor: 'pointer' }}
-                  >
-                    <div style={{
-                      width: 150, height: 150, borderRadius: 12, background: 'var(--bg-card)',
-                      marginBottom: 8, position: 'relative', overflow: 'hidden',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <span style={{ fontSize: 40, opacity: 0.3 }}>
-                          {(item.workout_type || item.tag || '').includes('mobility') ? '🧘' : '🏋️'}
-                        </span>
-                      )}
-                      <div style={{ position: 'absolute', top: 4, right: 4 }}>
-                        <FavButton
-                          itemType="workout"
-                          itemId={item.id || itemIdx}
-                          itemTitle={item.title || item.name}
-                          itemMeta={`${item.duration_mins ? item.duration_mins + ' mins' : item.duration} · ${item.body_parts || item.tag}`}
-                        />
-                      </div>
-                    </div>
-                    <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>
-                      {item.title || item.name}
-                    </p>
-                    <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                      {item.duration_mins ? `${item.duration_mins} mins` : item.duration} · {item.body_parts || item.tag}
-                    </p>
+          {/* Dynamic nutrition sections (recipes, etc.) */}
+          {nutritionSections.map(section => {
+            const sectionType = section.content_type || section.items?.[0]?.item_type;
+            if (section.items?.length === 0) return null;
+
+            // Skip meal_plan sections -- replaced by Meal Schedules above
+            if (sectionType === 'meal_plan') return null;
+
+            // Recipe carousel
+            if (sectionType === 'recipe') {
+              return (
+                <div key={section.id} style={{ marginBottom: 24 }}>
+                  <div className="section-header" style={{ marginTop: 0 }}>
+                    <h2 style={{ fontSize: 16 }}>{section.title}</h2>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+                    {section.items.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          minWidth: 150, cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        <div style={{
+                          width: 150, height: 150, borderRadius: 12, overflow: 'hidden',
+                          background: item.image_url
+                            ? `url(${item.image_url}) center/cover`
+                            : 'var(--bg-card)',
+                          marginBottom: 6,
+                        }} />
+                        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{item.title}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                          {item.calories ? `${item.calories} cal` : ''}
+                          {item.category ? ` - ${item.category}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
 
-          {/* Meet the Team */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '24px 0 16px' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent)' }} />
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Meet the Team</h2>
-            <div style={{ flex: 1, height: 1, background: 'var(--accent)' }} />
-          </div>
-          <div className="hide-scrollbar" style={{ display: 'flex', gap: 16, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
-            <div style={{ textAlign: 'center', minWidth: 100, cursor: 'pointer' }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: '50%', background: 'var(--bg-card)',
-                margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 32 }}>👤</span>
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>Coach</p>
-              <p style={{ fontSize: 14, fontWeight: 700 }}>Dan</p>
-            </div>
-          </div>
+            return null;
+          })}
+
+          {/* Full recipe browser below */}
+          <RecipeBrowser />
         </>
-      )}
-
-      {activeTab === 'Nutrition' && (
-        <div className="placeholder-page">
-          <div className="placeholder-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
-          </div>
-          <h2>Nutrition Content</h2>
-          <p>Meal plans, recipes, and nutrition resources coming in Step 5</p>
-        </div>
       )}
 
       {activeTab === 'Resources' && (
         <>
-          {/* Vault & Collections */}
           <div style={{ marginBottom: 28 }}>
             <div className="section-header" style={{ marginTop: 0 }}>
               <h2 style={{ fontSize: 18 }}>Resources</h2>
             </div>
-
-            {/* Vault + Collections cards */}
             <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-              <div className="card" style={{
-                flex: 1, textAlign: 'center', cursor: 'pointer', padding: '24px 16px',
-              }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: 14, margin: '0 auto 10px',
-                  background: 'linear-gradient(135deg, rgba(61,255,210,0.15), rgba(61,255,210,0.05))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
+              <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '24px 16px' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 10px', background: 'linear-gradient(135deg, rgba(61,255,210,0.15), rgba(61,255,210,0.05))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>Vault</p>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Guides & PDFs</p>
               </div>
-              <div className="card" style={{
-                flex: 1, textAlign: 'center', cursor: 'pointer', padding: '24px 16px',
-              }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: 14, margin: '0 auto 10px',
-                  background: 'linear-gradient(135deg, rgba(61,255,210,0.15), rgba(61,255,210,0.05))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
+              <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '24px 16px' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 10px', background: 'linear-gradient(135deg, rgba(61,255,210,0.15), rgba(61,255,210,0.05))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>Collections</p>
@@ -434,23 +620,17 @@ export default function Explore() {
               </div>
             </div>
 
-            {/* Resource Collections */}
             <div className="section-header">
               <h2 style={{ fontSize: 16 }}>Collections &gt;</h2>
             </div>
-            <div className="hide-scrollbar" style={{
-              display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px',
-            }}>
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
               {[
-                { name: 'Mobility 101', items: 8, icon: '🧘', color: 'var(--bg-card)' },
-                { name: 'Nutrition Guides', items: 5, icon: '🥗', color: 'var(--bg-card)' },
-                { name: 'Recovery Protocols', items: 6, icon: '💆', color: 'var(--bg-card)' },
-                { name: 'Training Science', items: 4, icon: '🧬', color: 'var(--bg-card)' },
+                { name: 'Mobility 101', items: 8, icon: '🧘' },
+                { name: 'Nutrition Guides', items: 5, icon: '🥗' },
+                { name: 'Recovery Protocols', items: 6, icon: '💆' },
+                { name: 'Training Science', items: 4, icon: '🧬' },
               ].map((col) => (
-                <div key={col.name} style={{
-                  minWidth: 160, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                  background: col.color,
-                }}>
+                <div key={col.name} style={{ minWidth: 160, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-card)' }}>
                   <div style={{ padding: '20px 16px' }}>
                     <span style={{ fontSize: 32, display: 'block', marginBottom: 10 }}>{col.icon}</span>
                     <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{col.name}</p>
@@ -460,7 +640,6 @@ export default function Explore() {
               ))}
             </div>
 
-            {/* Vault Items */}
             <div className="section-header">
               <h2 style={{ fontSize: 16 }}>Vault &gt;</h2>
             </div>
@@ -471,21 +650,15 @@ export default function Explore() {
               { name: 'Joint Health: What You Need to Know', type: 'Video', duration: '12 mins', icon: '🎥' },
               { name: 'How to Foam Roll Properly', type: 'Video', duration: '8 mins', icon: '🎥' },
             ].map((item) => (
-              <div key={item.name} className="card-sm" style={{
-                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-              }}>
+              <div key={item.name} className="card-sm" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 10, flexShrink: 0,
                   background: item.type === 'PDF' ? 'rgba(255,149,0,0.15)' : 'rgba(61,255,210,0.15)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                }}>
-                  {item.icon}
-                </div>
+                }}>{item.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                    {item.type} · {item.size || item.duration}
-                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.type} · {item.size || item.duration}</p>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
@@ -501,20 +674,28 @@ export default function Explore() {
         padding: 4, maxWidth: 360, width: 'calc(100% - 32px)',
       }}>
         {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
-              background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
-              color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
-              border: 'none',
-            }}
-          >
-            {tab}
-          </button>
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
+            background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
+            color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
+            border: 'none',
+          }}>{tab}</button>
         ))}
       </div>
     </div>
+
+    {/* Exercise detail modal */}
+    {selectedExercise && (
+      <ExerciseDetailModal exercise={selectedExercise} onClose={() => setSelectedExercise(null)} />
+    )}
+
+    {/* Tier comparison modal — opens when tapping a locked Explore item */}
+    <TiersModal
+      open={!!tiersModal}
+      onClose={() => setTiersModal(null)}
+      itemTitle={tiersModal?.itemTitle}
+      requiredTierLevel={tiersModal?.requiredTierLevel}
+    />
+    </>
   );
 }

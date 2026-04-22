@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import WorkoutThumb from '../../components/WorkoutThumb';
 
 export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
+  const [enrolling, setEnrolling] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(null); // { current_program }
 
   useEffect(() => {
     fetch(`/api/explore/programs/${programId}`, {
@@ -22,6 +25,32 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
 
   const { program, phases, workouts, enrollment } = data;
 
+  const handleEnroll = async (force = false) => {
+    setEnrolling(true);
+    try {
+      const res = await fetch(`/api/explore/programs/${programId}/enroll`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force }),
+      });
+      if (res.status === 409) {
+        // Server blocked because another program is active — show confirmation
+        const result = await res.json();
+        setConfirmReplace(result.current_program || { title: 'your current program' });
+        setEnrolling(false);
+        return;
+      }
+      const result = await res.json();
+      if (result.enrollment) {
+        setData({ ...data, enrollment: result.enrollment });
+        setConfirmReplace(null);
+      }
+    } catch (err) {
+      console.error('Enroll error:', err);
+    }
+    setEnrolling(false);
+  };
+
   // Group workouts by week
   const weekGroups = {};
   workouts.forEach(w => {
@@ -29,6 +58,21 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
     if (!weekGroups[key]) weekGroups[key] = [];
     weekGroups[key].push(w);
   });
+
+  // If the client is already enrolled, compute the real calendar date each
+  // (week, day) falls on by offsetting from enrollment.started_at. This keeps
+  // the client's week-view aligned with the day they actually started the
+  // program (so day 1 of a program enrolled on Thursday appears on Thursday,
+  // not on some abstract "Day 1" column).
+  const dateForWorkout = (w) => {
+    if (!enrollment?.started_at) return null;
+    const start = new Date(enrollment.started_at);
+    const offset = ((w.week_number || 1) - 1) * 7 + ((w.day_number || 1) - 1);
+    const d = new Date(start);
+    d.setDate(start.getDate() + offset);
+    return d;
+  };
+  const formatDayDate = (d) => d?.toLocaleDateString('en-IE', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
     <div className="page-content" style={{ paddingBottom: 100 }}>
@@ -106,15 +150,18 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
                 borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer',
               }}
             >
-              <div style={{
-                width: 52, height: 52, borderRadius: '50%', background: 'var(--bg-card)', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 20, opacity: 0.5 }}>🏋️</span>
+              <div style={{ width: 56, flexShrink: 0 }}>
+                <WorkoutThumb
+                  title={w.title}
+                  thumbnailUrl={w.image_url}
+                  aspectRatio="1/1"
+                  borderRadius={10}
+                  titleFontSize={9}
+                />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 11, color: 'var(--accent-orange)', fontWeight: 700, marginBottom: 2 }}>
-                  DAY {w.day_number}
+                  {enrollment?.started_at ? formatDayDate(dateForWorkout(w)).toUpperCase() : `DAY ${w.day_number}`}
                 </p>
                 <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {w.title}
@@ -136,7 +183,67 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
           maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
           background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
         }}>
-          <button className="btn-primary">Add to Schedule</button>
+          <button className="btn-primary" onClick={() => handleEnroll(false)} disabled={enrolling}>
+            {enrolling ? 'Adding...' : 'Add to Schedule'}
+          </button>
+        </div>
+      )}
+
+      {/* Replace-program confirmation modal */}
+      {confirmReplace && (
+        <div
+          onClick={() => setConfirmReplace(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: 16, maxWidth: 420, width: '100%',
+              padding: 24, textAlign: 'center',
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: 'rgba(255,149,0,0.15)', margin: '0 auto 12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="2.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+              Replace current program?
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 20 }}>
+              You're already doing <strong style={{ color: 'var(--text-primary)' }}>{confirmReplace.program_title || confirmReplace.title}</strong>.
+              Starting a new program will override your current one — all scheduled program workouts will be replaced.
+              Individual workouts you've added to your schedule will stay.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmReplace(null)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 10,
+                  background: 'var(--bg-primary)', color: 'var(--text-primary)',
+                  border: '1px solid var(--divider)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >Cancel</button>
+              <button
+                onClick={() => handleEnroll(true)}
+                disabled={enrolling}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 10,
+                  background: 'var(--accent-orange)', color: '#fff',
+                  border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  opacity: enrolling ? 0.5 : 1,
+                }}
+              >{enrolling ? 'Replacing…' : 'Replace'}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

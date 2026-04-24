@@ -349,6 +349,7 @@ function ReviewQueue({ onQueueCount }) {
                   background: 'transparent', border: 'none',
                   borderBottom: '1px solid var(--divider)',
                   display: 'flex', alignItems: 'center', gap: 12,
+                  color: 'var(--text-primary)',
                 }}
               >
                 {a.photo_url

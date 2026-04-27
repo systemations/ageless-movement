@@ -64,7 +64,7 @@ export default function Welcome() {
           <p style={welcomeBody}>
             Making world-class health and<br />fitness accessible for everyone.
           </p>
-          <button onClick={() => navigate('/onboarding')} style={ctaBtn}>
+          <button onClick={() => navigate('/register')} style={ctaBtn}>
             Get Started
           </button>
           <p style={loginLink}>

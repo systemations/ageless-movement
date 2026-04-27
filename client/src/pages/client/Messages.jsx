@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MessageThread from './MessageThread';
 
@@ -12,10 +13,31 @@ const isTeamInboxForClient = (conv, viewerId) =>
 
 export default function Messages() {
   const { token, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [selectedConvo, setSelectedConvo] = useState(null);
 
   useEffect(() => { fetchConversations(); }, []);
+
+  // Auto-open the team inbox when arriving from the post-onboarding
+  // "Subscribe to Prime" CTA. The server has already stamped
+  // tier_requested_id + logged the intent so the coach sees the request
+  // in their priority inbox; this just gives the client somewhere to
+  // chat about payment details until Stripe is wired.
+  useEffect(() => {
+    if (!conversations.length || !user?.id) return;
+    const params = new URLSearchParams(location.search);
+    const intent = params.get('intent');
+    if (intent !== 'upgrade-prime') return;
+    const teamInbox = conversations.find(c => isTeamInboxForClient(c, user.id))
+      || conversations.find(c => c.type === 'direct');
+    if (teamInbox) {
+      setSelectedConvo(teamInbox);
+      // Drop the query param so a refresh doesn't reopen the thread
+      navigate('/messages', { replace: true });
+    }
+  }, [conversations, user, location.search, navigate]);
 
   const fetchConversations = async () => {
     try {

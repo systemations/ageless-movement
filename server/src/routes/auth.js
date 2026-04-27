@@ -5,8 +5,7 @@ import rateLimit from 'express-rate-limit';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../lib/config.js';
-import { allocateProgram } from '../lib/programAllocator.js';
-import { calculateTargets } from '../lib/nutritionTargets.js';
+import { finalizeOnboarding } from '../lib/onboarding.js';
 import { queuePostSignupTasks } from '../jobs/post-signup-tasks.js';
 
 // Slow down brute-force login / register attempts. Keyed by IP — a
@@ -41,6 +40,17 @@ const resetLimiter = rateLimit({
 
 const router = Router();
 
+// Two flow shapes both land here:
+//   1. Slim register (new flow): { email, password, name, role } only.
+//      Account is created with onboarding_complete = 0 so the routing
+//      guard locks them on /onboarding until they finish the questions.
+//      The full questionnaire runs after login and finalises via
+//      POST /api/onboarding/finalize.
+//   2. Legacy register (kept for the anonymous funnel that still ships
+//      the answers in the same request, and for any cached older
+//      builds): { email, password, name, role, onboarding } — server
+//      finalises immediately. This path will be retired once the slim
+//      flow is the only entry point everywhere.
 router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { email, password, name, role, onboarding } = req.body;
@@ -72,87 +82,15 @@ router.post('/register', registerLimiter, async (req, res) => {
     // scheduler failure never blocks the register response.
     try { queuePostSignupTasks(user.id); } catch (e) { console.error('queuePostSignupTasks failed:', e); }
 
-    // If the client came through the onboarding flow, save their answers,
-    // re-run the allocator server-side (client can't self-assign a program
-    // by tampering) and enrol them if the rules match one.
+    // Legacy path: answers came in the same request, finalise inline.
     let allocation = null;
     if (onboarding && typeof onboarding === 'object') {
-      allocation = allocateProgram(onboarding);
-
-      // Persist answers into the first-class columns + the full JSON blob.
-      pool.query(
-        `INSERT INTO onboarding_answers
-          (user_id, goal, experience, injuries, schedule, equipment, answers_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET
-           goal = excluded.goal,
-           experience = excluded.experience,
-           injuries = excluded.injuries,
-           schedule = excluded.schedule,
-           equipment = excluded.equipment,
-           answers_json = excluded.answers_json`,
-        [
-          user.id,
-          onboarding.goal || null,
-          onboarding.experience || null,
-          Array.isArray(onboarding.injuries) ? onboarding.injuries.join(',') : null,
-          onboarding.days != null ? String(onboarding.days) : null,
-          onboarding.equipment || null,
-          JSON.stringify(onboarding),
-        ],
-      );
-
-      // Store demographics + nutrition inputs on the client profile.
-      // These power coach filtering, the Profile BMR card, and the
-      // server-side target recompute. Sex is stored separately from
-      // gender (gender is identity / display, sex is the Mifflin input).
-      const profileUpdates = [];
-      const profileVals = [];
-      if (typeof onboarding.age === 'number')           { profileUpdates.push('age = ?');             profileVals.push(onboarding.age); }
-      if (typeof onboarding.sex === 'string')           { profileUpdates.push('sex = ?');             profileVals.push(onboarding.sex); }
-      if (typeof onboarding.height_cm === 'number')     { profileUpdates.push('height_cm = ?');       profileVals.push(onboarding.height_cm); }
-      if (typeof onboarding.weight_kg === 'number')     { profileUpdates.push('weight_kg = ?');       profileVals.push(onboarding.weight_kg); }
-      if (typeof onboarding.activity_level === 'string'){ profileUpdates.push('activity_level = ?');  profileVals.push(onboarding.activity_level); }
-      if (typeof onboarding.eating_style === 'string')  { profileUpdates.push('eating_style = ?');    profileVals.push(onboarding.eating_style); }
-
-      // Compute Mifflin-St Jeor → activity → macro split server-side so
-      // a tampered client request can't preset their own targets. We only
-      // overwrite calorie/protein/fat/carbs targets when we have enough
-      // inputs; otherwise the schema defaults stay in place and the
-      // client gets nudged on the Profile page to fill in the gaps.
-      const targets = calculateTargets({
-        sex: onboarding.sex,
-        weight_kg: onboarding.weight_kg,
-        height_cm: onboarding.height_cm,
-        age: onboarding.age,
-        activity_level: onboarding.activity_level,
-        eating_style: onboarding.eating_style,
-      });
-      if (targets.calorie_target) {
-        profileUpdates.push('calorie_target = ?'); profileVals.push(targets.calorie_target);
-        profileUpdates.push('protein_target = ?'); profileVals.push(targets.protein_target);
-        profileUpdates.push('fat_target = ?');     profileVals.push(targets.fat_target);
-        profileUpdates.push('carbs_target = ?');   profileVals.push(targets.carbs_target);
-      }
-
-      if (profileUpdates.length > 0) {
-        profileVals.push(user.id);
-        pool.query(`UPDATE client_profiles SET ${profileUpdates.join(', ')} WHERE user_id = ?`, profileVals);
-      }
-
-      // Auto-enrol in the matched program (if any). Review cases don't
-      // enrol — the coach will pick on their review pass.
-      if (allocation.program_id) {
-        const total = pool.query(
-          'SELECT COUNT(*) as c FROM workouts WHERE program_id = ?',
-          [allocation.program_id],
-        ).rows[0]?.c || 0;
-        pool.query(
-          `INSERT INTO client_programs
-            (user_id, program_id, current_week, current_day, started_at, completed_workouts, total_workouts)
-           VALUES (?, ?, 1, 1, ?, 0, ?)`,
-          [user.id, allocation.program_id, new Date().toISOString(), total],
-        );
+      try {
+        ({ allocation } = finalizeOnboarding(user.id, onboarding));
+      } catch (e) {
+        console.error('Inline finalize failed:', e);
+        // Don't blow up the register — they'll just hit the post-login
+        // questionnaire flow as if it were a slim signup.
       }
     }
 

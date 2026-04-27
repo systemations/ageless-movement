@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { allocateProgram } from '../../lib/programAllocator';
 import {
   ACTIVITY_LEVELS,
@@ -12,14 +13,21 @@ import {
   calculateTargets,
 } from '../../lib/nutritionTargets';
 
-// Anonymous onboarding questionnaire. Fires before account creation so the
-// user has something tangible (a matched program) to sign up for, rather
-// than creating an account first and then being asked a bunch of questions.
+// Onboarding questionnaire. Renders in two modes:
 //
-// Answers are persisted to localStorage after every step so a bailout +
-// return picks up where they left off. When the user taps "Continue to
-// create account" the /register page reads the answers back out and sends
-// them with the signup POST.
+//   - Logged-in (slim signup flow, default): user already has an account
+//     with onboarding_complete = 0. The routing guard in App.jsx forces
+//     them here. Submitting the suggestion screen calls
+//     /api/onboarding/finalize which writes everything and flips the
+//     gate; refreshProfile() lets them through to /home.
+//
+//   - Logged-out (legacy / deep-link): the answers go to localStorage
+//     and pass to /register as part of the signup payload, which calls
+//     the same finalize helper server-side. Should rarely fire now that
+//     Welcome's "Get Started" CTA points at /register first.
+//
+// Answers persist to localStorage on each step so reload doesn't reset
+// the form. Once finalised the storage key is cleared.
 
 const STORAGE_KEY = 'am_onboarding_answers';
 
@@ -161,6 +169,8 @@ function persist(answers) {
 
 export default function OnboardingQuestionnaire() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState(loadSaved);
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -205,11 +215,11 @@ export default function OnboardingQuestionnaire() {
   const back = () => {
     if (showSuggestion) setShowSuggestion(false);
     else if (step > 0) setStep(s => s - 1);
-    else navigate('/welcome');
+    else navigate(isLoggedIn ? '/home' : '/welcome');
   };
 
   if (showSuggestion) {
-    return <SuggestionScreen answers={answers} onBack={back} onContinue={() => navigate('/register')} />;
+    return <SuggestionScreen answers={answers} onBack={back} isLoggedIn={isLoggedIn} />;
   }
 
   return (
@@ -220,8 +230,25 @@ export default function OnboardingQuestionnaire() {
         <div style={header}>
           <button onClick={back} style={backBtn}>← Back</button>
           <span style={stepLabel}>Step {step + 1} of {QUESTIONS.length}</span>
-          <button onClick={() => navigate('/login')} style={signInLinkBtn}>Sign In</button>
+          {isLoggedIn ? (
+            <span style={{ width: 60 }} />
+          ) : (
+            <button onClick={() => navigate('/login')} style={signInLinkBtn}>Sign In</button>
+          )}
         </div>
+
+        {/* Intro framing — shows once at the top of Q1 so the user knows
+            why each input matters. After Q1 we drop it to keep the
+            screen focused on the actual question. */}
+        {step === 0 && (
+          <div style={{
+            marginBottom: 14, padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(133,255,186,0.06)', border: '1px solid rgba(133,255,186,0.18)',
+            fontSize: 12, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5,
+          }}>
+            <strong style={{ color: 'var(--accent-mint)' }}>Why we ask:</strong> these answers match you to a starting program and set up your daily kcal + macro targets. Takes about 2 minutes — your coach can adjust anything later.
+          </div>
+        )}
 
         <div style={body}>
           <h1 style={titleStyle}>{q.title}</h1>
@@ -457,13 +484,93 @@ function UnitToggle({ options, value, onChange }) {
   );
 }
 
-function SuggestionScreen({ answers, onBack, onContinue }) {
+// SuggestionScreen — outcome of the questionnaire. Shows three cards:
+//   1. The matched program (Free tier — what they get out of the box)
+//   2. Group subscription (Prime — opens an upgrade-intent chat thread
+//      with their coach until Stripe is wired)
+//   3. 1:1 coaching (Elite — opens the handsdan.com booking page)
+//
+// Each card lists the actual feature breakdown from the tiers table so
+// users can compare without leaving the screen. Picking any of the
+// three CTAs first runs /api/onboarding/finalize (logged-in path) or
+// navigates to /register (logged-out path), then performs the CTA.
+function SuggestionScreen({ answers, onBack, isLoggedIn }) {
+  const navigate = useNavigate();
+  const { token, refreshProfile } = useAuth();
   const result = allocateProgram(answers);
   const targets = calculateTargets(answers);
 
+  const [tiers, setTiers] = useState([]);
+  const [submitting, setSubmitting] = useState(null); // 'free' | 'prime' | 'elite' | null
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch('/api/content/tiers', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setTiers(d.tiers || []))
+      .catch(() => setTiers([]));
+  }, [isLoggedIn, token]);
+
+  const tierByName = (name) => tiers.find(t => t.name === name);
+  const primeTier = tierByName('Prime');
+  const eliteTier = tierByName('Elite');
+
+  // Posts to the finalize endpoint (logged-in) or routes to /register
+  // (logged-out legacy path). On success, runs the post-finalize action
+  // for the picked CTA — open chat / booking link / just go home.
+  const finalizeAndAct = async (intent) => {
+    setError(null);
+    if (!isLoggedIn) {
+      // Legacy path: register page picks up answers from localStorage
+      // and posts them in one shot.
+      navigate('/register');
+      return;
+    }
+    setSubmitting(intent);
+    try {
+      const res = await fetch('/api/onboarding/finalize', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers, tier_choice: intent }),
+      });
+      if (!res.ok) throw new Error('Finalize failed');
+      // Flip the routing-guard flag in context so the next navigation
+      // doesn't bounce them back here.
+      await refreshProfile();
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+      if (intent === 'elite' && eliteTier?.cta_url) {
+        // Open the booking page in a new tab so they can come back to
+        // the app afterwards. Then route them home in this tab — the
+        // server already logged the intent so the coach knows.
+        window.open(eliteTier.cta_url, '_blank', 'noopener');
+        navigate('/home?intent=elite');
+      } else if (intent === 'prime') {
+        // Stripe isn't wired yet — server stamped tier_requested_id +
+        // logged the activity, so the coach will pick this up in the
+        // priority inbox. Drop the user into Messages with the team
+        // inbox preselected so they can chat about payment details.
+        navigate('/messages?intent=upgrade-prime');
+      } else {
+        navigate('/home');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Could not finalise your plan. Try again.');
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const parseFeatures = (raw) => {
+    if (!raw) return [];
+    return String(raw).split('\n').map(s => s.trim()).filter(Boolean);
+  };
+
   return (
     <div style={page}>
-      <div style={inner}>
+      <div style={{ ...inner, maxWidth: 520 }}>
         <div style={header}>
           <button onClick={onBack} style={backBtn}>← Back</button>
         </div>
@@ -481,26 +588,16 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
                 <div style={{ fontSize: 26, marginBottom: 6 }}>👋</div>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>Coach review within 24 hours</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
-                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan - you'll get a notification when it's ready.
+                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan — you'll get a notification when it's ready.
                 </div>
               </div>
             </>
           ) : (
-            <>
-              <h1 style={titleStyle}>We'd suggest</h1>
-              <div style={programCard}>
-                <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>{result.title}</div>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, margin: 0 }}>
-                  {result.reason}
-                </p>
-              </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 18, lineHeight: 1.5 }}>
-                Not quite right? Your coach can change your program at any time.
-              </p>
-            </>
+            <h1 style={titleStyle}>Here's what we'd suggest</h1>
           )}
 
-          {/* Nutrition target preview — only when we have enough data */}
+          {/* Nutrition target preview — shown above the cards because
+              every tier inherits the same daily target. */}
           {targets.calorie_target && (
             <div style={nutritionCard}>
               <div style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(133,255,186,0.85)', fontWeight: 800, marginBottom: 8 }}>
@@ -515,18 +612,127 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
                 <MacroPill label="Carbs"   grams={targets.carbs_target}   color="#85FFBA" />
               </div>
               <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 12, lineHeight: 1.5 }}>
-                {targets.style.label} split · BMR {targets.bmr} kcal · You can fine-tune in your profile.
+                {targets.style.label} split · BMR {targets.bmr} kcal · Editable any time
               </p>
             </div>
           )}
-        </div>
 
-        <div style={footer}>
-          <button onClick={onContinue} style={ctaBtn}>
-            Try the app free →
-          </button>
+          {/* The three tier cards. Free is always the matched program;
+              Prime + Elite come from the tiers table for live-edit
+              copy. Coach-side updates to features/description in the
+              admin tier editor land here on the next mount. */}
+          <div style={tierGrid}>
+            {/* Free / matched */}
+            {!result.needs_review && (
+              <TierCard
+                badge="INCLUDED"
+                badgeColor="rgba(133,255,186,0.85)"
+                title={result.title || 'Free starter program'}
+                price="Free"
+                description={result.reason}
+                features={[
+                  'Allocator-matched program',
+                  'Daily kcal + macro targets',
+                  'Free workout library',
+                  'Workout + meal logging',
+                ]}
+                ctaLabel={isLoggedIn ? 'Start free →' : 'Continue free →'}
+                onClick={() => finalizeAndAct('free')}
+                loading={submitting === 'free'}
+              />
+            )}
+
+            {/* Prime — group subscription */}
+            <TierCard
+              badge="MOST POPULAR"
+              badgeColor="var(--accent)"
+              highlight
+              title={primeTier?.name || 'Prime'}
+              price={primeTier?.price_label || '$49/mo'}
+              description={primeTier?.description || 'Full Ageless Movement access + group coaching.'}
+              features={parseFeatures(primeTier?.features)}
+              ctaLabel="Subscribe to Prime →"
+              onClick={() => finalizeAndAct('prime')}
+              loading={submitting === 'prime'}
+            />
+
+            {/* Elite — 1:1 (no price per Dan) */}
+            <TierCard
+              badge="1:1"
+              badgeColor="var(--accent-mint)"
+              title={eliteTier?.name || 'Elite'}
+              price={null}
+              description={eliteTier?.description || 'Personalised coaching with a dedicated coach. Book a call first.'}
+              features={parseFeatures(eliteTier?.features)}
+              ctaLabel={eliteTier?.cta_label || 'Book a discovery call →'}
+              onClick={() => finalizeAndAct('elite')}
+              loading={submitting === 'elite'}
+            />
+          </div>
+
+          {error && (
+            <p style={{ fontSize: 12, color: '#ff8fa0', marginTop: 12 }}>{error}</p>
+          )}
+
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 18, lineHeight: 1.5 }}>
+            Not sure? Pick free for now — you can upgrade any time from your profile.
+          </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TierCard({ badge, badgeColor, highlight, title, price, description, features, ctaLabel, onClick, loading }) {
+  return (
+    <div style={{
+      ...tierCard,
+      ...(highlight ? tierCardHighlight : {}),
+    }}>
+      {badge && (
+        <div style={{
+          position: 'absolute', top: -10, left: 14,
+          background: badgeColor, color: '#000',
+          fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 10,
+          letterSpacing: 0.5, textTransform: 'uppercase',
+        }}>{badge}</div>
+      )}
+      <h3 style={{ fontSize: 18, fontWeight: 800, color: '#fff', textAlign: 'left' }}>{title}</h3>
+      {price && (
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', marginTop: 2, textAlign: 'left' }}>
+          {price}
+        </div>
+      )}
+      {description && (
+        <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, marginTop: 8, textAlign: 'left' }}>
+          {description}
+        </p>
+      )}
+      {features && features.length > 0 && (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {features.map((f, i) => (
+            <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, lineHeight: 1.4, textAlign: 'left' }}>
+              <span style={{ color: 'var(--accent-mint)', fontWeight: 800, flexShrink: 0, marginTop: 1 }}>✓</span>
+              <span style={{ color: 'rgba(255,255,255,0.92)' }}>{f}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button
+        onClick={onClick}
+        disabled={loading}
+        style={{
+          marginTop: 'auto',
+          width: '100%', padding: '12px 14px', borderRadius: 10, border: 'none',
+          background: highlight ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+          color: highlight ? '#fff' : 'var(--text-primary)',
+          fontSize: 13, fontWeight: 800,
+          cursor: loading ? 'default' : 'pointer',
+          opacity: loading ? 0.6 : 1,
+        }}
+      >
+        {loading ? 'Setting up...' : ctaLabel}
+      </button>
     </div>
   );
 }
@@ -748,4 +954,28 @@ const metricField = {
   borderRadius: 12,
   color: '#fff',
   outline: 'none',
+};
+
+const tierGrid = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+  marginTop: 18,
+};
+
+const tierCard = {
+  position: 'relative',
+  background: 'rgba(255,255,255,0.04)',
+  border: '1.5px solid rgba(255,255,255,0.12)',
+  borderRadius: 14,
+  padding: 18,
+  display: 'flex',
+  flexDirection: 'column',
+  textAlign: 'left',
+};
+
+const tierCardHighlight = {
+  background: 'linear-gradient(135deg, rgba(255,140,0,0.10) 0%, rgba(255,140,0,0.03) 100%)',
+  border: '1.5px solid rgba(255,140,0,0.45)',
+  boxShadow: '0 8px 24px rgba(255,140,0,0.12)',
 };

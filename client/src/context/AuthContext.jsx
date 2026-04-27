@@ -37,6 +37,25 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Refetch profile from the server. Used after onboarding finalize so
+  // the routing guard in App.jsx sees onboarding_complete = 1 without
+  // requiring a hard reload.
+  const refreshProfile = async () => {
+    if (!token) return null;
+    try {
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        setProfile(data.profile);
+        return data.profile;
+      }
+    } catch {}
+    return null;
+  };
+
   const login = async (email, password) => {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
@@ -63,6 +82,16 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('am_onboarding_answers');
     setToken(data.token);
     setUser(data.user);
+    // Pull the freshly-created profile so the routing guard can decide
+    // whether to lock them on /onboarding (slim signup path) or send
+    // them straight to /home (legacy path with onboarding inline).
+    try {
+      const meRes = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${data.token}` } });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        setProfile(me.profile);
+      }
+    } catch {}
     return data;
   };
 
@@ -74,7 +103,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, profile, token, loading, login, register, refreshProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

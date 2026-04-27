@@ -19,6 +19,7 @@ import coachesRoutes from './routes/coaches.js';
 import athleteRoutes from './routes/athlete.js';
 import notificationRoutes from './routes/notifications.js';
 import benchmarkRoutes from './routes/benchmarks.js';
+import onboardingRoutes from './routes/onboarding.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 
@@ -91,6 +92,7 @@ app.use('/api/coaches', coachesRoutes);
 app.use('/api/athlete', athleteRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/benchmarks', benchmarkRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

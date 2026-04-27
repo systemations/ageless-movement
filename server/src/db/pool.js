@@ -1398,6 +1398,32 @@ try {
   if (!cpCols.includes('plan_next_renewal_at')) db.exec("ALTER TABLE client_profiles ADD COLUMN plan_next_renewal_at TEXT");
 } catch (e) { /* ignore */ }
 
+// ── Onboarding completion gate ────────────────────────────────────────
+// Slim signup creates an account with onboarding_complete = 0 — the user
+// is logged in but the routing guard (App.jsx) bounces them to
+// /onboarding until they finish the questionnaire. Once the
+// /api/onboarding/complete endpoint fires (allocator + Mifflin run +
+// program enrolled + targets seeded), this flips to 1 and the user can
+// access the rest of the app.
+//
+// Existing accounts (signed up before this gate) get backfilled to 1 so
+// they don't get redirected. Any client without an active program +
+// without nutrition data still sees prompts on Home, but isn't locked.
+try {
+  const cpCols = db.prepare("PRAGMA table_info(client_profiles)").all().map(c => c.name);
+  if (!cpCols.includes('onboarding_complete')) {
+    db.exec("ALTER TABLE client_profiles ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
+    // Backfill: any existing client with at least one onboarding_answers row
+    // is treated as "complete" so we don't punish them with a forced flow.
+    db.exec(`
+      UPDATE client_profiles
+         SET onboarding_complete = 1
+       WHERE user_id IN (SELECT user_id FROM onboarding_answers)
+          OR active_program_id IS NOT NULL
+    `);
+  }
+} catch (e) { /* ignore */ }
+
 // ── Nutrition target inputs ────────────────────────────────────────────
 // Mifflin-St Jeor BMR + activity factor + eating style → calorie & macro
 // targets. We store the raw inputs (height, weight, sex, activity, style)

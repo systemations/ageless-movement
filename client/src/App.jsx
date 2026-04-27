@@ -112,7 +112,7 @@ function ClientStatusBanner() {
 }
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   if (loading) {
     return (
       <div className="loading-screen">
@@ -122,12 +122,46 @@ function ProtectedRoute({ children }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  // Slim-signup gate: a logged-in client whose onboarding never
+  // finalised gets bounced to /onboarding regardless of which URL they
+  // typed. The questionnaire's finalize endpoint flips this flag and
+  // refreshProfile() lets them through. Coaches don't onboard.
+  if (user.role === 'client' && profile && !profile.onboarding_complete) {
+    return <Navigate to="/onboarding" replace />;
+  }
   return (
     <>
       <ClientStatusBanner />
       {children}
     </>
   );
+}
+
+// Decides what /onboarding renders depending on auth state:
+//   - Coach → bounce to admin/coach default
+//   - Client with onboarding_complete = 1 → bounce to /home (already done)
+//   - Client with onboarding_complete = 0 → run the questionnaire
+//   - Logged-out → run the anonymous fallback (legacy / deep-link)
+// Centralising this here means the questionnaire itself doesn't have
+// to second-guess whether it should be running.
+function OnboardingGate() {
+  const { user, profile, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <img src="/logo.png" alt="AM" style={{ width: 64, height: 64, borderRadius: '50%' }} />
+        <div className="spinner" />
+      </div>
+    );
+  }
+  if (user?.role === 'coach') {
+    const isNarrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    return <Navigate to={isNarrow ? '/coach/home' : '/admin'} replace />;
+  }
+  if (user && profile?.onboarding_complete) {
+    return <Navigate to="/home" replace />;
+  }
+  return <OnboardingQuestionnaire />;
 }
 
 // Coach-only route guard. Redirects non-coach users back to /home.
@@ -183,10 +217,13 @@ function AppRoutes() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 
-        {/* Onboarding - anonymous. Runs BEFORE signup so new users get a
-            matched program before creating an account. Answers are held in
-            localStorage and sent to the server as part of /register. */}
-        <Route path="/onboarding" element={user ? <Navigate to={defaultRoute} replace /> : <OnboardingQuestionnaire />} />
+        {/* Onboarding — runs AFTER slim signup. Logged-in clients with
+            onboarding_complete = 0 land here (forced by the routing
+            guard in ProtectedRoute). Logged-out users still get the
+            anonymous funnel as a fallback, but Welcome's "Get Started"
+            now points at /register first. Coaches and clients who've
+            already completed onboarding bounce back to /home. */}
+        <Route path="/onboarding" element={<OnboardingGate />} />
         <Route path="/plans" element={<ProtectedRoute><PlansPage /></ProtectedRoute>} />
 
         {/* Client Routes */}

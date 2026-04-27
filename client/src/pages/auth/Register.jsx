@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-// New-client signup. Reached from the end of the onboarding funnel,
-// which leaves the user's answers in localStorage. We pick those up here
-// and forward to the server so registration + program enrolment happen
-// in a single atomic call.
+// First step of the slim signup flow. Captures name + email + password
+// so we can lock the lead before the questionnaire runs. After a
+// successful register we route to /onboarding (not /home) — the routing
+// guard in App.jsx enforces that anyway, but explicit is friendlier.
+//
+// We deliberately don't pass onboarding answers here: the questions are
+// asked post-signup so we always have an account on record even if the
+// user bails mid-questionnaire. If a leftover localStorage payload from
+// an older build is present we drop it — a stale anonymous funnel
+// shouldn't backfill the new account.
 //
 // Coaches are invite-only - they don't come through this screen.
 
@@ -29,18 +35,17 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      // If the user came through onboarding, carry those answers so the
-      // server can save them + auto-enrol the matched program. Absent →
-      // the server just creates the account; a coach can set up a program
-      // from the review queue.
-      let onboarding = null;
-      try {
-        const raw = localStorage.getItem('am_onboarding_answers');
-        if (raw) onboarding = JSON.parse(raw);
-      } catch {}
+      // Slim register: account-only, no questionnaire payload. The
+      // routing guard will land them on /onboarding next.
+      const data = await register(email, password, name, role, null);
+      // Clean up any stale anonymous-funnel leftovers
+      try { localStorage.removeItem('am_onboarding_answers'); } catch {}
 
-      const data = await register(email, password, name, role, onboarding);
-      navigate(data.user.role === 'coach' ? '/coach/messages' : '/home');
+      if (data.user.role === 'coach') {
+        navigate('/coach/messages');
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -51,12 +56,12 @@ export default function Register() {
   return (
     <div style={page}>
       <div style={inner}>
-        <button onClick={() => navigate('/onboarding')} style={backBtn}>← Back</button>
+        <button onClick={() => navigate('/welcome')} style={backBtn}>← Back</button>
 
         <div style={brandBlock}>
           <img src="/am-logo.png" alt="Ageless Movement" style={logo} />
-          <h1 style={title}>Create your account</h1>
-          <p style={subtitle}>One last step before we start.</p>
+          <h1 style={title}>Let's get you started</h1>
+          <p style={subtitle}>We'll match you to a plan in the next step.</p>
         </div>
 
         <form onSubmit={handleSubmit} style={form}>

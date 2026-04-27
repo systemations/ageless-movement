@@ -433,9 +433,15 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
 
         {/* Main lesson body */}
         <div>
-          {/* Video — Vimeo embed if a URL is set, otherwise placeholder */}
+          {/* Video — Vimeo embed if a URL is set, otherwise placeholder.
+              Mint glow matches the AM logo treatment in global.css so the
+              hero video reads as a focal element on the navy background. */}
           {lesson.video_url ? (
-            <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 16, background: '#000' }}>
+            <div style={{
+              borderRadius: 12, overflow: 'hidden', marginBottom: 18, background: '#000',
+              border: '1.5px solid rgba(255, 255, 255, 0.18)',
+              boxShadow: '0 10px 32px rgba(133, 255, 186, 0.22)',
+            }}>
               <VimeoEmbed url={lesson.video_url} height={360} width="100%" />
             </div>
           ) : (

@@ -50,7 +50,7 @@ function hasAnyInjury(injuries) {
  * @param {'none'|'pickleball'|'tennis'|'golf'|'running'|'other'} answers.sport
  * @param {'just_starting'|'occasional'|'consistent'|'advanced'} answers.experience
  * @param {'home_bodyweight'|'home_basics'|'home_gym'|'full_gym'} answers.equipment
- * @param {2|3|4} answers.days
+ * @param {1|2|3|4|5|6|7} answers.days
  * @param {string[]} answers.injuries  e.g. ['knee','back'] or ['none']
  */
 export function allocateProgram(answers = {}) {

@@ -104,11 +104,16 @@ const QUESTIONS = [
   {
     id: 'days',
     title: 'How many days a week can you train?',
+    subtitle: 'Pick the realistic number, not the aspirational one. We can dial up later.',
     type: 'single',
     options: [
+      { value: 1, label: '1 day' },
       { value: 2, label: '2 days' },
       { value: 3, label: '3 days' },
-      { value: 4, label: '4+ days' },
+      { value: 4, label: '4 days' },
+      { value: 5, label: '5 days' },
+      { value: 6, label: '6 days' },
+      { value: 7, label: 'Every day' },
     ],
   },
   {

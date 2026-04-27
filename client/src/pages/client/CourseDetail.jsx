@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
+import '../../components/rich-text.css';
 
 // Client-facing course view. Fetches the full course (modules + lessons +
 // per-lesson completion state for this user) from /api/content/courses/:id
@@ -462,11 +463,13 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
             </div>
           )}
 
-          {/* Description — rich HTML from the admin editor */}
+          {/* Description — rich HTML from the admin TipTap editor.
+              Typography rules live in components/rich-text.css so the
+              authoring view and the rendered view stay identical. */}
           {lesson.description && (
             <div
               className="lesson-description"
-              style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)', marginBottom: 18 }}
+              style={{ marginBottom: 18 }}
               dangerouslySetInnerHTML={{ __html: lesson.description }}
             />
           )}

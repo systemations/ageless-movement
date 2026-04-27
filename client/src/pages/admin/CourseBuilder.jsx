@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../../components/ImageUpload';
+import RichTextEditor from '../../components/RichTextEditor';
 
 export default function CourseBuilder({ courseId, onBack }) {
   const { token } = useAuth();
@@ -331,7 +332,10 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
   const [resources, setResources] = useState(lesson.resources || []);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const editorElRef = useRef(null);
+  // RichTextEditor exposes its TipTap editor instance via this ref so
+  // we can pull the latest HTML on save without subscribing to every
+  // keystroke (cheap re-renders).
+  const editorRef = useRef(null);
 
   const update = (key, val) => {
     setForm(prev => ({ ...prev, [key]: val }));
@@ -340,7 +344,7 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
 
   const handleSave = async (publish) => {
     setSaving(true);
-    const desc = editorElRef.current ? editorElRef.current.innerHTML : form.description;
+    const desc = editorRef.current?.getHTML() ?? form.description;
     const status = publish ? 'published' : (form.status || 'draft');
     await onSave(lesson.id, { ...form, description: desc, status });
     setDirty(false);
@@ -454,7 +458,13 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
           {/* Description */}
           <div style={{ marginBottom: 24 }}>
             <label style={labelStyle}>Lesson Description</label>
-            <RichTextEditor editorElRef={editorElRef} initialValue={form.description} onChange={() => setDirty(true)} />
+            <RichTextEditor
+              editorRef={editorRef}
+              initialValue={form.description}
+              onChange={() => setDirty(true)}
+              authToken={token}
+              minHeight={260}
+            />
           </div>
 
           {/* Downloadable Resources */}
@@ -578,69 +588,6 @@ function ResourceUploader({ resources, onUpload, onRemove }) {
         )}
       </div>
       <input ref={fileRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" onChange={e => handleFiles(Array.from(e.target.files))} style={{ display: 'none' }} />
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════
-// RICH TEXT EDITOR
-// ═══════════════════════════════════════════════════
-function RichTextEditor({ initialValue, onChange, editorElRef }) {
-  const editorRef = useRef(null);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    if (editorRef.current && !initialized.current) {
-      editorRef.current.innerHTML = initialValue || '';
-      initialized.current = true;
-    }
-  }, [initialValue]);
-
-  const exec = (cmd, val = null) => {
-    document.execCommand(cmd, false, val);
-    editorRef.current?.focus();
-    onChange?.();
-  };
-
-  const insertLink = () => {
-    const url = prompt('Enter URL:');
-    if (url) exec('createLink', url);
-  };
-
-  const tbBtn = { background: 'none', border: 'none', cursor: 'pointer', padding: '5px 8px', borderRadius: 4, color: 'var(--text-primary)', fontSize: 13, display: 'flex', alignItems: 'center' };
-  const sep = { width: 1, height: 18, background: 'var(--divider)', margin: '0 4px', flexShrink: 0 };
-
-  return (
-    <div style={{ border: '1px solid var(--divider)', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 1, padding: '6px 8px', borderBottom: '1px solid var(--divider)', background: 'var(--bg-card)', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button onClick={() => exec('bold')} style={tbBtn} title="Bold"><strong>B</strong></button>
-        <button onClick={() => exec('italic')} style={tbBtn} title="Italic"><em>I</em></button>
-        <button onClick={() => exec('underline')} style={tbBtn} title="Underline"><u>U</u></button>
-        <div style={sep} />
-        <button onClick={() => exec('insertUnorderedList')} style={tbBtn} title="Bullet list">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>
-        </button>
-        <button onClick={() => exec('insertOrderedList')} style={tbBtn} title="Numbered list">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <div style={sep} />
-        <button onClick={insertLink} style={tbBtn} title="Insert link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-        </button>
-      </div>
-      <div
-        ref={(el) => {
-          editorRef.current = el;
-          if (editorElRef) editorElRef.current = el;
-        }}
-        contentEditable
-        onInput={onChange}
-        style={{
-          minHeight: 200, padding: '14px 16px', outline: 'none',
-          fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)', background: 'var(--bg-primary)',
-        }}
-        suppressContentEditableWarning
-      />
     </div>
   );
 }

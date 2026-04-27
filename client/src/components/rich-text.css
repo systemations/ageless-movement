@@ -1,0 +1,307 @@
+/* Rich-text editor + rendered output styles.
+ *
+ * Two consumers:
+ *   - .rt-shell: the TipTap-based RichTextEditor in admin authoring
+ *   - .lesson-description: the read-only rendered HTML in CourseDetail
+ *
+ * Same typography rules apply to both so what coaches see while writing
+ * matches exactly what clients see, no surprise re-flows.
+ */
+
+/* ── Editor chrome ──────────────────────────────────────────────── */
+.rt-shell {
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.rt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg-card);
+  align-items: center;
+  border-radius: 10px 10px 0 0;
+}
+
+.rt-btn {
+  background: none;
+  border: none;
+  padding: 6px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rt-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rt-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rt-btn-active {
+  background: rgba(255, 156, 51, 0.18);
+  color: var(--accent);
+}
+
+.rt-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--divider);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.rt-caret {
+  font-size: 9px;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
+/* Dropdowns (heading + color) */
+.rt-dd {
+  position: relative;
+}
+
+.rt-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 160px;
+  background: var(--bg-card);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  padding: 4px;
+  z-index: 50;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rt-menu-grid {
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.rt-menu-item {
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  font-family: inherit;
+}
+
+.rt-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rt-menu-item-active {
+  background: rgba(255, 156, 51, 0.18);
+  color: var(--accent);
+}
+
+.rt-swatch {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-family: inherit;
+}
+
+.rt-swatch:hover { background: rgba(255, 255, 255, 0.06); }
+
+.rt-swatch-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--divider);
+  flex-shrink: 0;
+}
+
+.rt-swatch-label {
+  flex: 1;
+}
+
+/* ── Editor content area + rendered output ─────────────────────── */
+.rt-content-wrap {
+  padding: 16px 18px;
+}
+
+.rt-content-wrap .ProseMirror,
+.lesson-description {
+  outline: none;
+  min-height: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.rt-content-wrap .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
+/* Headings */
+.rt-content-wrap .ProseMirror h1,
+.lesson-description h1 {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 22px 0 10px;
+  letter-spacing: -0.5px;
+}
+.rt-content-wrap .ProseMirror h2,
+.lesson-description h2 {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 20px 0 8px;
+  letter-spacing: -0.3px;
+}
+.rt-content-wrap .ProseMirror h3,
+.lesson-description h3 {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 18px 0 6px;
+}
+.rt-content-wrap .ProseMirror h4,
+.lesson-description h4 {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 16px 0 4px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Paragraphs */
+.rt-content-wrap .ProseMirror p,
+.lesson-description p {
+  margin: 0 0 12px;
+}
+
+/* Lists */
+.rt-content-wrap .ProseMirror ul,
+.rt-content-wrap .ProseMirror ol,
+.lesson-description ul,
+.lesson-description ol {
+  padding-left: 22px;
+  margin: 0 0 14px;
+}
+.rt-content-wrap .ProseMirror li,
+.lesson-description li {
+  margin-bottom: 4px;
+}
+
+/* Blockquote */
+.rt-content-wrap .ProseMirror blockquote,
+.lesson-description blockquote {
+  border-left: 3px solid var(--accent-mint);
+  margin: 16px 0;
+  padding: 6px 14px;
+  background: rgba(133, 255, 186, 0.06);
+  border-radius: 0 8px 8px 0;
+  color: var(--text-primary);
+  font-style: italic;
+}
+.rt-content-wrap .ProseMirror blockquote p,
+.lesson-description blockquote p {
+  margin: 4px 0;
+}
+
+/* Code */
+.rt-content-wrap .ProseMirror code,
+.lesson-description code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.rt-content-wrap .ProseMirror pre,
+.lesson-description pre {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.rt-content-wrap .ProseMirror pre code,
+.lesson-description pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Horizontal rule */
+.rt-content-wrap .ProseMirror hr,
+.lesson-description hr {
+  border: none;
+  border-top: 1px solid var(--divider);
+  margin: 22px 0;
+}
+
+/* Links */
+.rt-content-wrap .ProseMirror a,
+.lesson-description a {
+  color: var(--accent-mint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Images — full width by default, rounded corners, subtle border so
+   they sit nicely on the navy bg without fighting it. */
+.rt-content-wrap .ProseMirror img,
+.lesson-description img,
+.rt-content-wrap .ProseMirror .rt-image,
+.lesson-description .rt-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--divider);
+  margin: 14px 0;
+}
+
+/* Highlight */
+.rt-content-wrap .ProseMirror mark,
+.lesson-description mark {
+  background: rgba(255, 156, 51, 0.85);
+  color: #000;
+  padding: 1px 4px;
+  border-radius: 3px;
+}

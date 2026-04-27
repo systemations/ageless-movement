@@ -143,10 +143,17 @@ export default function CourseDetail({ course, onBack }) {
         </div>
 
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6, lineHeight: 1.2 }}>{full.title}</h2>
-        {full.description && (
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
-            {full.description}
+        {full.subtitle && (
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 12, lineHeight: 1.5, fontStyle: 'italic' }}>
+            {full.subtitle}
           </p>
+        )}
+        {full.description && (
+          <div
+            className="lesson-description"
+            style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}
+            dangerouslySetInnerHTML={{ __html: full.description }}
+          />
         )}
 
         <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>

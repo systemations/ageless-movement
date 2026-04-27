@@ -32,7 +32,12 @@ export default function Welcome() {
             </div>
           ))}
         </div>
-        {/* Gradient wash so text on top remains legible */}
+        {/* Two layers of darkening:
+            1. Flat black layer dims every photo evenly so foreground copy
+               reads cleanly regardless of which image it lands over.
+            2. Vertical gradient on top frames the top and bottom blocks
+               with extra darkness without crushing the photos in the middle. */}
+        <div style={blackWash} />
         <div style={gradientWash} />
       </div>
 
@@ -114,6 +119,15 @@ const collageImg = {
   filter: 'grayscale(0.25) contrast(1.05) brightness(0.9)',
 };
 
+// Constant black layer over the photos — keeps every image dim enough
+// that the white copy on top reads in any cell of the collage.
+const blackWash = {
+  position: 'absolute',
+  inset: 0,
+  background: 'rgba(0, 0, 0, 0.42)',
+  pointerEvents: 'none',
+};
+
 // Vertical gradient: mostly transparent through the middle (photos visible),
 // dark at top and bottom so the brand + welcome copy remain readable.
 const gradientWash = {
@@ -186,8 +200,13 @@ const wordmark = {
 const taglineSmall = {
   fontSize: 14,
   letterSpacing: 6,
-  color: 'rgba(255,255,255,0.6)', // light grey
-  fontWeight: 600,
+  color: 'rgba(255,255,255,0.92)',
+  fontWeight: 700,
+  // Mint glow behind the word — same accent-mint hue used on the AM logo
+  // shadow in global.css so the brand language stays consistent. Two layers:
+  // a wide soft halo + a tighter inner glow that lifts the letters off the
+  // collage background.
+  textShadow: '0 0 22px rgba(133, 255, 186, 0.55), 0 0 8px rgba(133, 255, 186, 0.35)',
 };
 
 const taglineLarge = {

@@ -434,19 +434,27 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
         {/* Main lesson body */}
         <div>
           {/* Video — Vimeo embed if a URL is set, otherwise placeholder.
-              Mint glow matches the AM logo treatment in global.css so the
-              hero video reads as a focal element on the navy background. */}
+              Mint glow matches the AM logo treatment in global.css.
+              16:9 aspect-ratio container so the iframe matches the actual
+              video shape — fixed-height was leaving black bars top/bottom
+              when the player letterboxed a 16:9 source into a taller box. */}
           {lesson.video_url ? (
             <div style={{
-              borderRadius: 12, overflow: 'hidden', marginBottom: 18, background: '#000',
+              position: 'relative', aspectRatio: '16 / 9',
+              borderRadius: 12, overflow: 'hidden', marginBottom: 14, background: '#000',
               border: '1.5px solid rgba(255, 255, 255, 0.18)',
               boxShadow: '0 10px 32px rgba(133, 255, 186, 0.22)',
             }}>
-              <VimeoEmbed url={lesson.video_url} height={360} width="100%" />
+              <VimeoEmbed
+                url={lesson.video_url}
+                width="100%"
+                height="100%"
+                style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
+              />
             </div>
           ) : (
             <div style={{
-              borderRadius: 12, marginBottom: 16, padding: '40px 20px', textAlign: 'center',
+              borderRadius: 12, marginBottom: 14, padding: '40px 20px', textAlign: 'center',
               background: 'rgba(255,255,255,0.04)', border: '1px dashed var(--divider)',
               color: 'var(--text-tertiary)', fontSize: 13,
             }}>

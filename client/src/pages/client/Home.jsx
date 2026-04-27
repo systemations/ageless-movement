@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useFavourites } from '../../context/FavouritesContext';
@@ -6,6 +6,16 @@ import { CalendarIcon } from '../../components/Icons';
 import WorkoutThumb, { MiniThumb } from '../../components/WorkoutThumb';
 import EnhancedToday, { invalidateTodayCache } from '../../components/EnhancedToday';
 import NotificationPopup from '../../components/NotificationPopup';
+import {
+  ACTIVITY_LEVELS,
+  EATING_STYLES,
+  SEX_OPTIONS,
+  cmToFtIn,
+  ftInToCm,
+  kgToLbs,
+  lbsToKg,
+  calculateTargets,
+} from '../../lib/nutritionTargets';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -1266,6 +1276,13 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Nutrition setup prompt — empty-state CTA shown when the client
+          hasn't filled in the BMR inputs yet. Once they tap through and
+          save, this card disappears and the calculated targets show in
+          the Targets section / meal plan card. Auto-hides if the data
+          is already on file. */}
+      <NutritionSetupPromptCard profile={profile} token={token} onComplete={fetchDashboard} />
+
       {/* Today's Meal Plan */}
       {todayMealPlan && (
         <>
@@ -1481,3 +1498,371 @@ function ChallengesCard({ token, onOpen }) {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Nutrition setup prompt
+// ─────────────────────────────────────────────────────────────────────
+// Empty-state CTA for clients who haven't filled in the BMR inputs.
+// Auto-hides once any of sex/height_cm/weight_kg is missing — i.e. as
+// soon as the modal saves a complete set, the card disappears on the
+// next dashboard fetch.
+//
+// We deliberately don't gate this by tier. The basic Mifflin calc is
+// free for every signup; recipes + meal plans + the smart_targets
+// training/rest day swap stay paid (see EnhancedToday's Targets card).
+//
+// New signups going through onboarding already fill these in, so this
+// card only fires for:
+//   - Clients who signed up before the BMR feature shipped
+//   - Anyone who skipped the questions for some reason
+//
+// Tapping the CTA opens a modal with all 4 questions on one screen.
+// 30-second flow as Dan asked for.
+function NutritionSetupPromptCard({ profile, token, onComplete }) {
+  const [open, setOpen] = useState(false);
+  const isSetUp = profile?.sex && profile?.height_cm && profile?.weight_kg;
+  if (isSetUp) return null;
+
+  return (
+    <>
+      <div
+        onClick={() => setOpen(true)}
+        className="card"
+        style={{
+          marginTop: 12,
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, rgba(133,255,186,0.10) 0%, rgba(133,255,186,0.04) 100%)',
+          border: '1.5px solid rgba(133,255,186,0.30)',
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: 'rgba(133,255,186,0.18)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, fontSize: 22,
+        }}>🥗</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+            Calculate your daily targets
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+            4 quick questions. Sets your kcal + macro goals.
+          </p>
+        </div>
+        <div style={{
+          padding: '6px 12px', borderRadius: 999,
+          background: 'var(--accent-mint)', color: '#000',
+          fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
+        }}>SET UP</div>
+      </div>
+
+      {open && (
+        <NutritionSetupModal
+          profile={profile}
+          token={token}
+          onClose={() => setOpen(false)}
+          onSaved={() => { setOpen(false); onComplete?.(); }}
+        />
+      )}
+    </>
+  );
+}
+
+// Modal with the 4 BMR-input questions on a single scrollable screen.
+// Live preview at the bottom shows the calculated daily target as the
+// user answers — same calc the server runs on save, so the user sees
+// what they're committing to before they hit Calculate.
+function NutritionSetupModal({ profile, token, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    sex: profile?.sex || '',
+    age: profile?.age || '',
+    height_cm: profile?.height_cm || '',
+    weight_kg: profile?.weight_kg || '',
+    activity_level: profile?.activity_level || 'moderate',
+    eating_style: profile?.eating_style || 'balanced',
+  });
+  const [heightUnit, setHeightUnit] = useState('cm');
+  const [weightUnit, setWeightUnit] = useState('kg');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const preview = useMemo(() => calculateTargets({
+    sex: form.sex,
+    weight_kg: Number(form.weight_kg),
+    height_cm: Number(form.height_cm),
+    age: Number(form.age),
+    activity_level: form.activity_level,
+    eating_style: form.eating_style,
+  }), [form]);
+
+  const ftIn = cmToFtIn(Number(form.height_cm));
+  const canSave = form.sex && form.age && form.height_cm && form.weight_kg;
+
+  const save = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/nutrition/targets', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sex: form.sex,
+          age: Number(form.age),
+          height_cm: Number(form.height_cm),
+          weight_kg: Number(form.weight_kg),
+          activity_level: form.activity_level,
+          eating_style: form.eating_style,
+          targets_custom: 0,
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      onSaved();
+    } catch (err) {
+      console.error(err);
+      setError('Could not save. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+        width: '100%', maxWidth: 480, padding: '14px 16px 28px',
+        maxHeight: '92vh', overflow: 'auto',
+      }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 14px' }} />
+        <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Daily nutrition targets</h2>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>
+          We use the Mifflin-St Jeor formula to set your kcal + macros. Editable later in Profile.
+        </p>
+
+        {/* Sex */}
+        <NutFieldLabel>Biological sex</NutFieldLabel>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {SEX_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => setField('sex', o.value)}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                background: form.sex === o.value ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                color: form.sex === o.value ? '#fff' : 'var(--text-primary)',
+                border: 'none', cursor: 'pointer',
+              }}
+            >{o.label}</button>
+          ))}
+        </div>
+
+        {/* Age */}
+        <NutFieldLabel>Age</NutFieldLabel>
+        <input
+          type="number" min={18} max={110} inputMode="numeric"
+          placeholder="35"
+          value={form.age}
+          onChange={e => setField('age', e.target.value)}
+          style={nutModalField}
+        />
+
+        {/* Height */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 6 }}>
+          <NutFieldLabel inline>Height</NutFieldLabel>
+          <UnitPills2 options={['cm', 'ft/in']} value={heightUnit} onChange={setHeightUnit} />
+        </div>
+        {heightUnit === 'cm' ? (
+          <input
+            type="number" min={100} max={230} inputMode="numeric"
+            placeholder="175"
+            value={form.height_cm}
+            onChange={e => setField('height_cm', e.target.value)}
+            style={nutModalField}
+          />
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="number" min={3} max={7} inputMode="numeric" placeholder="ft"
+              value={ftIn.ft ?? ''}
+              onChange={e => {
+                const f = parseInt(e.target.value, 10);
+                if (!Number.isFinite(f)) { setField('height_cm', ''); return; }
+                setField('height_cm', ftInToCm(f, ftIn.in || 0));
+              }}
+              style={{ ...nutModalField, flex: 1 }}
+            />
+            <input
+              type="number" min={0} max={11} inputMode="numeric" placeholder="in"
+              value={ftIn.in ?? ''}
+              onChange={e => {
+                const i = parseInt(e.target.value, 10);
+                if (!Number.isFinite(i)) { setField('height_cm', ''); return; }
+                setField('height_cm', ftInToCm(ftIn.ft || 0, i));
+              }}
+              style={{ ...nutModalField, flex: 1 }}
+            />
+          </div>
+        )}
+
+        {/* Weight */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 6 }}>
+          <NutFieldLabel inline>Weight</NutFieldLabel>
+          <UnitPills2 options={['kg', 'lbs']} value={weightUnit} onChange={setWeightUnit} />
+        </div>
+        <input
+          type="number" min={30} max={250} step={0.1} inputMode="decimal"
+          placeholder={weightUnit === 'kg' ? '70' : '155'}
+          value={
+            weightUnit === 'kg'
+              ? form.weight_kg
+              : (form.weight_kg ? kgToLbs(Number(form.weight_kg)) : '')
+          }
+          onChange={e => {
+            const n = parseFloat(e.target.value);
+            if (!Number.isFinite(n)) { setField('weight_kg', ''); return; }
+            setField('weight_kg', weightUnit === 'kg' ? n : lbsToKg(n));
+          }}
+          style={nutModalField}
+        />
+
+        {/* Activity */}
+        <NutFieldLabel style={{ marginTop: 18 }}>Daily activity (outside training)</NutFieldLabel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {ACTIVITY_LEVELS.map(a => {
+            const sel = form.activity_level === a.value;
+            return (
+              <button
+                key={a.value}
+                onClick={() => setField('activity_level', a.value)}
+                style={{
+                  textAlign: 'left', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                  background: sel ? 'rgba(255,140,0,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid ${sel ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}`,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{a.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{a.hint}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Eating style */}
+        <NutFieldLabel style={{ marginTop: 18 }}>Eating style</NutFieldLabel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {EATING_STYLES.map(s => {
+            const sel = form.eating_style === s.value;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setField('eating_style', s.value)}
+                style={{
+                  textAlign: 'left', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                  background: sel ? 'rgba(255,140,0,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid ${sel ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}`,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{s.hint}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Live preview */}
+        {preview.calorie_target && (
+          <div style={{
+            marginTop: 18, padding: 14, borderRadius: 12,
+            background: 'rgba(133,255,186,0.06)', border: '1px solid rgba(133,255,186,0.22)',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: 10, letterSpacing: 1.6, color: 'rgba(133,255,186,0.85)', fontWeight: 800 }}>YOUR TARGET</p>
+            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', marginTop: 4, lineHeight: 1 }}>
+              {preview.calorie_target.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>kcal</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10, gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#FF6B9D', fontWeight: 800 }}>{preview.protein_target}g <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>P</span></span>
+              <span style={{ fontSize: 12, color: '#FFD166', fontWeight: 800 }}>{preview.fat_target}g <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>F</span></span>
+              <span style={{ fontSize: 12, color: '#85FFBA', fontWeight: 800 }}>{preview.carbs_target}g <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>C</span></span>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 12, textAlign: 'center' }}>{error}</p>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '12px 18px', borderRadius: 12, border: 'none',
+              background: 'rgba(255,255,255,0.06)', color: 'var(--text-primary)',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}
+          >Cancel</button>
+          <button
+            onClick={save}
+            disabled={!canSave || saving}
+            style={{
+              flex: 1, padding: '12px 18px', borderRadius: 12, border: 'none',
+              background: 'var(--accent)', color: '#fff',
+              fontSize: 14, fontWeight: 800, cursor: canSave ? 'pointer' : 'default',
+              opacity: !canSave || saving ? 0.5 : 1,
+            }}
+          >{saving ? 'Saving...' : 'Calculate my targets'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NutFieldLabel({ children, inline, style }) {
+  return (
+    <label style={{
+      fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)',
+      letterSpacing: 0.3,
+      display: inline ? 'inline' : 'block',
+      marginBottom: inline ? 0 : 6,
+      ...(style || {}),
+    }}>{children}</label>
+  );
+}
+
+function UnitPills2({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: 2 }}>
+      {options.map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          style={{
+            padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer',
+            background: value === opt ? 'var(--accent)' : 'transparent',
+            color: value === opt ? '#fff' : 'var(--text-tertiary)',
+          }}
+        >{opt}</button>
+      ))}
+    </div>
+  );
+}
+
+const nutModalField = {
+  width: '100%',
+  padding: '12px 14px',
+  fontSize: 18,
+  fontWeight: 700,
+  background: 'rgba(255,255,255,0.05)',
+  border: '1.5px solid rgba(255,255,255,0.12)',
+  borderRadius: 10,
+  color: 'var(--text-primary)',
+  outline: 'none',
+};

@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { allocateProgram } from '../../lib/programAllocator';
+import {
+  ACTIVITY_LEVELS,
+  EATING_STYLES,
+  SEX_OPTIONS,
+  cmToFtIn,
+  ftInToCm,
+  kgToLbs,
+  lbsToKg,
+  calculateTargets,
+} from '../../lib/nutritionTargets';
 
 // Anonymous onboarding questionnaire. Fires before account creation so the
 // user has something tangible (a matched program) to sign up for, rather
@@ -18,9 +28,9 @@ const STORAGE_KEY = 'am_onboarding_answers';
 //   id        - key on the answers object
 //   title     - shown to user
 //   subtitle  - optional small copy
-//   type      - 'age' | 'single' | 'multi'
+//   type      - 'age' | 'single' | 'multi' | 'body_metrics'
 //   options   - array of { value, label, hint? }
-//   optional  - true for q7 (can proceed with no selections)
+//   optional  - true for questions that can proceed with no selections
 
 const QUESTIONS = [
   {
@@ -28,6 +38,19 @@ const QUESTIONS = [
     title: "What's your age?",
     subtitle: 'Helps us set the right pace and intensity for you.',
     type: 'age',
+  },
+  {
+    id: 'sex',
+    title: "What's your biological sex?",
+    subtitle: 'Used to calculate your daily calorie needs (Mifflin-St Jeor formula). Gender identity isn\'t used for the math, only biology.',
+    type: 'single',
+    options: SEX_OPTIONS.map(o => ({ value: o.value, label: o.label })),
+  },
+  {
+    id: 'body_metrics',
+    title: 'Your height and weight',
+    subtitle: 'So we can set realistic calorie and macro targets.',
+    type: 'body_metrics',
   },
   {
     id: 'goal',
@@ -89,6 +112,13 @@ const QUESTIONS = [
     ],
   },
   {
+    id: 'activity_level',
+    title: 'Outside of training, how active are you day-to-day?',
+    subtitle: 'Job, walking, chores. Your training already gets counted separately.',
+    type: 'single',
+    options: ACTIVITY_LEVELS.map(a => ({ value: a.value, label: a.label, hint: a.hint })),
+  },
+  {
     id: 'injuries',
     title: 'Any injuries or areas we should know about?',
     subtitle: 'Select any that apply. Your coach will adapt the plan.',
@@ -103,6 +133,13 @@ const QUESTIONS = [
       { value: 'neck',     label: 'Neck' },
       { value: 'wrist',    label: 'Wrist' },
     ],
+  },
+  {
+    id: 'eating_style',
+    title: 'Which eating style fits you best?',
+    subtitle: 'Sets your starting macro split. Your coach can fine-tune later.',
+    type: 'single',
+    options: EATING_STYLES.map(s => ({ value: s.value, label: s.label, hint: s.hint })),
   },
 ];
 
@@ -135,6 +172,10 @@ export default function OnboardingQuestionnaire() {
     if (q.type === 'age') return typeof a === 'number' && a >= 18 && a <= 110;
     if (q.type === 'single') return a !== undefined && a !== null;
     if (q.type === 'multi') return Array.isArray(a) && a.length > 0;
+    if (q.type === 'body_metrics') {
+      return typeof answers.height_cm === 'number' && answers.height_cm > 100 && answers.height_cm < 230
+        && typeof answers.weight_kg === 'number' && answers.weight_kg > 30  && answers.weight_kg < 250;
+    }
     return false;
   };
 
@@ -184,6 +225,14 @@ export default function OnboardingQuestionnaire() {
           <div style={{ marginTop: 24 }}>
             {q.type === 'age' && (
               <AgeInput value={answers.age} onChange={v => setAnswer(v)} />
+            )}
+
+            {q.type === 'body_metrics' && (
+              <BodyMetricsInput
+                heightCm={answers.height_cm}
+                weightKg={answers.weight_kg}
+                onChange={(field, v) => setAnswers(prev => ({ ...prev, [field]: v }))}
+              />
             )}
 
             {q.type === 'single' && (
@@ -275,8 +324,137 @@ function AgeInput({ value, onChange }) {
   );
 }
 
+function BodyMetricsInput({ heightCm, weightKg, onChange }) {
+  // Stored values in answers stay metric (cm + kg). The toggle only flips
+  // what the user types — we convert on the fly. Default is metric since
+  // Dan is Australia-based; clients can flip to imperial per session.
+  const [heightUnit, setHeightUnit] = useState('cm');
+  const [weightUnit, setWeightUnit] = useState('kg');
+
+  const ftIn = cmToFtIn(heightCm);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Height */}
+      <div>
+        <div style={metricRow}>
+          <label style={metricLabel}>Height</label>
+          <UnitToggle
+            options={['cm', 'ft/in']}
+            value={heightUnit}
+            onChange={setHeightUnit}
+          />
+        </div>
+        {heightUnit === 'cm' ? (
+          <input
+            type="number"
+            min={100}
+            max={230}
+            inputMode="numeric"
+            placeholder="175"
+            value={heightCm ?? ''}
+            onChange={e => {
+              const n = parseInt(e.target.value, 10);
+              onChange('height_cm', Number.isFinite(n) ? n : undefined);
+            }}
+            style={metricField}
+          />
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="number"
+              min={3}
+              max={7}
+              inputMode="numeric"
+              placeholder="5 ft"
+              value={ftIn.ft ?? ''}
+              onChange={e => {
+                const f = parseInt(e.target.value, 10);
+                if (!Number.isFinite(f)) return;
+                onChange('height_cm', ftInToCm(f, ftIn.in || 0));
+              }}
+              style={{ ...metricField, flex: 1 }}
+            />
+            <input
+              type="number"
+              min={0}
+              max={11}
+              inputMode="numeric"
+              placeholder="9 in"
+              value={ftIn.in ?? ''}
+              onChange={e => {
+                const i = parseInt(e.target.value, 10);
+                if (!Number.isFinite(i)) return;
+                onChange('height_cm', ftInToCm(ftIn.ft || 0, i));
+              }}
+              style={{ ...metricField, flex: 1 }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Weight */}
+      <div>
+        <div style={metricRow}>
+          <label style={metricLabel}>Weight</label>
+          <UnitToggle
+            options={['kg', 'lbs']}
+            value={weightUnit}
+            onChange={setWeightUnit}
+          />
+        </div>
+        <input
+          type="number"
+          min={30}
+          max={250}
+          step={0.1}
+          inputMode="decimal"
+          placeholder={weightUnit === 'kg' ? '70' : '155'}
+          value={
+            weightUnit === 'kg'
+              ? (weightKg ?? '')
+              : (weightKg != null ? kgToLbs(weightKg) : '')
+          }
+          onChange={e => {
+            const n = parseFloat(e.target.value);
+            if (!Number.isFinite(n)) { onChange('weight_kg', undefined); return; }
+            onChange('weight_kg', weightUnit === 'kg' ? n : lbsToKg(n));
+          }}
+          style={metricField}
+        />
+      </div>
+    </div>
+  );
+}
+
+function UnitToggle({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: 2 }}>
+      {options.map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          style={{
+            padding: '4px 10px',
+            fontSize: 11,
+            fontWeight: 700,
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            background: value === opt ? 'var(--accent)' : 'transparent',
+            color: value === opt ? '#fff' : 'rgba(255,255,255,0.6)',
+          }}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function SuggestionScreen({ answers, onBack, onContinue }) {
   const result = allocateProgram(answers);
+  const targets = calculateTargets(answers);
 
   return (
     <div style={page}>
@@ -316,6 +494,26 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
               </p>
             </>
           )}
+
+          {/* Nutrition target preview — only when we have enough data */}
+          {targets.calorie_target && (
+            <div style={nutritionCard}>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(133,255,186,0.85)', fontWeight: 800, marginBottom: 8 }}>
+                YOUR DAILY TARGETS
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                {targets.calorie_target.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>kcal</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, gap: 8 }}>
+                <MacroPill label="Protein" grams={targets.protein_target} color="#FF6B9D" />
+                <MacroPill label="Fat"     grams={targets.fat_target}     color="#FFD166" />
+                <MacroPill label="Carbs"   grams={targets.carbs_target}   color="#85FFBA" />
+              </div>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 12, lineHeight: 1.5 }}>
+                {targets.style.label} split · BMR {targets.bmr} kcal · You can fine-tune in your profile.
+              </p>
+            </div>
+          )}
         </div>
 
         <div style={footer}>
@@ -324,6 +522,15 @@ function SuggestionScreen({ answers, onBack, onContinue }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MacroPill({ label, grams, color }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color }}>{grams}g</div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
     </div>
   );
 }
@@ -501,4 +708,39 @@ const reviewCard = {
   background: 'rgba(133,255,186,0.08)',
   border: '1.5px solid rgba(133,255,186,0.35)',
   textAlign: 'center',
+};
+
+const nutritionCard = {
+  marginTop: 18,
+  padding: '20px 18px',
+  borderRadius: 14,
+  background: 'rgba(133,255,186,0.06)',
+  border: '1.5px solid rgba(133,255,186,0.22)',
+  textAlign: 'center',
+};
+
+const metricRow = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 8,
+};
+
+const metricLabel = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: 'rgba(255,255,255,0.85)',
+};
+
+const metricField = {
+  width: '100%',
+  padding: '16px 14px',
+  fontSize: 22,
+  fontWeight: 700,
+  textAlign: 'center',
+  background: 'rgba(255,255,255,0.05)',
+  border: '1.5px solid rgba(255,255,255,0.12)',
+  borderRadius: 12,
+  color: '#fff',
+  outline: 'none',
 };

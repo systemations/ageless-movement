@@ -1398,6 +1398,37 @@ try {
   if (!cpCols.includes('plan_next_renewal_at')) db.exec("ALTER TABLE client_profiles ADD COLUMN plan_next_renewal_at TEXT");
 } catch (e) { /* ignore */ }
 
+// ── Nutrition target inputs ────────────────────────────────────────────
+// Mifflin-St Jeor BMR + activity factor + eating style → calorie & macro
+// targets. We store the raw inputs (height, weight, sex, activity, style)
+// so the calc can be re-run server-side any time the client edits any of
+// them. Targets in calorie_target / protein_target / fat_target /
+// carbs_target stay the source-of-truth for diary % rings — they're what
+// gets shown — but they're derived from these inputs unless the client
+// manually overrides via the Profile "Custom" toggle.
+//   sex            : 'male' | 'female'  (Mifflin only has these two; intersex
+//                                         clients pick whichever matches their
+//                                         lean mass — same convention as
+//                                         every other tracking app)
+//   height_cm      : stored cm always; UI toggles ft/in for display
+//   weight_kg      : stored kg always; UI toggles lbs for display
+//   activity_level : 'sedentary' | 'light' | 'moderate' | 'very' | 'extreme'
+//                    (factors 1.2 / 1.375 / 1.55 / 1.725 / 1.9)
+//   eating_style   : 'balanced' | 'high_protein' | 'mediterranean' |
+//                    'low_carb' | 'keto' | 'carnivore' | 'plant_based'
+//   targets_custom : 1 = user manually overrode targets in Profile, so the
+//                    auto-recompute on input change is suppressed. 0 = keep
+//                    targets in lockstep with derived values.
+try {
+  const cpCols = db.prepare("PRAGMA table_info(client_profiles)").all().map(c => c.name);
+  if (!cpCols.includes('sex')) db.exec("ALTER TABLE client_profiles ADD COLUMN sex TEXT");
+  if (!cpCols.includes('height_cm')) db.exec("ALTER TABLE client_profiles ADD COLUMN height_cm REAL");
+  if (!cpCols.includes('weight_kg')) db.exec("ALTER TABLE client_profiles ADD COLUMN weight_kg REAL");
+  if (!cpCols.includes('activity_level')) db.exec("ALTER TABLE client_profiles ADD COLUMN activity_level TEXT DEFAULT 'moderate'");
+  if (!cpCols.includes('eating_style')) db.exec("ALTER TABLE client_profiles ADD COLUMN eating_style TEXT DEFAULT 'balanced'");
+  if (!cpCols.includes('targets_custom')) db.exec("ALTER TABLE client_profiles ADD COLUMN targets_custom INTEGER DEFAULT 0");
+} catch (e) { /* ignore */ }
+
 // ── Activity tracking ──────────────────────────────────────────────────
 // users.last_active_at is bumped by the authenticateToken middleware on
 // any authed API request, debounced to once per minute per user. The

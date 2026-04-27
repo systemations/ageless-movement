@@ -6,6 +6,7 @@ import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../lib/config.js';
 import { allocateProgram } from '../lib/programAllocator.js';
+import { calculateTargets } from '../lib/nutritionTargets.js';
 import { queuePostSignupTasks } from '../jobs/post-signup-tasks.js';
 
 // Slow down brute-force login / register attempts. Keyed by IP — a
@@ -101,9 +102,42 @@ router.post('/register', registerLimiter, async (req, res) => {
         ],
       );
 
-      // Store age on the client profile for coach-side filtering
-      if (typeof onboarding.age === 'number') {
-        pool.query('UPDATE client_profiles SET age = ? WHERE user_id = ?', [onboarding.age, user.id]);
+      // Store demographics + nutrition inputs on the client profile.
+      // These power coach filtering, the Profile BMR card, and the
+      // server-side target recompute. Sex is stored separately from
+      // gender (gender is identity / display, sex is the Mifflin input).
+      const profileUpdates = [];
+      const profileVals = [];
+      if (typeof onboarding.age === 'number')           { profileUpdates.push('age = ?');             profileVals.push(onboarding.age); }
+      if (typeof onboarding.sex === 'string')           { profileUpdates.push('sex = ?');             profileVals.push(onboarding.sex); }
+      if (typeof onboarding.height_cm === 'number')     { profileUpdates.push('height_cm = ?');       profileVals.push(onboarding.height_cm); }
+      if (typeof onboarding.weight_kg === 'number')     { profileUpdates.push('weight_kg = ?');       profileVals.push(onboarding.weight_kg); }
+      if (typeof onboarding.activity_level === 'string'){ profileUpdates.push('activity_level = ?');  profileVals.push(onboarding.activity_level); }
+      if (typeof onboarding.eating_style === 'string')  { profileUpdates.push('eating_style = ?');    profileVals.push(onboarding.eating_style); }
+
+      // Compute Mifflin-St Jeor → activity → macro split server-side so
+      // a tampered client request can't preset their own targets. We only
+      // overwrite calorie/protein/fat/carbs targets when we have enough
+      // inputs; otherwise the schema defaults stay in place and the
+      // client gets nudged on the Profile page to fill in the gaps.
+      const targets = calculateTargets({
+        sex: onboarding.sex,
+        weight_kg: onboarding.weight_kg,
+        height_cm: onboarding.height_cm,
+        age: onboarding.age,
+        activity_level: onboarding.activity_level,
+        eating_style: onboarding.eating_style,
+      });
+      if (targets.calorie_target) {
+        profileUpdates.push('calorie_target = ?'); profileVals.push(targets.calorie_target);
+        profileUpdates.push('protein_target = ?'); profileVals.push(targets.protein_target);
+        profileUpdates.push('fat_target = ?');     profileVals.push(targets.fat_target);
+        profileUpdates.push('carbs_target = ?');   profileVals.push(targets.carbs_target);
+      }
+
+      if (profileUpdates.length > 0) {
+        profileVals.push(user.id);
+        pool.query(`UPDATE client_profiles SET ${profileUpdates.join(', ')} WHERE user_id = ?`, profileVals);
       }
 
       // Auto-enrol in the matched program (if any). Review cases don't

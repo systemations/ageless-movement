@@ -1,8 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight } from '../../components/Icons';
+import {
+  ACTIVITY_LEVELS,
+  EATING_STYLES,
+  SEX_OPTIONS,
+  calculateTargets,
+  cmToFtIn,
+  ftInToCm,
+  kgToLbs,
+  lbsToKg,
+} from '../../lib/nutritionTargets';
 
 export default function Profile({ onBack }) {
   const { user, token, profile, logout } = useAuth();
@@ -80,6 +90,10 @@ export default function Profile({ onBack }) {
   }, []);
 
   // Sub-pages
+  if (showSubPage === 'nutrition') {
+    return <NutritionTargetsPage onBack={() => setShowSubPage(null)} token={token} initialProfile={profile} />;
+  }
+
   if (showSubPage === 'reminders') {
     const toggleReminder = async (key) => {
       const updated = { ...reminders, [key]: !reminders[key] };
@@ -294,14 +308,15 @@ export default function Profile({ onBack }) {
       <div className="card" style={{ marginBottom: 12 }}>
         {[
           { icon: '👤', label: 'My Profile', action: () => setShowSubPage('profile') },
+          { icon: '🥗', label: 'Nutrition Targets', action: () => setShowSubPage('nutrition') },
           { icon: '🔔', label: 'Reminders', action: () => setShowSubPage('reminders') },
           { icon: '📏', label: 'Measurement Goals', action: () => navigate('/progress') },
           { icon: '⌚', label: 'Connected Apps', action: () => setShowSubPage('connected') },
           { icon: '🔄', label: 'Unit System', action: () => setShowSubPage('units') },
-        ].map(({ icon, label, action }, i) => (
+        ].map(({ icon, label, action }, i, arr) => (
           <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 0', borderBottom: i < 4 ? '1px solid var(--divider)' : 'none',
+            padding: '14px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--divider)' : 'none',
             cursor: 'pointer',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -585,3 +600,423 @@ function renewalStatus(dateStr) {
   if (days <= 30) return { text: `Renews in ${days}d`, color: 'var(--text-secondary)' };
   return { text: `Renews ${new Date(dateStr).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}`, color: 'var(--text-secondary)' };
 }
+
+// ── Nutrition Targets sub-page ─────────────────────────────────────
+// Lets the client review + edit the inputs that drive their daily
+// calorie / macro targets. Live recompute as fields change so the
+// numbers move under the input (no surprise on save). Custom toggle
+// switches off auto-recompute for clients on coach-prescribed plans.
+//
+// Storage: cm + kg always. The unit toggles only flip what the
+// inputs accept, conversion happens before commit. Server runs the
+// same calc + writes the same fields, so a tampered request can't
+// underwrite calories without underwriting the inputs too.
+function NutritionTargetsPage({ onBack, token, initialProfile }) {
+  const [profile, setProfile] = useState(initialProfile || null);
+  const [loading, setLoading] = useState(!initialProfile);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const [heightUnit, setHeightUnit] = useState('cm');
+  const [weightUnit, setWeightUnit] = useState('kg');
+
+  // Local edit state — committed on Save. Pulled from profile on mount
+  // and on each refresh after save so manual overrides land back here.
+  const [form, setForm] = useState({
+    sex: '', age: '', height_cm: '', weight_kg: '',
+    activity_level: 'moderate', eating_style: 'balanced',
+    targets_custom: 0,
+    calorie_target: '', protein_target: '', fat_target: '', carbs_target: '',
+  });
+
+  // Hydrate form from profile.
+  useEffect(() => {
+    if (!profile) return;
+    setForm({
+      sex: profile.sex || '',
+      age: profile.age || '',
+      height_cm: profile.height_cm || '',
+      weight_kg: profile.weight_kg || '',
+      activity_level: profile.activity_level || 'moderate',
+      eating_style: profile.eating_style || 'balanced',
+      targets_custom: profile.targets_custom ? 1 : 0,
+      calorie_target: profile.calorie_target || '',
+      protein_target: profile.protein_target || '',
+      fat_target: profile.fat_target || '',
+      carbs_target: profile.carbs_target || '',
+    });
+  }, [profile]);
+
+  // If we didn't get the profile from auth context (race or stale),
+  // fetch it on mount so the form has fresh data.
+  useEffect(() => {
+    if (initialProfile) return;
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setProfile(d.profile); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [token, initialProfile]);
+
+  // Live preview of computed targets — overrides the form's manual
+  // values whenever auto mode is on. Keeps the visible number in sync
+  // with the inputs without waiting for a save.
+  const preview = useMemo(() => {
+    if (form.targets_custom) {
+      return {
+        calorie_target: Number(form.calorie_target) || 0,
+        protein_target: Number(form.protein_target) || 0,
+        fat_target: Number(form.fat_target) || 0,
+        carbs_target: Number(form.carbs_target) || 0,
+        bmr: null, tdee: null,
+        style: EATING_STYLES.find(s => s.value === form.eating_style) || EATING_STYLES[0],
+      };
+    }
+    return calculateTargets({
+      sex: form.sex,
+      weight_kg: Number(form.weight_kg),
+      height_cm: Number(form.height_cm),
+      age: Number(form.age),
+      activity_level: form.activity_level,
+      eating_style: form.eating_style,
+    });
+  }, [form]);
+
+  const ftIn = cmToFtIn(Number(form.height_cm));
+  const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    setSavedAt(null);
+    try {
+      const body = {
+        sex: form.sex || null,
+        age: form.age ? Number(form.age) : null,
+        height_cm: form.height_cm ? Number(form.height_cm) : null,
+        weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
+        activity_level: form.activity_level,
+        eating_style: form.eating_style,
+        targets_custom: form.targets_custom ? 1 : 0,
+      };
+      if (form.targets_custom) {
+        body.calorie_target = Number(form.calorie_target) || null;
+        body.protein_target = Number(form.protein_target) || null;
+        body.fat_target = Number(form.fat_target) || null;
+        body.carbs_target = Number(form.carbs_target) || null;
+      }
+      const res = await fetch('/api/nutrition/targets', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      const data = await res.json();
+      if (data.profile) setProfile(data.profile);
+      setSavedAt(Date.now());
+    } catch (err) {
+      console.error('Nutrition save error:', err);
+      alert('Failed to save. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page-content">
+        <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-content" style={{ paddingBottom: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h1 style={{ fontSize: 18, fontWeight: 700 }}>Nutrition Targets</h1>
+      </div>
+
+      {/* Daily total card — live preview */}
+      <div className="card" style={{ marginBottom: 16, padding: 18, textAlign: 'center', background: 'rgba(133,255,186,0.06)', border: '1px solid rgba(133,255,186,0.22)' }}>
+        <p style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(133,255,186,0.85)', fontWeight: 800 }}>YOUR DAILY TARGETS</p>
+        {preview.calorie_target ? (
+          <>
+            <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-primary)', marginTop: 6, lineHeight: 1 }}>
+              {preview.calorie_target.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-tertiary)' }}>kcal</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, gap: 8 }}>
+              <NutritionMacroPill label="Protein" grams={preview.protein_target} color="#FF6B9D" />
+              <NutritionMacroPill label="Fat"     grams={preview.fat_target}     color="#FFD166" />
+              <NutritionMacroPill label="Carbs"   grams={preview.carbs_target}   color="#85FFBA" />
+            </div>
+            {preview.bmr != null && !form.targets_custom && (
+              <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12 }}>
+                BMR {preview.bmr} kcal · TDEE {preview.tdee} kcal · {preview.style.label} split
+              </p>
+            )}
+            {form.targets_custom && (
+              <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 12, fontWeight: 700 }}>
+                Custom override — auto-recompute is OFF
+              </p>
+            )}
+          </>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 8 }}>
+            Fill in your sex, age, height and weight below to see your targets.
+          </p>
+        )}
+      </div>
+
+      {/* Auto / Custom mode toggle */}
+      <div className="card" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>Use custom targets</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+            Off = auto-calculate from your stats. On = enter your own kcal & macros.
+          </p>
+        </div>
+        <button
+          onClick={() => setField('targets_custom', form.targets_custom ? 0 : 1)}
+          style={{
+            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative',
+            background: form.targets_custom ? 'var(--accent)' : 'var(--divider)', transition: 'background 0.2s',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{
+            width: 20, height: 20, borderRadius: '50%', background: '#fff',
+            position: 'absolute', top: 2, left: form.targets_custom ? 22 : 2, transition: 'left 0.2s',
+          }} />
+        </button>
+      </div>
+
+      {/* Inputs that feed BMR */}
+      <div className="card" style={{ marginBottom: 12, padding: 16 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 12 }}>BIOLOGY</p>
+
+        <FieldRow label="Biological sex">
+          <SelectPills
+            options={SEX_OPTIONS}
+            value={form.sex}
+            onChange={v => setField('sex', v)}
+          />
+        </FieldRow>
+
+        <FieldRow label="Age">
+          <input
+            type="number" min={18} max={110} inputMode="numeric"
+            value={form.age}
+            onChange={e => setField('age', e.target.value)}
+            style={ntFieldStyle}
+          />
+        </FieldRow>
+
+        <FieldRow label="Height" right={
+          <UnitPills options={['cm', 'ft/in']} value={heightUnit} onChange={setHeightUnit} />
+        }>
+          {heightUnit === 'cm' ? (
+            <input
+              type="number" min={100} max={230} inputMode="numeric"
+              value={form.height_cm}
+              onChange={e => setField('height_cm', e.target.value)}
+              style={ntFieldStyle}
+            />
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="number" min={3} max={7} inputMode="numeric"
+                placeholder="ft"
+                value={ftIn.ft ?? ''}
+                onChange={e => {
+                  const f = parseInt(e.target.value, 10);
+                  if (!Number.isFinite(f)) { setField('height_cm', ''); return; }
+                  setField('height_cm', ftInToCm(f, ftIn.in || 0));
+                }}
+                style={{ ...ntFieldStyle, flex: 1 }}
+              />
+              <input
+                type="number" min={0} max={11} inputMode="numeric"
+                placeholder="in"
+                value={ftIn.in ?? ''}
+                onChange={e => {
+                  const i = parseInt(e.target.value, 10);
+                  if (!Number.isFinite(i)) { setField('height_cm', ''); return; }
+                  setField('height_cm', ftInToCm(ftIn.ft || 0, i));
+                }}
+                style={{ ...ntFieldStyle, flex: 1 }}
+              />
+            </div>
+          )}
+        </FieldRow>
+
+        <FieldRow label="Weight" right={
+          <UnitPills options={['kg', 'lbs']} value={weightUnit} onChange={setWeightUnit} />
+        }>
+          <input
+            type="number" min={30} max={250} step={0.1} inputMode="decimal"
+            value={
+              weightUnit === 'kg'
+                ? form.weight_kg
+                : (form.weight_kg ? kgToLbs(Number(form.weight_kg)) : '')
+            }
+            onChange={e => {
+              const n = parseFloat(e.target.value);
+              if (!Number.isFinite(n)) { setField('weight_kg', ''); return; }
+              setField('weight_kg', weightUnit === 'kg' ? n : lbsToKg(n));
+            }}
+            style={ntFieldStyle}
+          />
+        </FieldRow>
+      </div>
+
+      {/* Lifestyle inputs */}
+      <div className="card" style={{ marginBottom: 12, padding: 16 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 12 }}>LIFESTYLE</p>
+
+        <FieldRow label="Daily activity (outside training)">
+          <RadioList
+            options={ACTIVITY_LEVELS}
+            value={form.activity_level}
+            onChange={v => setField('activity_level', v)}
+          />
+        </FieldRow>
+
+        <FieldRow label="Eating style">
+          <RadioList
+            options={EATING_STYLES}
+            value={form.eating_style}
+            onChange={v => setField('eating_style', v)}
+          />
+        </FieldRow>
+      </div>
+
+      {/* Custom override grams (only when toggle is on) */}
+      {form.targets_custom ? (
+        <div className="card" style={{ marginBottom: 12, padding: 16 }}>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 1, marginBottom: 12 }}>CUSTOM TARGETS</p>
+          <FieldRow label="Calories (kcal)">
+            <input type="number" min={0} max={6000} inputMode="numeric" value={form.calorie_target} onChange={e => setField('calorie_target', e.target.value)} style={ntFieldStyle} />
+          </FieldRow>
+          <FieldRow label="Protein (g)">
+            <input type="number" min={0} max={500} inputMode="numeric" value={form.protein_target} onChange={e => setField('protein_target', e.target.value)} style={ntFieldStyle} />
+          </FieldRow>
+          <FieldRow label="Fat (g)">
+            <input type="number" min={0} max={400} inputMode="numeric" value={form.fat_target} onChange={e => setField('fat_target', e.target.value)} style={ntFieldStyle} />
+          </FieldRow>
+          <FieldRow label="Carbs (g)">
+            <input type="number" min={0} max={700} inputMode="numeric" value={form.carbs_target} onChange={e => setField('carbs_target', e.target.value)} style={ntFieldStyle} />
+          </FieldRow>
+        </div>
+      ) : null}
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="btn-primary"
+        style={{ width: '100%', marginTop: 8, opacity: saving ? 0.6 : 1 }}
+      >
+        {saving ? 'Saving...' : savedAt ? 'Saved ✓' : 'Save targets'}
+      </button>
+
+      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 14, lineHeight: 1.5 }}>
+        Calculated using the Mifflin-St Jeor formula. Your daily target updates automatically when you change weight, activity, or eating style.
+      </p>
+    </div>
+  );
+}
+
+function NutritionMacroPill({ label, grams, color }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color }}>{grams}g</div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+    </div>
+  );
+}
+
+function FieldRow({ label, right, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</label>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SelectPills({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          style={{
+            flex: 1, padding: '12px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, border: 'none',
+            background: value === opt.value ? 'var(--accent)' : 'var(--bg-card-hover, rgba(255,255,255,0.05))',
+            color: value === opt.value ? '#fff' : 'var(--text-primary)',
+            cursor: 'pointer',
+          }}
+        >{opt.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function UnitPills({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: 2 }}>
+      {options.map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          style={{
+            padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer',
+            background: value === opt ? 'var(--accent)' : 'transparent',
+            color: value === opt ? '#fff' : 'var(--text-tertiary)',
+          }}
+        >{opt}</button>
+      ))}
+    </div>
+  );
+}
+
+function RadioList({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {options.map(opt => {
+        const selected = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            style={{
+              width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 10,
+              background: selected ? 'rgba(255,140,0,0.12)' : 'rgba(255,255,255,0.04)',
+              border: `1.5px solid ${selected ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}`,
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{opt.label}</div>
+            {opt.hint && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3, lineHeight: 1.4 }}>{opt.hint}</div>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const ntFieldStyle = {
+  width: '100%',
+  padding: '12px 14px',
+  fontSize: 18,
+  fontWeight: 700,
+  background: 'rgba(255,255,255,0.05)',
+  border: '1.5px solid rgba(255,255,255,0.12)',
+  borderRadius: 10,
+  color: 'var(--text-primary)',
+  outline: 'none',
+};

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { loadPlan, scalePlanForClient, getScheduleForClient } from '../lib/mealScaling.js';
+import { calculateTargets } from '../lib/nutritionTargets.js';
 import https from 'https';
 
 const router = Router();
@@ -147,25 +148,93 @@ router.get('/diary', authenticateToken, async (req, res) => {
   }
 });
 
-// Update calorie/macro targets
+// Update calorie/macro targets + BMR inputs.
+//
+// Two modes:
+//   1. Auto (targets_custom = 0): client sends sex / height_cm / weight_kg /
+//      age / activity_level / eating_style. Server recomputes Mifflin-St
+//      Jeor → activity → macro split and writes the calorie/macro targets
+//      AND the inputs in one pass. Client UI shows the derived numbers.
+//   2. Manual (targets_custom = 1): client sends calorie/macro grams
+//      directly (coach-overridden plan, recomp-from-DEXA, etc). Server
+//      respects the values and skips the recompute even if inputs are
+//      also present in the body.
+//
+// Either mode: any subset of inputs can be omitted. We patch only what's
+// present in the body. This same endpoint handles "I lost 2kg, recompute"
+// (auto mode, just send weight_kg) and "I want exactly 2200 kcal" (manual
+// mode, set targets_custom=1 and send the grams).
 router.put('/targets', authenticateToken, async (req, res) => {
   try {
-    const { calorie_target, protein_target, fat_target, carbs_target } = req.body;
     const userId = req.user.id;
-    const existing = pool.query('SELECT id FROM client_profiles WHERE user_id = ?', [userId]).rows[0];
-    if (existing) {
-      const sets = [];
-      const vals = [];
-      if (calorie_target !== undefined) { sets.push('calorie_target = ?'); vals.push(calorie_target); }
-      if (protein_target !== undefined) { sets.push('protein_target = ?'); vals.push(protein_target); }
-      if (fat_target !== undefined) { sets.push('fat_target = ?'); vals.push(fat_target); }
-      if (carbs_target !== undefined) { sets.push('carbs_target = ?'); vals.push(carbs_target); }
-      if (sets.length > 0) {
-        vals.push(userId);
-        pool.query(`UPDATE client_profiles SET ${sets.join(', ')} WHERE user_id = ?`, vals);
+    const body = req.body || {};
+
+    const profile = pool.query('SELECT * FROM client_profiles WHERE user_id = ?', [userId]).rows[0];
+    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+    const sets = [];
+    const vals = [];
+
+    // Patch demographic / nutrition inputs first so the recompute uses
+    // the new values, not stale ones from `profile`.
+    const merged = { ...profile };
+    const inputFields = ['sex', 'height_cm', 'weight_kg', 'activity_level', 'eating_style'];
+    for (const f of inputFields) {
+      if (body[f] !== undefined) {
+        sets.push(`${f} = ?`);
+        vals.push(body[f]);
+        merged[f] = body[f];
       }
     }
-    res.json({ success: true });
+    // age lives on client_profiles too — allow updating it via this same
+    // endpoint so the Profile page doesn't need a second route.
+    if (body.age !== undefined) {
+      sets.push('age = ?'); vals.push(body.age); merged.age = body.age;
+    }
+
+    // Determine mode.
+    const modeFlag = body.targets_custom;
+    const goingCustom = modeFlag === 1 || modeFlag === true;
+    const goingAuto   = modeFlag === 0 || modeFlag === false;
+    if (goingCustom || goingAuto) {
+      sets.push('targets_custom = ?'); vals.push(goingCustom ? 1 : 0);
+    }
+
+    if (goingCustom) {
+      // Manual override path — accept the grams the client sent.
+      if (body.calorie_target !== undefined) { sets.push('calorie_target = ?'); vals.push(body.calorie_target); }
+      if (body.protein_target !== undefined) { sets.push('protein_target = ?'); vals.push(body.protein_target); }
+      if (body.fat_target !== undefined)     { sets.push('fat_target = ?');     vals.push(body.fat_target); }
+      if (body.carbs_target !== undefined)   { sets.push('carbs_target = ?');   vals.push(body.carbs_target); }
+    } else if (!profile.targets_custom || goingAuto) {
+      // Auto path — recompute from the merged inputs (existing + body).
+      // Only fires if either we're explicitly switching to auto, or the
+      // profile is already in auto mode.
+      const t = calculateTargets({
+        sex: merged.sex,
+        weight_kg: merged.weight_kg,
+        height_cm: merged.height_cm,
+        age: merged.age,
+        activity_level: merged.activity_level,
+        eating_style: merged.eating_style,
+      });
+      if (t.calorie_target) {
+        sets.push('calorie_target = ?'); vals.push(t.calorie_target);
+        sets.push('protein_target = ?'); vals.push(t.protein_target);
+        sets.push('fat_target = ?');     vals.push(t.fat_target);
+        sets.push('carbs_target = ?');   vals.push(t.carbs_target);
+      }
+    }
+
+    if (sets.length > 0) {
+      vals.push(userId);
+      pool.query(`UPDATE client_profiles SET ${sets.join(', ')} WHERE user_id = ?`, vals);
+    }
+
+    // Return the updated profile so the client can re-render without a
+    // separate GET.
+    const updated = pool.query('SELECT * FROM client_profiles WHERE user_id = ?', [userId]).rows[0];
+    res.json({ success: true, profile: updated });
   } catch (err) {
     console.error('Update targets error:', err);
     res.status(500).json({ error: 'Server error' });

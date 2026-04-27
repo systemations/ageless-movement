@@ -1429,6 +1429,20 @@ try {
   if (!cpCols.includes('targets_custom')) db.exec("ALTER TABLE client_profiles ADD COLUMN targets_custom INTEGER DEFAULT 0");
 } catch (e) { /* ignore */ }
 
+// ── 1:1 booking link migration ────────────────────────────────────────
+// Old admin-set value pointed at systemations.com/book. Dan moved the
+// elite booking page to handsdan.com/vip-elite-coaching. Only update if
+// the row is still on the old URL so we don't clobber further edits
+// made through the admin Tier editor.
+try {
+  db.prepare(
+    `UPDATE tiers
+        SET cta_url = ?
+      WHERE name = 'Elite'
+        AND cta_url = 'https://systemations.com/book'`
+  ).run('https://handsdan.com/vip-elite-coaching');
+} catch (e) { /* ignore */ }
+
 // ── Activity tracking ──────────────────────────────────────────────────
 // users.last_active_at is bumped by the authenticateToken middleware on
 // any authed API request, debounced to once per minute per user. The

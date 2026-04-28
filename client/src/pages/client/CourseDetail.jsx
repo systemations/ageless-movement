@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
 import '../../components/rich-text.css';
@@ -557,6 +557,7 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               flatLessons={flatLessons}
               onPickLesson={onPickLesson}
               onBack={onBack}
+              lessonId={lesson.id}
             />
           ) : (
             <>
@@ -585,7 +586,11 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               coach roster (Team admin → Coach profiles), so support /
               meet-the-team lessons stay in sync with that one source. */}
           {lesson.description && (
-            <LessonDescription html={lesson.description} />
+            <LessonDescription
+              html={lesson.description}
+              lessonId={lesson.id}
+              interactive={!!lesson.is_movement_assessment}
+            />
           )}
 
           {/* Attachments */}
@@ -694,9 +699,23 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
 // per-question Vimeo videos, collects A/B/C selections, computes score
 // (sum of option.score / question count), and shows a pass or fail
 // result screen with routing CTAs (next quiz / program enrolment).
-function QuizPlayer({ quiz, flatLessons, onPickLesson, onBack }) {
+function QuizPlayer({ quiz, flatLessons, onPickLesson, onBack, lessonId }) {
+  const { token } = useAuth();
   const [selections, setSelections] = useState({});
   const [submitted, setSubmitted] = useState(false);
+
+  // Persist the attempt server-side on submit so the coach + client
+  // both have a history record. Fire-and-forget — UX moves on
+  // immediately; the server recomputes the score from canonical
+  // quiz_data so a network hiccup doesn't block the result screen.
+  const persistAttempt = (sel) => {
+    if (!lessonId) return;
+    fetch(`/api/content/lessons/${lessonId}/quiz-attempt`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selections: sel }),
+    }).catch(() => { /* non-blocking */ });
+  };
 
   const allAnswered = quiz.questions.every(q => selections[q.id]);
   const score = quiz.questions.reduce((sum, q) => {
@@ -802,7 +821,7 @@ function QuizPlayer({ quiz, flatLessons, onPickLesson, onBack }) {
 
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 24px' }}>
         <button
-          onClick={() => setSubmitted(true)}
+          onClick={() => { persistAttempt(selections); setSubmitted(true); }}
           disabled={!allAnswered}
           style={{
             padding: '14px 32px', borderRadius: 12, border: 'none',
@@ -989,8 +1008,11 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
 // inline by the public coach roster. That keeps coach bios + photos
 // editable in one place (Team admin) instead of duplicated into the
 // lesson HTML.
-function LessonDescription({ html }) {
+function LessonDescription({ html, lessonId, interactive }) {
   const TOKEN = '{{coaches}}';
+  if (interactive) {
+    return <InteractiveAssessmentDescription html={html} lessonId={lessonId} />;
+  }
   if (!html.includes(TOKEN)) {
     return (
       <div
@@ -1006,6 +1028,154 @@ function LessonDescription({ html }) {
       {before && <div dangerouslySetInnerHTML={{ __html: before }} />}
       <CoachesRoster />
       {after && <div dangerouslySetInnerHTML={{ __html: after }} />}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Interactive assessment description
+// ─────────────────────────────────────────────────────────────────────
+// For the 13 movement-based assessment lessons. The reference photos
+// embedded in the description become tappable inputs — the client
+// picks the photo that best matches their body in the position. The
+// selection POSTs to /api/content/lessons/:id/assessment-response and
+// is visible to the coach on ClientProfile (and to the client across
+// re-tests).
+//
+// We render the description HTML as-is, then walk the DOM after mount
+// to upgrade each <img> into a tap-to-select button. State stays in
+// React; clicks trigger an effect-driven re-render to update visuals.
+function InteractiveAssessmentDescription({ html, lessonId }) {
+  const { token } = useAuth();
+  const containerRef = useRef(null);
+  const [selectedIndex, setSelectedIndex] = useState(null); // 1-based
+  const [previousAttempts, setPreviousAttempts] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  // Load any previous selection so the client sees their last answer
+  // when they revisit the lesson. Most-recent first.
+  useEffect(() => {
+    if (!lessonId || !token) return;
+    fetch(`/api/content/lessons/${lessonId}/assessment-responses`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : { responses: [] })
+      .then(d => {
+        const responses = d.responses || [];
+        setPreviousAttempts(responses);
+        if (responses[0]) setSelectedIndex(responses[0].selected_photo_index);
+      })
+      .catch(() => { /* non-blocking */ });
+  }, [lessonId, token]);
+
+  // Walk the rendered DOM and turn each <img> into a tap target.
+  // Re-runs whenever the selectedIndex changes so the visual state
+  // (ring + checkmark) reflects the live selection.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const imgs = container.querySelectorAll('img');
+    const photoUrls = [];
+    imgs.forEach((img, i) => {
+      const idx = i + 1; // 1-based
+      photoUrls.push(img.getAttribute('src'));
+      img.style.cursor = 'pointer';
+      img.style.transition = 'all 0.15s ease';
+      const isSelected = selectedIndex === idx;
+      img.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-mint), 0 8px 24px rgba(0,0,0,0.4)' : 'none';
+      img.style.opacity = (selectedIndex && !isSelected) ? '0.55' : '1';
+      // Wrap in a labelled container so the photo number is visible.
+      // Avoid wrapping twice on re-runs by tagging the parent.
+      const parent = img.parentElement;
+      if (parent && !parent.dataset.tapWrapped) {
+        parent.dataset.tapWrapped = 'true';
+        parent.style.position = 'relative';
+        const badge = document.createElement('div');
+        badge.textContent = `Photo ${idx}`;
+        badge.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;letter-spacing:0.4px;pointer-events:none';
+        badge.dataset.photoBadge = String(idx);
+        parent.appendChild(badge);
+      }
+      img.onclick = () => save(idx, photoUrls[i]);
+    });
+  }, [selectedIndex, html]);
+
+  const save = async (idx, url) => {
+    if (saving) return;
+    setSelectedIndex(idx);
+    setSaving(true);
+    try {
+      await fetch(`/api/content/lessons/${lessonId}/assessment-response`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected_photo_index: idx, selected_photo_url: url }),
+      });
+      // Refresh history so the client can see the new attempt land
+      const r = await fetch(`/api/content/lessons/${lessonId}/assessment-responses`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setPreviousAttempts(d.responses || []);
+      }
+    } catch (e) { /* swallow — user can retry by tapping again */ }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      {/* Selection prompt — sticky-ish hint at the top so the client
+          knows the photos are tappable. */}
+      <div style={{
+        background: 'rgba(133,255,186,0.08)',
+        border: '1px solid rgba(133,255,186,0.30)',
+        borderRadius: 12, padding: '10px 14px', marginBottom: 14,
+        display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+          background: selectedIndex ? 'var(--accent-mint)' : 'rgba(133,255,186,0.25)',
+          color: selectedIndex ? '#000' : 'var(--accent-mint)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 14,
+        }}>{selectedIndex ? '✓' : '?'}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {selectedIndex
+              ? `Your answer: Photo ${selectedIndex}`
+              : 'Tap the photo that best matches your position'}
+          </p>
+          {previousAttempts.length > 1 && (
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+              {previousAttempts.length} attempts on file · last one saved
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div
+        ref={containerRef}
+        className="lesson-description"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      {previousAttempts.length > 0 && (
+        <div style={{
+          marginTop: 14, padding: '12px 14px',
+          background: 'var(--bg-card)', borderRadius: 10,
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            Your history
+          </p>
+          {previousAttempts.slice(0, 5).map(a => (
+            <p key={a.id} style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Photo {a.selected_photo_index}</strong>
+              {' · '}
+              {new Date(a.created_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

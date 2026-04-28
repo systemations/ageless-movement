@@ -13,7 +13,7 @@ import WorkoutBuilder from './WorkoutBuilder';
 //     always visible; `conversationId` + `clientName` = Chats tab renders
 //     the MessageThread inline in the center pane (FitBudd-style 3-column)
 
-const TABS = ['Overview', 'Check-ins', 'Chats', 'Habits', 'Workout', 'Nutrition', 'Levels', 'Gallery', 'Notes', 'Calendar', 'Settings'];
+const TABS = ['Overview', 'Check-ins', 'Chats', 'Habits', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
 
 export default function ClientProfile({
   clientId,
@@ -176,6 +176,7 @@ export default function ClientProfile({
             {activeTab === 'Workout' && <WorkoutTab data={data} />}
             {activeTab === 'Nutrition' && <NutritionTab data={data} />}
             {activeTab === 'Levels' && <LevelsTab clientId={clientId} />}
+            {activeTab === 'Assessments' && <AssessmentsTab clientId={clientId} />}
             {activeTab === 'Gallery' && <GalleryTab data={data} />}
             {activeTab === 'Notes' && <NotesTab clientId={clientId} notes={data.notes} onChange={refetch} />}
             {activeTab === 'Calendar' && <CalendarTab clientId={clientId} />}
@@ -196,6 +197,7 @@ export default function ClientProfile({
           {activeTab === 'Workout' && <WorkoutTab data={data} />}
           {activeTab === 'Nutrition' && <NutritionTab data={data} />}
           {activeTab === 'Levels' && <LevelsTab clientId={clientId} />}
+          {activeTab === 'Assessments' && <AssessmentsTab clientId={clientId} />}
           {activeTab === 'Gallery' && <GalleryTab data={data} />}
           {activeTab === 'Notes' && <NotesTab clientId={clientId} notes={data.notes} onChange={refetch} />}
           {activeTab === 'Calendar' && <CalendarTab clientId={clientId} />}
@@ -1792,6 +1794,127 @@ function LevelsTab({ clientId }) {
 }
 
 // ═══ Gallery ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────
+// Assessments tab — quiz attempts + movement assessment selections
+// ─────────────────────────────────────────────────────────────────────
+// Coach view of the client's assessment history:
+//   - Quiz attempts (Ground Zero / ReBuild / Prime) with score + pass
+//     status, ordered most recent first.
+//   - Movement assessment responses (tap-to-pick photo selections)
+//     grouped by lesson, showing the latest pick + history per lesson.
+function AssessmentsTab({ clientId }) {
+  const { token } = useAuth();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!clientId) return;
+    fetch(`/api/content/clients/${clientId}/assessment-history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(setData)
+      .catch(() => setError('Could not load assessment history.'));
+  }, [clientId, token]);
+
+  if (error) return <p style={{ padding: 24, color: 'var(--text-tertiary)' }}>{error}</p>;
+  if (!data) return <p style={{ padding: 24, color: 'var(--text-tertiary)' }}>Loading…</p>;
+
+  const quizzes = data.quiz_attempts || [];
+  const responses = data.assessment_responses || [];
+
+  // Group movement responses by lesson_id (newest first within group).
+  const byLesson = new Map();
+  for (const r of responses) {
+    if (!byLesson.has(r.lesson_id)) byLesson.set(r.lesson_id, []);
+    byLesson.get(r.lesson_id).push(r);
+  }
+
+  if (quizzes.length === 0 && responses.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+        <p style={{ fontSize: 14 }}>No assessment activity yet.</p>
+        <p style={{ fontSize: 12, marginTop: 6 }}>This client hasn't completed any quiz or movement assessment.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '4px 0 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Quiz attempts */}
+      <section>
+        <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+          Quiz attempts ({quizzes.length})
+        </h3>
+        {quizzes.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No quiz attempts yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {quizzes.map(q => (
+              <div key={q.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px' }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  background: q.passed ? 'rgba(133,255,186,0.18)' : 'rgba(255,140,0,0.18)',
+                  color: q.passed ? 'var(--accent-mint)' : 'var(--accent-orange)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: 14,
+                }}>{q.score_pct}%</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700 }}>{q.lesson_title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {q.passed ? 'Passed' : 'Did not pass'} · {new Date(q.created_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Movement assessment responses, grouped by lesson */}
+      <section>
+        <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+          Movement assessments ({byLesson.size} lessons · {responses.length} responses)
+        </h3>
+        {byLesson.size === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No movement responses yet.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            {[...byLesson.entries()].map(([lessonId, attempts]) => {
+              const latest = attempts[0];
+              return (
+                <div key={lessonId} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  {latest.selected_photo_url && (
+                    <img
+                      src={latest.selected_photo_url}
+                      alt={latest.lesson_title}
+                      style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover', display: 'block' }}
+                    />
+                  )}
+                  <div style={{ padding: '10px 12px' }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{latest.lesson_title}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                      Latest: <strong style={{ color: 'var(--text-primary)' }}>Photo {latest.selected_photo_index}</strong>
+                      {' · '}
+                      {new Date(latest.created_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}
+                    </p>
+                    {attempts.length > 1 && (
+                      <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                        {attempts.length} attempts:{' '}
+                        {attempts.slice(0, 6).map(a => a.selected_photo_index).join(' → ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 // Two modes: "All" shows every progress photo in a grid; "Compare" picks
 // the earliest and latest photo of each pose so the coach can see progress
 // at a glance. Compare mode is the FitBudd-style "Weekly Check-in Jul 15

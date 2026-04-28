@@ -586,7 +586,15 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
         try { quiz = JSON.parse(lesson.quiz_data); }
         catch (e) { /* malformed — treat as no quiz */ }
       }
-      return { ...lesson, resources: resources.rows, completed, quiz };
+      // Movement assessment lessons: any lesson living under STEP 2's
+      // Mobility Assessment sub-tree (parent_module_id = 22) with no
+      // video and at least one image in its description gets tap-to-
+      // pick interaction. Toe Balance/Dexterity have videos so are
+      // excluded; Thoracic / Pike / etc are the targets.
+      const inAssessmentTree = mod.parent_module_id === 22;
+      const hasImg = !!lesson.description && /<img\b/i.test(lesson.description);
+      const isMovementAssessment = inAssessmentTree && hasImg && !lesson.video_url;
+      return { ...lesson, resources: resources.rows, completed, quiz, is_movement_assessment: isMovementAssessment };
     });
 
     // Recurse into sub-modules so progress counts include their lessons.
@@ -660,6 +668,135 @@ router.post('/lessons/:id/uncomplete', authenticateToken, (req, res) => {
     res.json({ ok: true, completed: false });
   } catch (err) {
     console.error('Lesson uncomplete error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Quiz attempts (append-only)
+// ─────────────────────────────────────────────────────────────────────
+// Saves a single quiz submission. The renderer computes score + pass/
+// fail client-side, but we trust-but-verify by recomputing here from
+// the canonical quiz_data so a tampered request can't claim a pass.
+router.post('/lessons/:id/quiz-attempt', authenticateToken, (req, res) => {
+  try {
+    const lesson = pool.query('SELECT id, quiz_data FROM course_lessons WHERE id = ?', [req.params.id]).rows[0];
+    if (!lesson || !lesson.quiz_data) return res.status(404).json({ error: 'Quiz not found' });
+
+    let quiz;
+    try { quiz = JSON.parse(lesson.quiz_data); } catch { return res.status(500).json({ error: 'Bad quiz data' }); }
+
+    const selections = req.body?.selections || {};
+    if (typeof selections !== 'object' || Array.isArray(selections)) {
+      return res.status(400).json({ error: 'selections must be an object' });
+    }
+
+    // Server-side scoring — same rules as the renderer (sum of option
+    // scores / question count → percentage; any C is auto-fail).
+    let scoreSum = 0;
+    let hasC = false;
+    for (const q of quiz.questions || []) {
+      const sel = selections[q.id];
+      if (sel === 'C') hasC = true;
+      const opt = (q.options || []).find(o => o.label === sel);
+      scoreSum += opt?.score || 0;
+    }
+    const total = (quiz.questions || []).length || 1;
+    const scorePct = Math.round((scoreSum / total) * 100);
+    const passed = !hasC && scorePct >= (quiz.pass_pct || 66);
+
+    pool.query(
+      'INSERT INTO quiz_attempts (user_id, lesson_id, score_pct, passed, selections) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, req.params.id, scorePct, passed ? 1 : 0, JSON.stringify(selections)],
+    );
+    res.json({ ok: true, score_pct: scorePct, passed });
+  } catch (err) {
+    console.error('Quiz attempt save error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// History — own quiz attempts for a lesson (most recent first).
+router.get('/lessons/:id/quiz-attempts', authenticateToken, (req, res) => {
+  try {
+    const rows = pool.query(
+      `SELECT id, score_pct, passed, selections, created_at
+         FROM quiz_attempts
+        WHERE user_id = ? AND lesson_id = ?
+        ORDER BY created_at DESC`,
+      [req.user.id, req.params.id],
+    ).rows;
+    res.json({ attempts: rows.map(r => ({ ...r, passed: !!r.passed, selections: JSON.parse(r.selections || '{}') })) });
+  } catch (err) {
+    console.error('Quiz history error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Assessment responses (tap-to-pick, append-only)
+// ─────────────────────────────────────────────────────────────────────
+router.post('/lessons/:id/assessment-response', authenticateToken, (req, res) => {
+  try {
+    const { selected_photo_index, selected_photo_url, notes } = req.body || {};
+    if (!Number.isInteger(selected_photo_index) || selected_photo_index < 1) {
+      return res.status(400).json({ error: 'selected_photo_index must be a positive integer' });
+    }
+    pool.query(
+      'INSERT INTO assessment_responses (user_id, lesson_id, selected_photo_index, selected_photo_url, notes) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, req.params.id, selected_photo_index, selected_photo_url || null, notes || null],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Assessment save error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/lessons/:id/assessment-responses', authenticateToken, (req, res) => {
+  try {
+    const rows = pool.query(
+      `SELECT id, selected_photo_index, selected_photo_url, notes, created_at
+         FROM assessment_responses
+        WHERE user_id = ? AND lesson_id = ?
+        ORDER BY created_at DESC`,
+      [req.user.id, req.params.id],
+    ).rows;
+    res.json({ responses: rows });
+  } catch (err) {
+    console.error('Assessment history error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Coach view: every quiz attempt + assessment response for a client.
+// Used by ClientProfile → Assessments tab.
+router.get('/clients/:userId/assessment-history', authenticateToken, requireRole('coach'), (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const quizzes = pool.query(
+      `SELECT qa.id, qa.lesson_id, qa.score_pct, qa.passed, qa.created_at, cl.title AS lesson_title
+         FROM quiz_attempts qa
+         JOIN course_lessons cl ON cl.id = qa.lesson_id
+        WHERE qa.user_id = ?
+        ORDER BY qa.created_at DESC`,
+      [userId],
+    ).rows;
+    const assessments = pool.query(
+      `SELECT ar.id, ar.lesson_id, ar.selected_photo_index, ar.selected_photo_url,
+              ar.notes, ar.created_at, cl.title AS lesson_title
+         FROM assessment_responses ar
+         JOIN course_lessons cl ON cl.id = ar.lesson_id
+        WHERE ar.user_id = ?
+        ORDER BY ar.created_at DESC`,
+      [userId],
+    ).rows;
+    res.json({
+      quiz_attempts: quizzes.map(q => ({ ...q, passed: !!q.passed })),
+      assessment_responses: assessments,
+    });
+  } catch (err) {
+    console.error('Coach assessment history error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

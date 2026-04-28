@@ -690,6 +690,34 @@ const alterStatements = [
   // + video. Routing on submit (next quiz / program recommendation)
   // is encoded inside the result config.
   "ALTER TABLE course_lessons ADD COLUMN quiz_data TEXT",
+  // Quiz attempts: every quiz submission lands here. Coach sees the
+  // history per client on ClientProfile; client sees their own past
+  // attempts on the lesson. Append-only (no UPDATEs/DELETEs) so a
+  // retake in 4 weeks creates a new row and the trend is preserved.
+  `CREATE TABLE IF NOT EXISTS quiz_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id INTEGER NOT NULL REFERENCES course_lessons(id) ON DELETE CASCADE,
+    score_pct INTEGER NOT NULL,
+    passed INTEGER NOT NULL,
+    selections TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user ON quiz_attempts(user_id, lesson_id, created_at DESC)",
+  // Assessment responses: tap-to-pick photo selection on the 13
+  // movement lessons. Same append-only model as quiz_attempts.
+  // selected_photo_url is denormalised so the answer stays meaningful
+  // even if the photo path changes later.
+  `CREATE TABLE IF NOT EXISTS assessment_responses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id INTEGER NOT NULL REFERENCES course_lessons(id) ON DELETE CASCADE,
+    selected_photo_index INTEGER NOT NULL,
+    selected_photo_url TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_assessment_responses_user ON assessment_responses(user_id, lesson_id, created_at DESC)",
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",

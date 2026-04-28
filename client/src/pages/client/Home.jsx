@@ -1302,6 +1302,11 @@ export default function Home() {
           )}
         </div>
       </div>
+      </>}
+      {/* end of {!hasEnhancedToday} block. Nutrition cards + meal plan
+          below always render — they were previously buried inside the
+          enhanced-today gate which hid them for any client auto-enrolled
+          in a program (i.e. every new signup). */}
 
       {/* Nutrition setup prompt — empty-state CTA shown when the client
           hasn't filled in the BMR inputs yet. Once they tap through and
@@ -1358,7 +1363,6 @@ export default function Home() {
           </div>
         </>
       )}
-      </>}
 
       {/* Activity Section */}
       <div className="section-header">

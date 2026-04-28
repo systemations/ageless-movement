@@ -568,6 +568,42 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
     [req.params.id],
   ).rows;
 
+  // Build the quiz prerequisite chain by inverting pass_next_quiz_lesson_id.
+  // Quiz lesson A points at B as the next quiz on pass; that means B's
+  // prerequisite is A. Walking every quiz lesson in this course once
+  // gives us a { [lesson_id]: prereq_lesson_id } map plus the prereq's
+  // title for friendly client copy. Then we fetch the user's passing
+  // attempts in one query so the per-lesson lock check is a Set lookup.
+  const moduleIds = allModules.map(m => m.id);
+  const allLessonsRaw = moduleIds.length
+    ? pool.query(
+        `SELECT id, title, module_id, quiz_data FROM course_lessons
+         WHERE module_id IN (${moduleIds.map(() => '?').join(',')})`,
+        moduleIds,
+      ).rows
+    : [];
+  const quizPrereqOf = {};       // { lesson_id: { lesson_id, title } }
+  const quizLessonIds = [];
+  for (const l of allLessonsRaw) {
+    if (!l.quiz_data) continue;
+    quizLessonIds.push(l.id);
+    let q;
+    try { q = JSON.parse(l.quiz_data); } catch { continue; }
+    if (q?.pass_next_quiz_lesson_id) {
+      quizPrereqOf[q.pass_next_quiz_lesson_id] = { id: l.id, title: l.title };
+    }
+  }
+  const passedQuizLessonIds = quizLessonIds.length
+    ? new Set(
+        pool.query(
+          `SELECT DISTINCT lesson_id FROM quiz_attempts
+           WHERE user_id = ? AND passed = 1
+             AND lesson_id IN (${quizLessonIds.map(() => '?').join(',')})`,
+          [req.user.id, ...quizLessonIds],
+        ).rows.map(r => r.lesson_id),
+      )
+    : new Set();
+
   let totalLessons = 0;
   let totalCompleted = 0;
 
@@ -594,7 +630,18 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
       const inAssessmentTree = mod.parent_module_id === 22;
       const hasImg = !!lesson.description && /<img\b/i.test(lesson.description);
       const isMovementAssessment = inAssessmentTree && hasImg && !lesson.video_url;
-      return { ...lesson, resources: resources.rows, completed, quiz, is_movement_assessment: isMovementAssessment };
+      // Quiz prerequisite lock. Quiz B's prereq is whichever quiz A
+      // points at B via pass_next_quiz_lesson_id. Locked = there is a
+      // prereq AND the user has not passed it yet. The first quiz in a
+      // chain has no prereq and is always accessible.
+      const prereq = quiz ? quizPrereqOf[lesson.id] : null;
+      const quizLocked = !!prereq && !passedQuizLessonIds.has(prereq.id);
+      return {
+        ...lesson, resources: resources.rows, completed, quiz,
+        is_movement_assessment: isMovementAssessment,
+        quiz_prerequisite: prereq || null,
+        quiz_locked: quizLocked,
+      };
     });
 
     // Recurse into sub-modules so progress counts include their lessons.
@@ -685,6 +732,31 @@ router.post('/lessons/:id/quiz-attempt', authenticateToken, (req, res) => {
 
     let quiz;
     try { quiz = JSON.parse(lesson.quiz_data); } catch { return res.status(500).json({ error: 'Bad quiz data' }); }
+
+    // Prerequisite gate. The quiz chain is encoded by each quiz's
+    // pass_next_quiz_lesson_id. Find any quiz lesson that points at
+    // this one as the next step; that's the prerequisite. If found
+    // and the user has no passing attempt for it, reject so a tampered
+    // client can't skip ahead by POSTing directly.
+    const prereq = pool.query(
+      `SELECT id, title FROM course_lessons
+       WHERE quiz_data IS NOT NULL
+         AND json_extract(quiz_data, '$.pass_next_quiz_lesson_id') = ?
+       LIMIT 1`,
+      [lesson.id],
+    ).rows[0];
+    if (prereq) {
+      const passed = pool.query(
+        'SELECT 1 FROM quiz_attempts WHERE user_id = ? AND lesson_id = ? AND passed = 1 LIMIT 1',
+        [req.user.id, prereq.id],
+      ).rows[0];
+      if (!passed) {
+        return res.status(403).json({
+          error: 'Prerequisite quiz not passed',
+          prerequisite: { id: prereq.id, title: prereq.title },
+        });
+      }
+    }
 
     const selections = req.body?.selections || {};
     if (typeof selections !== 'object' || Array.isArray(selections)) {

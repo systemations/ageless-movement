@@ -354,6 +354,7 @@ function ModuleRow({ mod, depth, number, expandedModules, toggleModule, onPickLe
 }
 
 function LessonRow({ lesson, isLast, onPick, onToggle, toggling }) {
+  const locked = lesson.quiz_locked;
   return (
     <div
       onClick={onPick}
@@ -361,33 +362,52 @@ function LessonRow({ lesson, isLast, onPick, onToggle, toggling }) {
         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
         borderBottom: isLast ? 'none' : '1px solid var(--divider)',
         cursor: 'pointer',
+        opacity: locked ? 0.65 : 1,
       }}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        disabled={toggling === lesson.id}
-        title={lesson.completed ? 'Mark incomplete' : 'Mark complete'}
-        style={{
+      {locked ? (
+        <div style={{
           width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-          background: lesson.completed ? 'var(--accent-mint)' : 'rgba(255,255,255,0.06)',
-          border: lesson.completed ? 'none' : '1px solid var(--divider)',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid var(--divider)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', opacity: toggling === lesson.id ? 0.5 : 1, padding: 0,
-        }}
-      >
-        {lesson.completed ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-        ) : lesson.video_url ? (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent-mint)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        ) : null}
-      </button>
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+      ) : (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          disabled={toggling === lesson.id}
+          title={lesson.completed ? 'Mark incomplete' : 'Mark complete'}
+          style={{
+            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+            background: lesson.completed ? 'var(--accent-mint)' : 'rgba(255,255,255,0.06)',
+            border: lesson.completed ? 'none' : '1px solid var(--divider)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', opacity: toggling === lesson.id ? 0.5 : 1, padding: 0,
+          }}
+        >
+          {lesson.completed ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+          ) : lesson.video_url ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent-mint)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          ) : null}
+        </button>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           fontSize: 13, fontWeight: 500,
           textDecoration: lesson.completed ? 'line-through' : 'none',
-          color: lesson.completed ? 'var(--text-secondary)' : 'var(--text-primary)',
+          color: locked ? 'var(--text-tertiary)' : (lesson.completed ? 'var(--text-secondary)' : 'var(--text-primary)'),
         }}>{lesson.title}</p>
-        {lesson.resources?.length > 0 && (
+        {locked && lesson.quiz_prerequisite?.title && (
+          <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+            Pass {lesson.quiz_prerequisite.title} first
+          </p>
+        )}
+        {!locked && lesson.resources?.length > 0 && (
           <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
             {lesson.resources.length} attachment{lesson.resources.length === 1 ? '' : 's'}
           </p>
@@ -416,6 +436,10 @@ function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
       }}>{mod.title}</p>
       {lessons.map(l => {
         const active = l.id === activeLessonId;
+        // Locked quiz lessons stay clickable so the user can land on
+        // the gate (which explains the prereq) instead of silently
+        // doing nothing — the body view shows the lock state.
+        const locked = l.quiz_locked;
         return (
           <button
             key={l.id}
@@ -424,12 +448,20 @@ function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
               width: '100%', textAlign: 'left',
               padding: '8px 10px', borderRadius: 8, border: 'none',
               background: active ? 'rgba(255,140,0,0.14)' : 'transparent',
-              color: active ? 'var(--accent)' : 'var(--text-primary)',
+              color: active ? 'var(--accent)' : (locked ? 'var(--text-tertiary)' : 'var(--text-primary)'),
               fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 8,
+              opacity: locked && !active ? 0.65 : 1,
             }}
           >
-            {l.completed ? (
+            {locked ? (
+              <span style={{ width: 16, height: 16, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </span>
+            ) : l.completed ? (
               <span style={{
                 width: 16, height: 16, borderRadius: '50%', background: 'var(--accent-mint)',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -551,7 +583,13 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
           {/* Quiz lesson: replaces the standard video + description
               layout entirely. The renderer handles its own state,
               scoring, and pass/fail routing. */}
-          {lesson.quiz ? (
+          {lesson.quiz && lesson.quiz_locked ? (
+            <QuizLockGate
+              prerequisite={lesson.quiz_prerequisite}
+              onPickLesson={onPickLesson}
+              onBack={onBack}
+            />
+          ) : lesson.quiz ? (
             <QuizPlayer
               quiz={lesson.quiz}
               flatLessons={flatLessons}
@@ -686,6 +724,64 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Quiz lock gate — replaces the QuizPlayer when a prerequisite quiz
+// has not been passed yet. Stops users from starting (or even seeing)
+// the next quiz in the chain, e.g. ReBuild before Ground Zero.
+// ─────────────────────────────────────────────────────────────────────
+function QuizLockGate({ prerequisite, onPickLesson, onBack }) {
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 4px' }}>
+      <button
+        onClick={onBack}
+        style={{
+          background: 'none', border: 'none', color: 'var(--text-tertiary)',
+          fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0,
+          marginBottom: 18, display: 'inline-flex', alignItems: 'center', gap: 6,
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Back
+      </button>
+
+      <div style={{
+        background: 'var(--bg-card)', borderRadius: 16, padding: '32px 24px',
+        textAlign: 'center', border: '1px solid var(--divider)',
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%',
+          background: 'rgba(255,140,0,0.12)',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 16,
+        }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Quiz Locked</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 22 }}>
+          {prerequisite?.title
+            ? <>Pass <strong style={{ color: 'var(--text-primary)' }}>{prerequisite.title}</strong> first to unlock this assessment.</>
+            : <>Complete the previous quiz first to unlock this assessment.</>}
+        </p>
+        {prerequisite?.id && (
+          <button
+            onClick={() => onPickLesson(prerequisite.id)}
+            style={{
+              background: 'var(--accent)', color: '#fff', border: 'none',
+              borderRadius: 12, padding: '12px 22px', fontSize: 15, fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >Take {prerequisite.title} →</button>
+        )}
       </div>
     </div>
   );

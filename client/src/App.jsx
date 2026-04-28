@@ -64,6 +64,7 @@ import Progress from './pages/client/Progress';
 import Challenges from './pages/client/Challenges';
 import BenchmarkDetail from './pages/client/BenchmarkDetail';
 import OnboardingQuestionnaire from './pages/client/OnboardingQuestionnaire';
+import PackageSelection from './pages/client/PackageSelection';
 import PlansPage from './pages/client/PlansPage';
 import NutritionHub from './pages/client/NutritionHub';
 import Profile from './pages/client/Profile';
@@ -113,6 +114,7 @@ function ClientStatusBanner() {
 
 function ProtectedRoute({ children }) {
   const { user, profile, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="loading-screen">
@@ -126,7 +128,14 @@ function ProtectedRoute({ children }) {
   // finalised gets bounced to /onboarding regardless of which URL they
   // typed. The questionnaire's finalize endpoint flips this flag and
   // refreshProfile() lets them through. Coaches don't onboard.
-  if (user.role === 'client' && profile && !profile.onboarding_complete) {
+  // /onboarding/* sub-routes (Packages step) are exempt — they're part
+  // of the same flow, redirecting them would be a loop.
+  if (
+    user.role === 'client'
+    && profile
+    && !profile.onboarding_complete
+    && !location.pathname.startsWith('/onboarding')
+  ) {
     return <Navigate to="/onboarding" replace />;
   }
   return (
@@ -235,6 +244,7 @@ function AppRoutes() {
             now points at /register first. Coaches and clients who've
             already completed onboarding bounce back to /home. */}
         <Route path="/onboarding" element={<OnboardingGate />} />
+        <Route path="/onboarding/packages" element={<ProtectedRoute><PackageSelection /></ProtectedRoute>} />
         <Route path="/plans" element={<ProtectedRoute><PlansPage /></ProtectedRoute>} />
 
         {/* Client Routes */}

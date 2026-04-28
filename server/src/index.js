@@ -22,9 +22,11 @@ import benchmarkRoutes from './routes/benchmarks.js';
 import onboardingRoutes from './routes/onboarding.js';
 import painRoutes from './routes/pain.js';
 import goalsRoutes from './routes/goals.js';
+import paymentPlansRoutes from './routes/payment-plans.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
+import { seedPaymentPlans } from './db/seed-payment-plans.js';
 
 dotenv.config();
 
@@ -98,6 +100,7 @@ app.use('/api/benchmarks', benchmarkRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/pain', painRoutes);
 app.use('/api/goals', goalsRoutes);
+app.use('/api/plans', paymentPlansRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -123,4 +126,5 @@ app.listen(PORT, () => {
   // rows are still empty, so this is safe to run on every start (local
   // dev + Render prod). Adds new content without touching coach edits.
   seedAssessmentLessons();
+  seedPaymentPlans();
 });

@@ -169,7 +169,7 @@ function persist(answers) {
 
 export default function OnboardingQuestionnaire() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token, refreshProfile } = useAuth();
   const isLoggedIn = !!user;
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState(loadSaved);
@@ -207,9 +207,28 @@ export default function OnboardingQuestionnaire() {
     });
   };
 
-  const next = () => {
-    if (isLast) setShowSuggestion(true);
-    else setStep(s => s + 1);
+  const next = async () => {
+    if (!isLast) { setStep(s => s + 1); return; }
+    // Final question answered. Logged-in users go to the Packages step
+    // which stamps tier_requested + runs the purchase chain on Free.
+    // Logged-out users hit the legacy SuggestionScreen which routes
+    // them to /register first (no account = no plan to attach to).
+    if (!isLoggedIn) { setShowSuggestion(true); return; }
+    try {
+      // Persist answers server-side before routing to /packages so the
+      // coach's priority inbox sees them even if the client closes the
+      // app on the Packages screen. Finalize flips onboarding_complete=1
+      // so the routing gate stops bouncing the user back here after
+      // they've picked a plan.
+      await fetch('/api/onboarding/finalize', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      });
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      await refreshProfile();
+    } catch (e) { /* fall through — Packages still works without the persist */ }
+    navigate('/onboarding/packages');
   };
 
   const back = () => {

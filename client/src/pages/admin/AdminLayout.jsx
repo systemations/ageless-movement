@@ -16,6 +16,7 @@ import MealPlanManager from './MealPlanManager';
 import MealScheduleManager from './MealScheduleManager';
 import CoachingManager from './CoachingManager';
 import NotificationManager from './NotificationManager';
+import PaymentPlansManager from './PaymentPlansManager';
 
 const navItems = [
   { id: 'home', label: 'Home', icon: '🏠' },
@@ -41,6 +42,7 @@ const navItems = [
   { id: 'explore', label: 'Explore', icon: '🔍' },
   { id: 'challenges-old', label: 'Social Challenges', icon: '🎯' },
   { id: 'challenges', label: 'Levels & Leaderboards', icon: '🏆' },
+  { id: 'packages', label: 'Packages', icon: '💳' },
 ];
 
 export default function AdminLayout() {
@@ -83,6 +85,7 @@ export default function AdminLayout() {
       case 'team': return <CoachingManager variant="team" />;
       case 'coaching': return <CoachingManager variant="events" />;
       case 'notifications': return <NotificationManager />;
+      case 'packages': return <PaymentPlansManager />;
       default: return (
         <div style={{ padding: 40, textAlign: 'center' }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{navItems.find(n => n.id === activePage)?.label}</h2>

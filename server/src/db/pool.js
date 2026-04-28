@@ -928,6 +928,79 @@ const alterStatements = [
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(user_id, workout_id)
   )`,
+
+  // Payment plans — the master record for everything purchasable.
+  // platform restricts where the plan is shown (so the same product can have
+  // a Stripe-priced 'web'/'android' version and an IAP-marked-up 'ios' twin).
+  // hidden=1 means the plan is excluded from public listing but a direct
+  // /checkout/:slug link still works (used for high-ticket close-from-chat).
+  // tier_id is the tier granted on successful purchase. stripe_price_id /
+  // apple_iap_product_id stay NULL until the corresponding payment infra is
+  // wired; the manual 'Mark as paid' admin path works without them.
+  `CREATE TABLE IF NOT EXISTS payment_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    platform TEXT NOT NULL DEFAULT 'all'
+      CHECK (platform IN ('all','web','android','ios')),
+    hidden INTEGER NOT NULL DEFAULT 0,
+    billing_type TEXT NOT NULL DEFAULT 'one_time'
+      CHECK (billing_type IN ('one_time','weekly','monthly','quarterly','yearly')),
+    price_cents INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    free_trial_days INTEGER NOT NULL DEFAULT 0,
+    tier_id INTEGER REFERENCES tiers(id),
+    stripe_price_id TEXT,
+    apple_iap_product_id TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_payment_plans_listing ON payment_plans(active, hidden, platform, sort_order)",
+
+  // Plan automations — ordered chain of side-effects fired by processPurchase()
+  // when a plan is purchased. action_type is the dispatch key; action_config is
+  // a JSON blob whose shape depends on the type:
+  //   enroll_program  { program_id }
+  //   send_message    { from_user_id, body }
+  //   add_to_group    { conversation_id }
+  //   set_tier        { tier_id }    -- usually redundant w/ plans.tier_id, here for explicit chains
+  //   notify_coach    { title, body }
+  //   schedule_checkin { days_from_now }
+  `CREATE TABLE IF NOT EXISTS payment_plan_automations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES payment_plans(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL
+      CHECK (action_type IN ('enroll_program','send_message','add_to_group','set_tier','notify_coach','schedule_checkin')),
+    action_config TEXT NOT NULL DEFAULT '{}',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_plan_automations_plan ON payment_plan_automations(plan_id, sort_order)",
+
+  // Audit trail of every purchase (manual, Stripe, or IAP). automations_ran is
+  // a JSON array of {action_type, ok, error?, ran_at} objects so we can debug
+  // partial failures. external_id is the Stripe payment_intent id, Apple
+  // transaction id, or NULL for manual admin marks.
+  `CREATE TABLE IF NOT EXISTS user_purchases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id INTEGER NOT NULL REFERENCES payment_plans(id),
+    source TEXT NOT NULL
+      CHECK (source IN ('stripe','apple_iap','google_play','manual_admin','free_signup')),
+    external_id TEXT,
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    purchased_at TEXT NOT NULL DEFAULT (datetime('now')),
+    marked_by INTEGER REFERENCES users(id),
+    automations_ran TEXT NOT NULL DEFAULT '[]'
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_user_purchases_user ON user_purchases(user_id, purchased_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_user_purchases_plan ON user_purchases(plan_id, purchased_at DESC)",
 ];
 
 // Onboarding answers — persists the questionnaire that used to live only in

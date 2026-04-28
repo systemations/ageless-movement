@@ -40,6 +40,9 @@ export default function Home() {
   const location = useLocation();
   const { favourites } = useFavourites() || { favourites: [] };
   const [dashboard, setDashboard] = useState(homeCache.dashboard);
+  // Onboarding checklist status — controls whether Today's Tasks hides.
+  // Today's Tasks only appears once the 5 first-action tasks are done.
+  const [onboardingDone, setOnboardingDone] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
@@ -71,7 +74,21 @@ export default function Home() {
     fetchWeekSchedule();
     fetchAthleteFeatures();
     fetchNotifications();
+    fetchOnboardingStatus();
   }, []);
+
+  // Lightweight poll of the onboarding checklist so Today's Tasks
+  // appears the moment the client finishes their 5 first-actions.
+  const fetchOnboardingStatus = async () => {
+    try {
+      const r = await fetch('/api/onboarding/checklist', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) return;
+      const j = await r.json();
+      setOnboardingDone(!!j.all_done);
+    } catch (e) { /* swallow */ }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -485,7 +502,11 @@ export default function Home() {
           are complete so it doesn't crowd Home for established users. */}
       <OnboardingChecklistCard token={token} />
 
-      {/* Daily Tasks - collapsible dropdown */}
+      {/* Daily Tasks - hidden until the onboarding checklist is fully
+          complete. Two competing checklists at the top of Home would
+          split focus during the new-client first-actions phase. Once
+          onboardingDone flips true, this becomes the primary card. */}
+      {onboardingDone && (
       <div className="card" style={{ marginBottom: 12, padding: 0 }}>
         {/* Clickable header */}
         <div
@@ -625,6 +646,7 @@ export default function Home() {
           </div>
         )}
       </div>
+      )}
 
       {/* Enhanced Today -- phase banner, sessions, meals, supplements */}
       {athleteFeatures && (

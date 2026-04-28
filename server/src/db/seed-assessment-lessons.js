@@ -10,6 +10,11 @@
 // description and skips the lesson.
 
 import pool from './pool.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Helper: build a centred image tag. The 480px max keeps photos sized
 // reasonably even on desktop where the lesson body is wider; on mobile
@@ -173,6 +178,35 @@ export function seedAssessmentLessons() {
   if (wrapUp) {
     pool.query('DELETE FROM course_lessons WHERE id = 28');
     console.log('[assessment-seed] removed legacy lesson 28 (What do I do Now?)');
+  }
+
+  // Quiz JSON for the 3 STEP 3 lessons. Idempotent: only writes when
+  // quiz_data is currently NULL so a coach editing the quiz via SQL
+  // later won't be clobbered. Files live alongside this script so the
+  // seed can be diffed in version control.
+  const QUIZZES = [
+    { id: 29, title: 'AMS | Ground Zero™', file: 'seed-quiz-data/ground-zero.json' },
+    { id: 30, title: 'AMS | Re-Build™',    file: 'seed-quiz-data/rebuild.json' },
+    { id: 31, title: 'AMS | Prime™',       file: 'seed-quiz-data/prime.json' },
+  ];
+  const quizUpdated = [];
+  for (const q of QUIZZES) {
+    const row = pool.query('SELECT id, title, quiz_data FROM course_lessons WHERE id = ?', [q.id]).rows[0];
+    if (!row) continue;
+    if (row.title !== q.title) continue;
+    if (row.quiz_data && row.quiz_data.length > 100) continue; // already populated
+    try {
+      const json = fs.readFileSync(path.join(__dirname, q.file), 'utf8').trim();
+      if (!json) continue;
+      JSON.parse(json); // bail if malformed
+      pool.query('UPDATE course_lessons SET quiz_data = ? WHERE id = ?', [json, q.id]);
+      quizUpdated.push(q.id);
+    } catch (err) {
+      console.error('[assessment-seed] failed to seed quiz for lesson', q.id, err.message);
+    }
+  }
+  if (quizUpdated.length) {
+    console.log(`[assessment-seed] seeded quiz_data for lessons: ${quizUpdated.join(', ')}`);
   }
 
   // Re-sync the denormalised modules + lessons counts on course id 5.

@@ -743,6 +743,15 @@ const alterStatements = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
   "CREATE INDEX IF NOT EXISTS idx_pain_entries_issue ON pain_entries(issue_id, created_at DESC)",
+  // Goals: hybrid model. metric_type='manual' stores progress directly
+  // (user updates via a slider). metric_type='workouts_per_week' is
+  // computed live from workout_logs.completed in the last 7 days vs
+  // target_value. Existing goals table already has user_id/title/
+  // target/progress/achieved/achieved_date — we just add the two new
+  // columns to flag goal type + numeric target.
+  "ALTER TABLE goals ADD COLUMN metric_type TEXT DEFAULT 'manual'",
+  "ALTER TABLE goals ADD COLUMN target_value REAL",
+  "CREATE INDEX IF NOT EXISTS idx_goals_user_achieved ON goals(user_id, achieved, created_at DESC)",
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",

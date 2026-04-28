@@ -7,20 +7,6 @@ import ExerciseProgress from '../../components/ExerciseProgress';
 
 const tabs = ['Progress', 'Trends'];
 
-const activeGoals = [
-  { id: 1, title: 'Pain-free squat', target: 'Full depth bodyweight squat with no discomfort', progress: 65, category: 'Mobility' },
-  { id: 2, title: 'Touch toes', target: 'Standing forward fold, palms flat on floor', progress: 40, category: 'Flexibility' },
-  { id: 3, title: 'Train 5x per week', target: 'Consistent 5 sessions per week for 4 weeks', progress: 75, category: 'Consistency' },
-  { id: 4, title: 'Reach 90kg', target: 'Body weight goal of 90kg', progress: 50, category: 'Body Comp' },
-];
-
-const achievedGoals = [
-  { id: 10, title: 'Complete Ground Zero Phase 1', achievedDate: '15 Feb 2026', category: 'Program' },
-  { id: 11, title: '7-day training streak', achievedDate: '02 Mar 2026', category: 'Consistency' },
-  { id: 12, title: 'First check-in submitted', achievedDate: '20 Jan 2026', category: 'Milestone' },
-  { id: 13, title: 'Log meals for 7 days straight', achievedDate: '28 Feb 2026', category: 'Nutrition' },
-];
-
 const categoryColors = {
   Mobility: '#3DFFD2',
   Flexibility: '#64D2FF',
@@ -41,12 +27,26 @@ export default function Progress() {
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showExerciseProgress, setShowExerciseProgress] = useState(null); // exercise_id
   const [exerciseList, setExerciseList] = useState([]);
-  const [newGoal, setNewGoal] = useState({ title: '', target: '', category: 'General' });
-  const [goals, setGoals] = useState(activeGoals);
+  const [newGoal, setNewGoal] = useState({
+    title: '', target: '', category: 'General',
+    metric_type: 'manual', target_value: '',
+  });
+  const [goals, setGoals] = useState([]);
+  const [achievedGoals, setAchievedGoals] = useState([]);
+  const [expandedGoalId, setExpandedGoalId] = useState(null);
+
+  const fetchGoals = () => {
+    fetch('/api/goals', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { active: [], achieved: [] })
+      .then(d => { setGoals(d.active || []); setAchievedGoals(d.achieved || []); })
+      .catch(() => {});
+  };
   const [myCheckins, setMyCheckins] = useState([]);
   const [compareMode, setCompareMode] = useState(false);
   const [compareSelection, setCompareSelection] = useState([]); // [checkinId, checkinId]
   const [compareView, setCompareView] = useState(null); // { left, right }
+
+  useEffect(() => { fetchGoals(); }, [token]);
 
   useEffect(() => {
     fetch('/api/explore/progress/exercises', {
@@ -91,11 +91,54 @@ export default function Progress() {
     setCompareView({ left: sorted[0], right: sorted[sorted.length - 1] });
   };
 
-  const handleAddGoal = () => {
+  const handleAddGoal = async () => {
     if (!newGoal.title.trim()) return;
-    setGoals([...goals, { id: Date.now(), ...newGoal, progress: 0 }]);
-    setNewGoal({ title: '', target: '', category: 'General' });
-    setShowAddGoal(false);
+    if (newGoal.metric_type !== 'manual' && !newGoal.target_value) return;
+    try {
+      await fetch('/api/goals', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newGoal.title,
+          target: newGoal.target,
+          category: newGoal.category,
+          metric_type: newGoal.metric_type,
+          target_value: newGoal.metric_type === 'manual' ? null : parseFloat(newGoal.target_value),
+        }),
+      });
+      setNewGoal({ title: '', target: '', category: 'General', metric_type: 'manual', target_value: '' });
+      setShowAddGoal(false);
+      fetchGoals();
+    } catch (err) { /* swallow */ }
+  };
+
+  const updateGoalProgress = async (goalId, pct) => {
+    try {
+      await fetch(`/api/goals/${goalId}/progress`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progress: pct }),
+      });
+      // Optimistic local update so the slider feels instant
+      setGoals(gs => gs.map(g => g.id === goalId ? { ...g, progress: pct } : g));
+    } catch (err) { /* swallow */ }
+  };
+
+  const achieveGoal = async (goalId) => {
+    await fetch(`/api/goals/${goalId}/achieve`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    setExpandedGoalId(null);
+    fetchGoals();
+  };
+
+  const deleteGoal = async (goalId) => {
+    if (!confirm('Delete this goal? This can\'t be undone.')) return;
+    await fetch(`/api/goals/${goalId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    setExpandedGoalId(null);
+    fetchGoals();
   };
 
   if (showCheckin) return <CheckinForm onClose={() => setShowCheckin(false)} onSuccess={() => setShowCheckin(false)} />;
@@ -119,46 +162,117 @@ export default function Progress() {
           </div>
 
           {/* Active Goals */}
-          {goals.map((goal) => (
-            <div key={goal.id} className="card" style={{ marginBottom: 8, cursor: 'pointer' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                {/* Progress Ring */}
-                <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
-                  <svg width="48" height="48" viewBox="0 0 48 48">
-                    <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
-                    <circle
-                      cx="24" cy="24" r="19" fill="none"
-                      stroke={categoryColors[goal.category] || 'var(--accent-mint)'}
-                      strokeWidth="4"
-                      strokeDasharray={`${2 * Math.PI * 19}`}
-                      strokeDashoffset={`${2 * Math.PI * 19 * (1 - goal.progress / 100)}`}
-                      strokeLinecap="round" transform="rotate(-90 24 24)"
-                    />
-                  </svg>
-                  <span style={{
-                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
-                  }}>
-                    {goal.progress}%
-                  </span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                    <h4 style={{ fontSize: 15, fontWeight: 700 }}>{goal.title}</h4>
+          {goals.length === 0 && (
+            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', padding: '12px 0' }}>
+              No goals yet. Tap "+ Add Goal" to set one.
+            </p>
+          )}
+          {goals.map((goal) => {
+            const expanded = expandedGoalId === goal.id;
+            const color = categoryColors[goal.category] || 'var(--accent-mint)';
+            return (
+              <div
+                key={goal.id}
+                className="card"
+                style={{ marginBottom: 8, cursor: 'pointer' }}
+                onClick={() => setExpandedGoalId(expanded ? null : goal.id)}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  {/* Progress Ring */}
+                  <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
+                    <svg width="48" height="48" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                      <circle
+                        cx="24" cy="24" r="19" fill="none"
+                        stroke={color}
+                        strokeWidth="4"
+                        strokeDasharray={`${2 * Math.PI * 19}`}
+                        strokeDashoffset={`${2 * Math.PI * 19 * (1 - goal.progress / 100)}`}
+                        strokeLinecap="round" transform="rotate(-90 24 24)"
+                      />
+                    </svg>
+                    <span style={{
+                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700,
+                    }}>
+                      {goal.progress}%
+                    </span>
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, lineHeight: 1.4 }}>{goal.target}</p>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
-                    background: `${categoryColors[goal.category] || 'var(--accent-mint)'}20`,
-                    color: categoryColors[goal.category] || 'var(--accent-mint)',
-                    textTransform: 'uppercase', letterSpacing: 0.5,
-                  }}>
-                    {goal.category}
-                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <h4 style={{ fontSize: 15, fontWeight: 700 }}>{goal.title}</h4>
+                    </div>
+                    {goal.target && (
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, lineHeight: 1.4 }}>{goal.target}</p>
+                    )}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                        background: `${color}20`, color,
+                        textTransform: 'uppercase', letterSpacing: 0.5,
+                      }}>
+                        {goal.category}
+                      </span>
+                      {goal.is_auto && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                          background: 'rgba(133,255,186,0.18)', color: 'var(--accent-mint)',
+                          textTransform: 'uppercase', letterSpacing: 0.5,
+                        }}>
+                          Auto · {goal.target_value}/wk
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Expanded controls */}
+                {expanded && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--divider)' }} onClick={e => e.stopPropagation()}>
+                    {goal.is_auto ? (
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                        Tracked automatically from completed workouts in the last 7 days.
+                      </p>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+                          Update progress
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                          <input
+                            type="range" min="0" max="100" value={goal.progress}
+                            onChange={e => updateGoalProgress(goal.id, parseInt(e.target.value, 10))}
+                            style={{ flex: 1, height: 4, accentColor: color }}
+                          />
+                          <span style={{ fontSize: 14, fontWeight: 800, color, minWidth: 42, textAlign: 'right' }}>
+                            {goal.progress}%
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => achieveGoal(goal.id)}
+                        style={{
+                          flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+                          background: 'var(--accent-mint)', color: '#000',
+                          fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >✓ Mark achieved</button>
+                      <button
+                        onClick={() => deleteGoal(goal.id)}
+                        style={{
+                          padding: '10px 14px', borderRadius: 8,
+                          border: '1px solid var(--divider)', background: 'transparent',
+                          color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >Delete</button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Achieved Goals */}
           <button
@@ -195,7 +309,9 @@ export default function Progress() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 600, textDecoration: 'line-through', color: 'var(--text-secondary)' }}>{goal.title}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Achieved {goal.achievedDate}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      Achieved {goal.achieved_date ? new Date(goal.achieved_date + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                    </p>
                   </div>
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
@@ -460,8 +576,43 @@ export default function Progress() {
           >
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 16px' }} />
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Set a Goal</h3>
+
+            {/* Goal type picker — drives whether the user updates progress
+                manually or it's auto-tracked from data we already capture. */}
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+              How do you want this tracked?
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <button
+                onClick={() => setNewGoal({ ...newGoal, metric_type: 'manual' })}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 10,
+                  border: newGoal.metric_type === 'manual' ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                  background: newGoal.metric_type === 'manual' ? 'rgba(255,140,0,0.08)' : 'transparent',
+                  color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Manual</div>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>You update the % yourself</div>
+              </button>
+              <button
+                onClick={() => setNewGoal({ ...newGoal, metric_type: 'workouts_per_week' })}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 10,
+                  border: newGoal.metric_type === 'workouts_per_week' ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                  background: newGoal.metric_type === 'workouts_per_week' ? 'rgba(255,140,0,0.08)' : 'transparent',
+                  color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Workouts / week</div>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Auto, tracks completed workouts</div>
+              </button>
+            </div>
+
             <input
-              placeholder="Goal title (e.g. Touch toes)"
+              placeholder={newGoal.metric_type === 'workouts_per_week' ? 'Goal title (e.g. Train 5x per week)' : 'Goal title (e.g. Touch toes)'}
               value={newGoal.title}
               onChange={e => setNewGoal({ ...newGoal, title: e.target.value })}
               className="input-field"
@@ -469,12 +620,22 @@ export default function Progress() {
               autoFocus
             />
             <input
-              placeholder="Target description"
+              placeholder="Description (optional)"
               value={newGoal.target}
               onChange={e => setNewGoal({ ...newGoal, target: e.target.value })}
               className="input-field"
               style={{ marginBottom: 10, fontSize: 14 }}
             />
+            {newGoal.metric_type === 'workouts_per_week' && (
+              <input
+                type="number" min="1" max="14"
+                placeholder="Workouts per week (e.g. 5)"
+                value={newGoal.target_value}
+                onChange={e => setNewGoal({ ...newGoal, target_value: e.target.value })}
+                className="input-field"
+                style={{ marginBottom: 10, fontSize: 14 }}
+              />
+            )}
             <select
               value={newGoal.category}
               onChange={e => setNewGoal({ ...newGoal, category: e.target.value })}
@@ -496,7 +657,7 @@ export default function Progress() {
               <button
                 className="btn-primary"
                 onClick={handleAddGoal}
-                disabled={!newGoal.title.trim()}
+                disabled={!newGoal.title.trim() || (newGoal.metric_type !== 'manual' && !newGoal.target_value)}
                 style={{ flex: 2, fontSize: 14 }}
               >
                 Add Goal

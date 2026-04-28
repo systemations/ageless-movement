@@ -380,19 +380,17 @@ export default function Progress() {
             ))
           )}
 
-          {/* ROM & Pain Tracking */}
+          {/* Pain Tracking */}
+          {/* ROM tile hidden — phase 2 build (see VALD HumanTrak inspiration
+              in /movement screening/). Will return as a numeric L/R degree
+              entry surface with norm bands + trend lines. The ROMTracking
+              component is left in place so flipping ROM_ENABLED back on
+              restores the row. */}
           <div className="divider" />
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div onClick={() => setShowROM(true)} className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '20px 12px' }}>
-              <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🦴</span>
-              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>ROM Tracking</p>
-              <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Range of Motion</p>
-            </div>
-            <div onClick={() => setShowPain(true)} className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '20px 12px' }}>
-              <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🩹</span>
-              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Pain Log</p>
-              <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Track Discomfort</p>
-            </div>
+          <div onClick={() => setShowPain(true)} className="card" style={{ textAlign: 'center', cursor: 'pointer', padding: '20px 12px' }}>
+            <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🩹</span>
+            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Pain Log</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Track Discomfort</p>
           </div>
         </>
       )}

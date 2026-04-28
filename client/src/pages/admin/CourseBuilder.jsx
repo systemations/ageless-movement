@@ -23,16 +23,29 @@ export default function CourseBuilder({ courseId, onBack }) {
     setCourse(courseRes.course);
     setTiers(tierRes.tiers || []);
     setLoading(false);
-    // Auto-expand all modules on first load
+    // Auto-expand all modules (including nested sub-modules) on first load
     if (courseRes.course?.moduleList) {
       setExpandedModules(prev => {
         if (Object.keys(prev).length > 0) return prev;
         const exp = {};
-        courseRes.course.moduleList.forEach(m => { exp[m.id] = true; });
+        const walk = (m) => {
+          exp[m.id] = true;
+          (m.subModuleList || []).forEach(walk);
+        };
+        courseRes.course.moduleList.forEach(walk);
         return exp;
       });
     }
   }, [courseId]);
+
+  // Walk top-level + sub-modules so admin lookups find lessons regardless
+  // of nesting depth. Used by getParentModule + search filtering.
+  const flattenModules = (mods) => {
+    const out = [];
+    const walk = (m) => { out.push(m); (m.subModuleList || []).forEach(walk); };
+    (mods || []).forEach(walk);
+    return out;
+  };
 
   useEffect(() => { fetchCourse(); }, [fetchCourse]);
 
@@ -113,7 +126,7 @@ export default function CourseBuilder({ courseId, onBack }) {
   // Find parent module for breadcrumb
   const getParentModule = (lessonId) => {
     if (!course?.moduleList) return null;
-    for (const mod of course.moduleList) {
+    for (const mod of flattenModules(course.moduleList)) {
       if (mod.lessonList?.some(l => l.id === lessonId)) return mod;
     }
     return null;
@@ -239,45 +252,74 @@ export default function CourseBuilder({ courseId, onBack }) {
                 {expandedModules[mod.id] && (
                   <div style={{ paddingLeft: 20 }}>
                     {mod.lessonList?.map((lesson, lesIdx) => (
-                      <div
+                      <LessonRow
                         key={lesson.id}
-                        onClick={() => setSelectedLesson(lesson)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 16px',
-                          cursor: 'pointer', borderRadius: 6, fontSize: 12,
-                          background: selectedLesson?.id === lesson.id ? 'rgba(61,255,210,0.08)' : 'transparent',
-                          borderLeft: selectedLesson?.id === lesson.id ? '3px solid var(--accent)' : '3px solid transparent',
-                          color: selectedLesson?.id === lesson.id ? 'var(--accent)' : 'var(--text-primary)',
-                          fontWeight: selectedLesson?.id === lesson.id ? 600 : 400,
-                        }}
-                        onMouseEnter={e => { if (selectedLesson?.id !== lesson.id) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                        onMouseLeave={e => { if (selectedLesson?.id !== lesson.id) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={lesson.video_url ? 'var(--accent)' : 'var(--text-tertiary)'} strokeWidth="1.5" style={{ flexShrink: 0 }}>
-                          {lesson.video_url
-                            ? <><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill={lesson.video_url ? 'var(--accent)' : 'var(--text-tertiary)'}/></>
-                            : <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></>
-                          }
-                        </svg>
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.title}</span>
-                        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                          <StatusBadge status={lesson.status} onChange={(s) => saveLesson(lesson.id, { status: s })} small />
-                          <IconBtn onClick={() => moveLesson(mod.id, lesson.id, 'up')} disabled={lesIdx === 0} small>
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
-                          </IconBtn>
-                          <IconBtn onClick={() => moveLesson(mod.id, lesson.id, 'down')} disabled={lesIdx === mod.lessonList.length - 1} small>
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
-                          </IconBtn>
-                          <IconBtn onClick={() => deleteLesson(lesson.id)} className="danger" small>
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </IconBtn>
-                        </div>
-                      </div>
+                        lesson={lesson}
+                        modId={mod.id}
+                        lesIdx={lesIdx}
+                        siblingCount={mod.lessonList.length}
+                        selectedLesson={selectedLesson}
+                        setSelectedLesson={setSelectedLesson}
+                        saveLesson={saveLesson}
+                        moveLesson={moveLesson}
+                        deleteLesson={deleteLesson}
+                      />
                     ))}
                     <button onClick={() => addLesson(mod.id)} style={{
                       background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px 6px 16px',
                       fontSize: 11, color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
                     }}>+ Add Lesson</button>
+
+                    {/* Nested sub-modules (e.g. Feet/Spine/Hips/Shoulders
+                        live under STEP 2). Each renders its own header
+                        + lesson list with extra indentation. */}
+                    {(mod.subModuleList || []).map(sub => (
+                      <div key={sub.id} style={{ marginTop: 4 }}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                          fontSize: 12, color: 'var(--text-secondary)',
+                        }}>
+                          <button onClick={() => setExpandedModules(prev => ({ ...prev, [sub.id]: !prev[sub.id] }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)', display: 'flex' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: expandedModules[sub.id] ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>
+                              <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                          </button>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                          </svg>
+                          <ModuleTitle module={sub} onUpdate={updateModule} />
+                          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{sub.lessonList?.length || 0}</span>
+                          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                            <StatusBadge status={sub.status} onChange={(s) => updateModule(sub.id, { title: sub.title, status: s })} small />
+                            <IconBtn onClick={() => deleteModule(sub.id)} className="danger" small>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </IconBtn>
+                          </div>
+                        </div>
+                        {expandedModules[sub.id] && (
+                          <div style={{ paddingLeft: 20 }}>
+                            {sub.lessonList?.map((lesson, lesIdx) => (
+                              <LessonRow
+                                key={lesson.id}
+                                lesson={lesson}
+                                modId={sub.id}
+                                lesIdx={lesIdx}
+                                siblingCount={sub.lessonList.length}
+                                selectedLesson={selectedLesson}
+                                setSelectedLesson={setSelectedLesson}
+                                saveLesson={saveLesson}
+                                moveLesson={moveLesson}
+                                deleteLesson={deleteLesson}
+                              />
+                            ))}
+                            <button onClick={() => addLesson(sub.id)} style={{
+                              background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px 6px 16px',
+                              fontSize: 11, color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                            }}>+ Add Lesson</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -602,6 +644,47 @@ const inputStyle = {
 };
 
 const labelStyle = { fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' };
+
+// Lesson row in the admin tree. Extracted so the same row markup
+// renders both for top-level module lessons and sub-module lessons,
+// without duplicating ~30 lines of JSX in the main render.
+function LessonRow({ lesson, modId, lesIdx, siblingCount, selectedLesson, setSelectedLesson, saveLesson, moveLesson, deleteLesson }) {
+  return (
+    <div
+      onClick={() => setSelectedLesson(lesson)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 16px',
+        cursor: 'pointer', borderRadius: 6, fontSize: 12,
+        background: selectedLesson?.id === lesson.id ? 'rgba(61,255,210,0.08)' : 'transparent',
+        borderLeft: selectedLesson?.id === lesson.id ? '3px solid var(--accent)' : '3px solid transparent',
+        color: selectedLesson?.id === lesson.id ? 'var(--accent)' : 'var(--text-primary)',
+        fontWeight: selectedLesson?.id === lesson.id ? 600 : 400,
+      }}
+      onMouseEnter={e => { if (selectedLesson?.id !== lesson.id) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+      onMouseLeave={e => { if (selectedLesson?.id !== lesson.id) e.currentTarget.style.background = 'transparent'; }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={lesson.video_url ? 'var(--accent)' : 'var(--text-tertiary)'} strokeWidth="1.5" style={{ flexShrink: 0 }}>
+        {lesson.video_url
+          ? <><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill={lesson.video_url ? 'var(--accent)' : 'var(--text-tertiary)'}/></>
+          : <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></>
+        }
+      </svg>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.title}</span>
+      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <StatusBadge status={lesson.status} onChange={(s) => saveLesson(lesson.id, { status: s })} small />
+        <IconBtn onClick={() => moveLesson(modId, lesson.id, 'up')} disabled={lesIdx === 0} small>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
+        </IconBtn>
+        <IconBtn onClick={() => moveLesson(modId, lesson.id, 'down')} disabled={lesIdx === siblingCount - 1} small>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
+        </IconBtn>
+        <IconBtn onClick={() => deleteLesson(lesson.id)} className="danger" small>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </IconBtn>
+      </div>
+    </div>
+  );
+}
 
 function IconBtn({ onClick, disabled, children, className, small, title }) {
   return (

@@ -175,6 +175,21 @@ export function seedAssessmentLessons() {
     console.log('[assessment-seed] removed legacy lesson 28 (What do I do Now?)');
   }
 
+  // Re-sync the denormalised modules + lessons counts on course id 5.
+  // These columns get out of date when lessons are added/removed via
+  // SQL or the seeder; the UI shows them on the explore course card so
+  // a stale count looks like a content gap. Recompute live each run.
+  const counts = pool.query(
+    `SELECT
+       (SELECT COUNT(*) FROM course_modules WHERE course_id = 5) AS modules,
+       (SELECT COUNT(*) FROM course_lessons cl
+          JOIN course_modules cm ON cm.id = cl.module_id
+         WHERE cm.course_id = 5) AS lessons`,
+  ).rows[0];
+  if (counts) {
+    pool.query('UPDATE courses SET modules = ?, lessons = ? WHERE id = 5', [counts.modules, counts.lessons]);
+  }
+
   if (updated.length || skipped.length) {
     console.log(`[assessment-seed] updated=${updated.length} skipped=${skipped.length}`);
   }

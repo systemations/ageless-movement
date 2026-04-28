@@ -7,6 +7,35 @@ import ExerciseProgress from '../../components/ExerciseProgress';
 
 const tabs = ['Progress', 'Trends'];
 
+// Short label shown on the goal card for auto-tracked goals.
+function autoBadgeLabel(goal) {
+  switch (goal.metric_type) {
+    case 'workouts_per_week': return `Auto · ${goal.target_value}/wk`;
+    case 'streak_days':       return `Auto · ${goal.target_value}-day streak`;
+    case 'workouts_total':    return `Auto · ${goal.target_value} workouts`;
+    case 'course_completion': return `Auto · course`;
+    default:                  return 'Auto';
+  }
+}
+
+// One-line explainer shown when an auto-tracked goal is expanded.
+function autoExplainer(goal, courseOptions) {
+  switch (goal.metric_type) {
+    case 'workouts_per_week':
+      return 'Tracked from completed workouts in the last 7 days.';
+    case 'streak_days':
+      return 'Counts consecutive days with at least one completed workout.';
+    case 'workouts_total':
+      return 'Lifetime count of completed workouts toward your milestone.';
+    case 'course_completion': {
+      const c = courseOptions.find(c => c.id === parseInt(goal.target_value, 10));
+      return `Tracks lessons completed in ${c?.title || 'the chosen course'}.`;
+    }
+    default:
+      return 'Auto-tracked.';
+  }
+}
+
 const categoryColors = {
   Mobility: '#3DFFD2',
   Flexibility: '#64D2FF',
@@ -34,6 +63,7 @@ export default function Progress() {
   const [goals, setGoals] = useState([]);
   const [achievedGoals, setAchievedGoals] = useState([]);
   const [expandedGoalId, setExpandedGoalId] = useState(null);
+  const [courseOptions, setCourseOptions] = useState([]);
 
   const fetchGoals = () => {
     fetch('/api/goals', { headers: { Authorization: `Bearer ${token}` } })
@@ -41,12 +71,21 @@ export default function Progress() {
       .then(d => { setGoals(d.active || []); setAchievedGoals(d.achieved || []); })
       .catch(() => {});
   };
+
+  // Pull course list for the course_completion metric picker. Coach
+  // edits to course visibility/title flow through here on next mount.
+  const fetchCourses = () => {
+    fetch('/api/content/courses', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { courses: [] })
+      .then(d => setCourseOptions(d.courses || []))
+      .catch(() => {});
+  };
   const [myCheckins, setMyCheckins] = useState([]);
   const [compareMode, setCompareMode] = useState(false);
   const [compareSelection, setCompareSelection] = useState([]); // [checkinId, checkinId]
   const [compareView, setCompareView] = useState(null); // { left, right }
 
-  useEffect(() => { fetchGoals(); }, [token]);
+  useEffect(() => { fetchGoals(); fetchCourses(); }, [token]);
 
   useEffect(() => {
     fetch('/api/explore/progress/exercises', {
@@ -219,7 +258,7 @@ export default function Progress() {
                           background: 'rgba(133,255,186,0.18)', color: 'var(--accent-mint)',
                           textTransform: 'uppercase', letterSpacing: 0.5,
                         }}>
-                          Auto · {goal.target_value}/wk
+                          {autoBadgeLabel(goal)}
                         </span>
                       )}
                     </div>
@@ -231,7 +270,7 @@ export default function Progress() {
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--divider)' }} onClick={e => e.stopPropagation()}>
                     {goal.is_auto ? (
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
-                        Tracked automatically from completed workouts in the last 7 days.
+                        {autoExplainer(goal, courseOptions)}
                       </p>
                     ) : (
                       <>
@@ -582,37 +621,34 @@ export default function Progress() {
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
               How do you want this tracked?
             </p>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button
-                onClick={() => setNewGoal({ ...newGoal, metric_type: 'manual' })}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 10,
-                  border: newGoal.metric_type === 'manual' ? '2px solid var(--accent)' : '1px solid var(--divider)',
-                  background: newGoal.metric_type === 'manual' ? 'rgba(255,140,0,0.08)' : 'transparent',
-                  color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 2 }}>Manual</div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>You update the % yourself</div>
-              </button>
-              <button
-                onClick={() => setNewGoal({ ...newGoal, metric_type: 'workouts_per_week' })}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 10,
-                  border: newGoal.metric_type === 'workouts_per_week' ? '2px solid var(--accent)' : '1px solid var(--divider)',
-                  background: newGoal.metric_type === 'workouts_per_week' ? 'rgba(255,140,0,0.08)' : 'transparent',
-                  color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 2 }}>Workouts / week</div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Auto, tracks completed workouts</div>
-              </button>
-            </div>
+            <select
+              value={newGoal.metric_type}
+              onChange={e => setNewGoal({ ...newGoal, metric_type: e.target.value, target_value: '' })}
+              className="input-field"
+              style={{ marginBottom: 4, fontSize: 14 }}
+            >
+              <option value="manual">Manual — I update the % myself</option>
+              <option value="workouts_per_week">Workouts / week (auto)</option>
+              <option value="streak_days">Workout streak (auto)</option>
+              <option value="workouts_total">Total workouts (auto)</option>
+              <option value="course_completion">Finish a course (auto)</option>
+            </select>
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 12, lineHeight: 1.5 }}>
+              {newGoal.metric_type === 'manual' && 'You set the percentage yourself with a slider on the goal card.'}
+              {newGoal.metric_type === 'workouts_per_week' && 'Tracked from completed workouts in the last 7 days.'}
+              {newGoal.metric_type === 'streak_days' && 'Counts consecutive days with at least one completed workout.'}
+              {newGoal.metric_type === 'workouts_total' && 'Lifetime count of completed workouts toward your milestone.'}
+              {newGoal.metric_type === 'course_completion' && 'Tracks lessons completed in the chosen course.'}
+            </p>
 
             <input
-              placeholder={newGoal.metric_type === 'workouts_per_week' ? 'Goal title (e.g. Train 5x per week)' : 'Goal title (e.g. Touch toes)'}
+              placeholder={
+                newGoal.metric_type === 'workouts_per_week' ? 'Goal title (e.g. Train 5x per week)' :
+                newGoal.metric_type === 'streak_days' ? 'Goal title (e.g. 30-day streak)' :
+                newGoal.metric_type === 'workouts_total' ? 'Goal title (e.g. 100 workouts)' :
+                newGoal.metric_type === 'course_completion' ? 'Goal title (e.g. Finish AMS Getting Started)' :
+                'Goal title (e.g. Touch toes)'
+              }
               value={newGoal.title}
               onChange={e => setNewGoal({ ...newGoal, title: e.target.value })}
               className="input-field"
@@ -635,6 +671,39 @@ export default function Progress() {
                 className="input-field"
                 style={{ marginBottom: 10, fontSize: 14 }}
               />
+            )}
+            {newGoal.metric_type === 'streak_days' && (
+              <input
+                type="number" min="1" max="365"
+                placeholder="Streak length in days (e.g. 30)"
+                value={newGoal.target_value}
+                onChange={e => setNewGoal({ ...newGoal, target_value: e.target.value })}
+                className="input-field"
+                style={{ marginBottom: 10, fontSize: 14 }}
+              />
+            )}
+            {newGoal.metric_type === 'workouts_total' && (
+              <input
+                type="number" min="1"
+                placeholder="Total workouts target (e.g. 100)"
+                value={newGoal.target_value}
+                onChange={e => setNewGoal({ ...newGoal, target_value: e.target.value })}
+                className="input-field"
+                style={{ marginBottom: 10, fontSize: 14 }}
+              />
+            )}
+            {newGoal.metric_type === 'course_completion' && (
+              <select
+                value={newGoal.target_value}
+                onChange={e => setNewGoal({ ...newGoal, target_value: e.target.value })}
+                className="input-field"
+                style={{ marginBottom: 10, fontSize: 14 }}
+              >
+                <option value="">Pick a course…</option>
+                {courseOptions.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
             )}
             <select
               value={newGoal.category}

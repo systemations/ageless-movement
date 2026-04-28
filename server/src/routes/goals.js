@@ -15,23 +15,93 @@ import { authenticateToken, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-const VALID_METRIC_TYPES = new Set(['manual', 'workouts_per_week']);
+const VALID_METRIC_TYPES = new Set([
+  'manual',
+  'workouts_per_week',
+  'streak_days',
+  'course_completion',
+  'workouts_total',
+]);
 
 // Compute the live progress percentage for an auto-typed goal. Returns
 // null for manual goals (caller falls back to the stored progress).
 const computeProgress = (goal) => {
-  if (goal.metric_type !== 'workouts_per_week') return null;
   const target = parseFloat(goal.target_value);
-  if (!target || target <= 0) return 0;
-  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000)
-    .toISOString().slice(0, 10);
-  const count = pool.query(
-    `SELECT COUNT(*) AS n FROM workout_logs
-      WHERE user_id = ? AND completed = 1 AND date >= ?`,
-    [goal.user_id, since],
-  ).rows[0]?.n || 0;
-  return Math.max(0, Math.min(100, Math.round((count / target) * 100)));
+
+  if (goal.metric_type === 'workouts_per_week') {
+    if (!target || target <= 0) return 0;
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000)
+      .toISOString().slice(0, 10);
+    const count = pool.query(
+      `SELECT COUNT(*) AS n FROM workout_logs
+        WHERE user_id = ? AND completed = 1 AND date >= ?`,
+      [goal.user_id, since],
+    ).rows[0]?.n || 0;
+    return cap(count / target);
+  }
+
+  // Streak: walk back day by day from today, stop at first gap.
+  // Capped at 365 days for safety.
+  if (goal.metric_type === 'streak_days') {
+    if (!target || target <= 0) return 0;
+    let streak = 0;
+    const now = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(now); d.setUTCDate(now.getUTCDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const has = pool.query(
+        `SELECT 1 FROM workout_logs
+          WHERE user_id = ? AND completed = 1 AND date = ? LIMIT 1`,
+        [goal.user_id, ds],
+      ).rows[0];
+      if (has) streak++;
+      else if (i === 0) {
+        // No workout today doesn't break the streak; streak counts
+        // consecutive days they trained, which can include "yesterday".
+        continue;
+      } else break;
+    }
+    return cap(streak / target);
+  }
+
+  // Workouts total — lifetime count toward a milestone (e.g. 100 workouts).
+  if (goal.metric_type === 'workouts_total') {
+    if (!target || target <= 0) return 0;
+    const count = pool.query(
+      `SELECT COUNT(*) AS n FROM workout_logs
+        WHERE user_id = ? AND completed = 1`,
+      [goal.user_id],
+    ).rows[0]?.n || 0;
+    return cap(count / target);
+  }
+
+  // Course completion — % of lessons completed in the course whose id
+  // is stored as target_value. Pulls live from user_lesson_completions
+  // so it stays in sync as the client ticks lessons off.
+  if (goal.metric_type === 'course_completion') {
+    const courseId = parseInt(target, 10);
+    if (!courseId) return 0;
+    const total = pool.query(
+      `SELECT COUNT(*) AS n FROM course_lessons cl
+         JOIN course_modules cm ON cm.id = cl.module_id
+        WHERE cm.course_id = ? AND COALESCE(cl.status, 'published') != 'draft'`,
+      [courseId],
+    ).rows[0]?.n || 0;
+    if (!total) return 0;
+    const done = pool.query(
+      `SELECT COUNT(*) AS n FROM user_lesson_completions ulc
+         JOIN course_lessons cl ON cl.id = ulc.lesson_id
+         JOIN course_modules cm ON cm.id = cl.module_id
+        WHERE ulc.user_id = ? AND cm.course_id = ?`,
+      [goal.user_id, courseId],
+    ).rows[0]?.n || 0;
+    return cap(done / total);
+  }
+
+  return null;
 };
+
+const cap = (ratio) => Math.max(0, Math.min(100, Math.round(ratio * 100)));
 
 // Shape a row for API. Replaces stored progress with computed value
 // for auto goals so the client always shows live data.

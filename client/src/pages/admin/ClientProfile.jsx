@@ -13,7 +13,7 @@ import WorkoutBuilder from './WorkoutBuilder';
 //     always visible; `conversationId` + `clientName` = Chats tab renders
 //     the MessageThread inline in the center pane (FitBudd-style 3-column)
 
-const TABS = ['Overview', 'Check-ins', 'Chats', 'Habits', 'Pain', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
+const TABS = ['Overview', 'Goals', 'Check-ins', 'Chats', 'Habits', 'Pain', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
 
 export default function ClientProfile({
   clientId,
@@ -166,6 +166,7 @@ export default function ClientProfile({
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
             {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} railMode />}
+            {activeTab === 'Goals' && <GoalsTab clientId={clientId} />}
             {activeTab === 'Check-ins' && <CheckinsTab data={{ ...data, _refetch: refetch }} />}
             {activeTab === 'Chats' && (
               effectiveConvoId
@@ -188,6 +189,7 @@ export default function ClientProfile({
       ) : (
         <>
           {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} />}
+          {activeTab === 'Goals' && <GoalsTab clientId={clientId} />}
           {activeTab === 'Check-ins' && <CheckinsTab data={{ ...data, _refetch: refetch }} />}
           {activeTab === 'Chats' && (
             effectiveConvoId
@@ -1796,6 +1798,129 @@ function LevelsTab({ clientId }) {
 }
 
 // ═══ Gallery ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────
+// Goals tab — read-only view of the client's active + achieved goals
+// ─────────────────────────────────────────────────────────────────────
+// Active goals first (with progress ring + auto/manual badge), then
+// achieved below. Coach can see the same data the client sees, no
+// edit controls — goals are owned by the client. Future: allow coach
+// to add/edit on the client's behalf if needed.
+const GOAL_CATEGORY_COLORS = {
+  Mobility: '#3DFFD2', Flexibility: '#64D2FF', Consistency: '#FF9500',
+  'Body Comp': '#FF6B9D', Program: '#BF5AF2', Milestone: '#FFD60A',
+  Nutrition: '#30D158', Strength: '#FF9C33', General: '#85FFBA',
+};
+
+function autoLabel(metric_type, target_value) {
+  switch (metric_type) {
+    case 'workouts_per_week': return `Auto · ${target_value}/wk`;
+    case 'streak_days':       return `Auto · ${target_value}-day streak`;
+    case 'workouts_total':    return `Auto · ${target_value} workouts`;
+    case 'course_completion': return `Auto · course`;
+    default:                  return null;
+  }
+}
+
+function GoalsTab({ clientId }) {
+  const { token } = useAuth();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    if (!clientId) return;
+    fetch(`/api/goals/clients/${clientId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { active: [], achieved: [] })
+      .then(setData)
+      .catch(() => setData({ active: [], achieved: [] }));
+  }, [clientId, token]);
+
+  if (!data) return <p style={{ padding: 24, color: 'var(--text-tertiary)' }}>Loading…</p>;
+  const { active = [], achieved = [] } = data;
+
+  if (active.length === 0 && achieved.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+        <p style={{ fontSize: 14 }}>No goals yet.</p>
+        <p style={{ fontSize: 12, marginTop: 6 }}>Anything this client sets in their Progress tab will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '4px 0 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {active.length > 0 && (
+        <section>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+            Active ({active.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {active.map(g => {
+              const color = GOAL_CATEGORY_COLORS[g.category] || '#85FFBA';
+              const badge = g.is_auto ? autoLabel(g.metric_type, g.target_value) : null;
+              return (
+                <div key={g.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
+                    <svg width="50" height="50" viewBox="0 0 50 50">
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                      <circle
+                        cx="25" cy="25" r="20" fill="none"
+                        stroke={color} strokeWidth="4"
+                        strokeDasharray={`${2 * Math.PI * 20}`}
+                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - (g.progress || 0) / 100)}`}
+                        strokeLinecap="round" transform="rotate(-90 25 25)"
+                      />
+                    </svg>
+                    <span style={{
+                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700,
+                    }}>{g.progress || 0}%</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{g.title}</p>
+                    {g.target && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.4 }}>{g.target}</p>}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                        background: `${color}20`, color, textTransform: 'uppercase', letterSpacing: 0.5,
+                      }}>{g.category}</span>
+                      {badge && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                          background: 'rgba(133,255,186,0.18)', color: 'var(--accent-mint)',
+                          textTransform: 'uppercase', letterSpacing: 0.5,
+                        }}>{badge}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      {achieved.length > 0 && (
+        <section>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+            Achieved ({achieved.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {achieved.map(g => (
+              <div key={g.id} className="card" style={{ padding: '12px 14px', opacity: 0.75, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 14 }}>✓</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, textDecoration: 'line-through' }}>{g.title}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    {g.category} · achieved {g.achieved_date ? new Date(g.achieved_date + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Pain tab — issue-based pain log
 // ─────────────────────────────────────────────────────────────────────

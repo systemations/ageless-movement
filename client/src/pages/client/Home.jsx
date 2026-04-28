@@ -480,6 +480,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Onboarding checklist — sits in the prominent Daily Tasks slot
+          for new clients. Auto-hides as soon as all 5 first-actions
+          are complete so it doesn't crowd Home for established users. */}
+      <OnboardingChecklistCard token={token} />
+
       {/* Daily Tasks - collapsible dropdown */}
       <div className="card" style={{ marginBottom: 12, padding: 0 }}>
         {/* Clickable header */}
@@ -1275,10 +1280,6 @@ export default function Home() {
           )}
         </div>
       </div>
-
-      {/* Onboarding checklist — 5 first-action tasks. Auto-hides as
-          soon as all 5 are complete. */}
-      <OnboardingChecklistCard token={token} />
 
       {/* Nutrition setup prompt — empty-state CTA shown when the client
           hasn't filled in the BMR inputs yet. Once they tap through and

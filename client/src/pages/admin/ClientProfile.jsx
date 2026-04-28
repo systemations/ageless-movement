@@ -13,7 +13,7 @@ import WorkoutBuilder from './WorkoutBuilder';
 //     always visible; `conversationId` + `clientName` = Chats tab renders
 //     the MessageThread inline in the center pane (FitBudd-style 3-column)
 
-const TABS = ['Overview', 'Check-ins', 'Chats', 'Habits', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
+const TABS = ['Overview', 'Check-ins', 'Chats', 'Habits', 'Pain', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
 
 export default function ClientProfile({
   clientId,
@@ -173,6 +173,7 @@ export default function ClientProfile({
                 : <EmptyCard text="No conversation yet with this client." />
             )}
             {activeTab === 'Habits' && <HabitsTab data={data} />}
+            {activeTab === 'Pain' && <PainTab clientId={clientId} />}
             {activeTab === 'Workout' && <WorkoutTab data={data} />}
             {activeTab === 'Nutrition' && <NutritionTab data={data} />}
             {activeTab === 'Levels' && <LevelsTab clientId={clientId} />}
@@ -194,6 +195,7 @@ export default function ClientProfile({
               : <EmptyCard text="No conversation yet with this client." />
           )}
           {activeTab === 'Habits' && <HabitsTab data={data} />}
+          {activeTab === 'Pain' && <PainTab clientId={clientId} />}
           {activeTab === 'Workout' && <WorkoutTab data={data} />}
           {activeTab === 'Nutrition' && <NutritionTab data={data} />}
           {activeTab === 'Levels' && <LevelsTab clientId={clientId} />}
@@ -1794,6 +1796,197 @@ function LevelsTab({ clientId }) {
 }
 
 // ═══ Gallery ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────
+// Pain tab — issue-based pain log
+// ─────────────────────────────────────────────────────────────────────
+// Active pain issues at top with severity sparkline + last entry date.
+// Tap an issue → expanded panel with full trend chart + entry history.
+// Coach can mark an issue resolved on the client's behalf.
+const PAIN_REGION_LABEL = {
+  neck: 'Neck', upper_back: 'Upper Back', lower_back: 'Lower Back',
+  shoulder_l: 'L Shoulder', shoulder_r: 'R Shoulder',
+  elbow_l: 'L Elbow', elbow_r: 'R Elbow',
+  wrist_l: 'L Wrist', wrist_r: 'R Wrist',
+  hip_l: 'L Hip', hip_r: 'R Hip',
+  knee_l: 'L Knee', knee_r: 'R Knee',
+  ankle_l: 'L Ankle', ankle_r: 'R Ankle',
+  foot_l: 'L Foot', foot_r: 'R Foot', other: 'Other',
+};
+const painSeverityColor = (s) => {
+  if (s == null) return 'var(--text-tertiary)';
+  if (s <= 3) return '#30D158';
+  if (s <= 6) return '#FF9500';
+  return '#FF453A';
+};
+
+function PainTab({ clientId }) {
+  const { token } = useAuth();
+  const [issues, setIssues] = useState(null);
+  const [expanded, setExpanded] = useState(null); // issue_id with detail loaded
+  const [details, setDetails] = useState({}); // issue_id → { issue, entries }
+  const [resolving, setResolving] = useState(null);
+
+  const fetchList = () => {
+    fetch(`/api/pain/clients/${clientId}/issues`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { issues: [] })
+      .then(d => setIssues(d.issues || []));
+  };
+  useEffect(fetchList, [clientId, token]);
+
+  const expand = async (id) => {
+    if (expanded === id) { setExpanded(null); return; }
+    if (!details[id]) {
+      const r = await fetch(`/api/pain/clients/${clientId}/issues/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json();
+      setDetails(prev => ({ ...prev, [id]: d }));
+    }
+    setExpanded(id);
+  };
+
+  const resolve = async (id) => {
+    setResolving(id);
+    await fetch(`/api/pain/clients/${clientId}/issues/${id}/resolve`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    setResolving(null);
+    setDetails(prev => ({ ...prev, [id]: null }));
+    fetchList();
+  };
+
+  if (issues === null) return <p style={{ padding: 24, color: 'var(--text-tertiary)' }}>Loading…</p>;
+
+  const active = issues.filter(i => i.status === 'active');
+  const resolved = issues.filter(i => i.status === 'resolved');
+
+  if (issues.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+        <p style={{ fontSize: 14 }}>No pain issues logged yet.</p>
+        <p style={{ fontSize: 12, marginTop: 6 }}>Anything this client logs in their Pain Log appears here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '4px 0 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {active.length > 0 && (
+        <section>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+            Active ({active.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {active.map(issue => (
+              <PainIssueCard
+                key={issue.id}
+                issue={issue}
+                expanded={expanded === issue.id}
+                detail={details[issue.id]}
+                onExpand={() => expand(issue.id)}
+                onResolve={() => resolve(issue.id)}
+                resolving={resolving === issue.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+      {resolved.length > 0 && (
+        <section>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--text-secondary)' }}>
+            Resolved ({resolved.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {resolved.map(issue => (
+              <div key={issue.id} className="card" style={{ padding: '12px 14px', opacity: 0.75 }}>
+                <p style={{ fontSize: 13, fontWeight: 700 }}>✓ {issue.title}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  {PAIN_REGION_LABEL[issue.body_region] || issue.body_region} · {issue.entry_count} entries · resolved {issue.resolved_at ? new Date(issue.resolved_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                  {issue.resolved_by === 'coach' && ' (by coach)'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function PainIssueCard({ issue, expanded, detail, onExpand, onResolve, resolving }) {
+  const sev = issue.latest_entry?.severity;
+  const color = painSeverityColor(sev);
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div onClick={onExpand} style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer',
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+          background: `${color}20`, color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 800, fontSize: 14,
+        }}>{sev != null ? sev : '–'}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>{issue.title}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+            {PAIN_REGION_LABEL[issue.body_region] || issue.body_region} · {issue.entry_count} {issue.entry_count === 1 ? 'entry' : 'entries'}
+            {issue.latest_entry && ` · last ${new Date(issue.latest_entry.created_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}`}
+          </p>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }}><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      {expanded && detail && (
+        <div style={{ borderTop: '1px solid var(--divider)', padding: '14px 16px' }}>
+          {/* Trend */}
+          {detail.entries && detail.entries.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+                Severity trend
+              </p>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 60 }}>
+                {[...detail.entries].reverse().map(e => (
+                  <div key={e.id} title={`${e.severity}/10 on ${new Date(e.created_at + 'Z').toLocaleDateString('en-IE')}`}
+                       style={{ flex: 1, height: `${(e.severity / 10) * 100}%`, minHeight: 4, background: painSeverityColor(e.severity), borderRadius: 3 }} />
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Entry history */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {(detail.entries || []).map(e => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                  background: `${painSeverityColor(e.severity)}20`, color: painSeverityColor(e.severity),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: 11,
+                }}>{e.severity}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    {new Date(e.created_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                  {e.notes && <p style={{ fontSize: 12, marginTop: 2, lineHeight: 1.5 }}>{e.notes}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+          {detail.issue?.notes_initial && (
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', fontStyle: 'italic', marginBottom: 12, padding: 10, background: 'var(--bg-primary)', borderRadius: 8 }}>
+              <strong style={{ color: 'var(--text-secondary)', fontStyle: 'normal' }}>Original notes:</strong> {detail.issue.notes_initial}
+            </p>
+          )}
+          <button
+            onClick={onResolve}
+            disabled={resolving}
+            style={{
+              padding: '10px 16px', borderRadius: 8, border: '1px solid var(--accent-mint)',
+              background: 'transparent', color: 'var(--accent-mint)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}
+          >{resolving ? '…' : '✓ Mark resolved'}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Assessments tab — quiz attempts + movement assessment selections
 // ─────────────────────────────────────────────────────────────────────

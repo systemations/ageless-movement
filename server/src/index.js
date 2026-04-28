@@ -20,6 +20,7 @@ import athleteRoutes from './routes/athlete.js';
 import notificationRoutes from './routes/notifications.js';
 import benchmarkRoutes from './routes/benchmarks.js';
 import onboardingRoutes from './routes/onboarding.js';
+import painRoutes from './routes/pain.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
@@ -94,6 +95,7 @@ app.use('/api/athlete', athleteRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/benchmarks', benchmarkRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/pain', painRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

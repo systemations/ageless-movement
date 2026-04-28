@@ -718,6 +718,31 @@ const alterStatements = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
   "CREATE INDEX IF NOT EXISTS idx_assessment_responses_user ON assessment_responses(user_id, lesson_id, created_at DESC)",
+  // Pain log: issue-based tracking. Each pain_issue is a discrete
+  // tracked entity (e.g. "right shoulder impingement") that the
+  // client can log severity entries against over time, then mark
+  // resolved when done. Body region is enum-string for clean
+  // future queries ("show all clients with shoulder issues").
+  `CREATE TABLE IF NOT EXISTS pain_issues (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body_region TEXT NOT NULL,
+    title TEXT NOT NULL,
+    notes_initial TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    opened_at TEXT DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    resolved_by TEXT
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_pain_issues_user_status ON pain_issues(user_id, status, opened_at DESC)",
+  `CREATE TABLE IF NOT EXISTS pain_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    issue_id INTEGER NOT NULL REFERENCES pain_issues(id) ON DELETE CASCADE,
+    severity INTEGER NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_pain_entries_issue ON pain_entries(issue_id, created_at DESC)",
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",

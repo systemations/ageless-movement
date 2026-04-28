@@ -20,11 +20,22 @@ import '../../components/rich-text.css';
 // the completion state. Falls back gracefully if course can't be loaded.
 export default function CourseDetail({ course, onBack }) {
   const { token } = useAuth();
-  const [expandedModule, setExpandedModule] = useState(0);
+  // Set of module ids currently expanded. Modules can nest one level
+  // (e.g. STEP 2 → Feet/Spine/Hips/Shoulders), so a single index won't
+  // do. The first top-level module starts open; everything else closed.
+  const [expandedModules, setExpandedModules] = useState(() => new Set());
   const [full, setFull] = useState(null); // loaded course with moduleList + progress
   const [error, setError] = useState(null);
   const [toggling, setToggling] = useState(null); // lesson_id being toggled
   const [activeLessonId, setActiveLessonId] = useState(null);
+
+  const toggleModule = (id) => {
+    setExpandedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const courseId = course?.id;
 
@@ -213,108 +224,236 @@ export default function CourseDetail({ course, onBack }) {
         )}
 
         {moduleList.map((mod, i) => (
-          <div key={mod.id || i} style={{ marginBottom: 8 }}>
-            <div
-              onClick={() => setExpandedModule(expandedModule === i ? -1 : i)}
-              style={{
-                background: 'var(--bg-card)', borderRadius: expandedModule === i ? '12px 12px 0 0' : 12,
-                padding: '14px 16px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 12,
-              }}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                background: mod.completed ? 'var(--accent-mint)' : 'var(--divider)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 700, color: mod.completed ? '#000' : 'var(--text-secondary)',
-              }}>
-                {mod.completed ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                ) : (
-                  i + 1
-                )}
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{mod.title}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                  {(mod.lessonList || []).length} lessons{mod.duration ? ` · ${mod.duration}` : ''}
-                  {mod.lessonList?.length > 0 && ` · ${mod.completed_count}/${mod.lessonList.length} done`}
-                </p>
-              </div>
-
-              <svg
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"
-                style={{ transform: expandedModule === i ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}
-              >
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
-
-            {expandedModule === i && (
-              <div style={{
-                background: 'var(--bg-card)', borderRadius: '0 0 12px 12px',
-                padding: '4px 16px 8px', borderTop: '1px solid var(--divider)',
-              }}>
-                {(mod.lessonList || []).filter(l => l.status !== 'draft').map((lesson, j, arr) => (
-                  <div
-                    key={lesson.id}
-                    onClick={() => setActiveLessonId(lesson.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-                      borderBottom: j < arr.length - 1 ? '1px solid var(--divider)' : 'none',
-                      cursor: 'pointer',
-                    }}>
-                    {/* Tap-to-toggle completion checkbox (clicks here don't open the lesson) */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleLesson(lesson); }}
-                      disabled={toggling === lesson.id}
-                      title={lesson.completed ? 'Mark incomplete' : 'Mark complete'}
-                      style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        background: lesson.completed ? 'var(--accent-mint)' : 'rgba(255,255,255,0.06)',
-                        border: lesson.completed ? 'none' : '1px solid var(--divider)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', opacity: toggling === lesson.id ? 0.5 : 1, padding: 0,
-                      }}
-                    >
-                      {lesson.completed ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      ) : lesson.video_url ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent-mint)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      ) : null}
-                    </button>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{
-                        fontSize: 13, fontWeight: 500,
-                        textDecoration: lesson.completed ? 'line-through' : 'none',
-                        color: lesson.completed ? 'var(--text-secondary)' : 'var(--text-primary)',
-                      }}>{lesson.title}</p>
-                      {lesson.resources?.length > 0 && (
-                        <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                          {lesson.resources.length} attachment{lesson.resources.length === 1 ? '' : 's'}
-                        </p>
-                      )}
-                    </div>
-                    {lesson.duration && (
-                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                        {lesson.duration}
-                      </p>
-                    )}
-                    {/* Chevron — signals tap to open */}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                  </div>
-                ))}
-                {(mod.lessonList || []).filter(l => l.status !== 'draft').length === 0 && (
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '10px 0', textAlign: 'center' }}>No lessons yet</p>
-                )}
-              </div>
-            )}
-          </div>
+          <ModuleRow
+            key={mod.id || i}
+            mod={mod}
+            depth={0}
+            number={i + 1}
+            expandedModules={expandedModules}
+            toggleModule={toggleModule}
+            onPickLesson={setActiveLessonId}
+            onToggleLesson={toggleLesson}
+            toggling={toggling}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Module row — recursive
+// ─────────────────────────────────────────────────────────────────────
+// Renders a single module's collapsible card. When expanded, renders
+// its lessons followed by any nested sub-modules (which recurse using
+// the same component). Top-level modules show a numbered circle; sub-
+// modules drop the number and indent slightly so the hierarchy reads.
+function ModuleRow({ mod, depth, number, expandedModules, toggleModule, onPickLesson, onToggleLesson, toggling }) {
+  const isOpen = expandedModules.has(mod.id);
+  const lessons = (mod.lessonList || []).filter(l => l.status !== 'draft');
+  const subModules = mod.subModuleList || [];
+  const hasSubs = subModules.length > 0;
+  const hasContent = lessons.length > 0 || hasSubs;
+  // Rolled-up totals come from the API; fall back to direct lessons if
+  // a stale client somehow gets a flat module shape.
+  const total = mod.total_lessons ?? lessons.length;
+  const done = mod.completed_count ?? 0;
+
+  return (
+    <div style={{ marginBottom: depth === 0 ? 8 : 0 }}>
+      <div
+        onClick={() => toggleModule(mod.id)}
+        style={{
+          background: depth === 0 ? 'var(--bg-card)' : 'transparent',
+          borderRadius: depth === 0 ? (isOpen ? '12px 12px 0 0' : 12) : 0,
+          padding: depth === 0 ? '14px 16px' : '12px 0',
+          borderBottom: depth > 0 ? '1px solid var(--divider)' : 'none',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}
+      >
+        {depth === 0 ? (
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+            background: mod.completed ? 'var(--accent-mint)' : 'var(--divider)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 700, color: mod.completed ? '#000' : 'var(--text-secondary)',
+          }}>
+            {mod.completed ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : number}
+          </div>
+        ) : (
+          <div style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: mod.completed ? 'var(--accent-mint)' : 'var(--text-tertiary)',
+          }} />
+        )}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: depth === 0 ? 14 : 13, fontWeight: depth === 0 ? 600 : 500, marginBottom: 2 }}>
+            {mod.title}
+          </p>
+          {total > 0 && (
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              {total} lesson{total === 1 ? '' : 's'} · {done}/{total} done
+            </p>
+          )}
+        </div>
+
+        <svg
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}
+        >
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      {isOpen && hasContent && (
+        <div style={{
+          background: depth === 0 ? 'var(--bg-card)' : 'transparent',
+          borderRadius: depth === 0 ? '0 0 12px 12px' : 0,
+          padding: depth === 0 ? '4px 16px 8px' : '0 0 8px 16px',
+          borderTop: depth === 0 ? '1px solid var(--divider)' : 'none',
+        }}>
+          {lessons.map((lesson, j) => (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              isLast={j === lessons.length - 1 && !hasSubs}
+              onPick={() => onPickLesson(lesson.id)}
+              onToggle={() => onToggleLesson(lesson)}
+              toggling={toggling}
+            />
+          ))}
+          {subModules.map(sub => (
+            <ModuleRow
+              key={sub.id}
+              mod={sub}
+              depth={depth + 1}
+              expandedModules={expandedModules}
+              toggleModule={toggleModule}
+              onPickLesson={onPickLesson}
+              onToggleLesson={onToggleLesson}
+              toggling={toggling}
+            />
+          ))}
+        </div>
+      )}
+      {isOpen && !hasContent && (
+        <div style={{
+          background: depth === 0 ? 'var(--bg-card)' : 'transparent',
+          borderRadius: depth === 0 ? '0 0 12px 12px' : 0,
+          padding: '10px 16px', borderTop: depth === 0 ? '1px solid var(--divider)' : 'none',
+        }}>
+          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>No lessons yet</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LessonRow({ lesson, isLast, onPick, onToggle, toggling }) {
+  return (
+    <div
+      onClick={onPick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
+        borderBottom: isLast ? 'none' : '1px solid var(--divider)',
+        cursor: 'pointer',
+      }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        disabled={toggling === lesson.id}
+        title={lesson.completed ? 'Mark incomplete' : 'Mark complete'}
+        style={{
+          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+          background: lesson.completed ? 'var(--accent-mint)' : 'rgba(255,255,255,0.06)',
+          border: lesson.completed ? 'none' : '1px solid var(--divider)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', opacity: toggling === lesson.id ? 0.5 : 1, padding: 0,
+        }}
+      >
+        {lesson.completed ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+        ) : lesson.video_url ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent-mint)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        ) : null}
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: 13, fontWeight: 500,
+          textDecoration: lesson.completed ? 'line-through' : 'none',
+          color: lesson.completed ? 'var(--text-secondary)' : 'var(--text-primary)',
+        }}>{lesson.title}</p>
+        {lesson.resources?.length > 0 && (
+          <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+            {lesson.resources.length} attachment{lesson.resources.length === 1 ? '' : 's'}
+          </p>
+        )}
+      </div>
+      {lesson.duration && (
+        <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{lesson.duration}</p>
+      )}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  );
+}
+
+// Lesson player sidebar — flat list grouped by module/sub-module
+// header. Recurses on subModuleList so the hierarchy is preserved.
+function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
+  const lessons = (mod.lessonList || []).filter(l => l.status !== 'draft');
+  return (
+    <div style={{ marginBottom: 8, marginLeft: depth * 8 }}>
+      <p style={{
+        fontSize: depth === 0 ? 11 : 10,
+        fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6,
+        color: 'var(--text-secondary)', padding: '8px 6px 4px',
+      }}>{mod.title}</p>
+      {lessons.map(l => {
+        const active = l.id === activeLessonId;
+        return (
+          <button
+            key={l.id}
+            onClick={() => onPickLesson(l.id)}
+            style={{
+              width: '100%', textAlign: 'left',
+              padding: '8px 10px', borderRadius: 8, border: 'none',
+              background: active ? 'rgba(255,140,0,0.14)' : 'transparent',
+              color: active ? 'var(--accent)' : 'var(--text-primary)',
+              fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}
+          >
+            {l.completed ? (
+              <span style={{
+                width: 16, height: 16, borderRadius: '50%', background: 'var(--accent-mint)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+            ) : (
+              <span style={{ width: 16, height: 16, flexShrink: 0 }} />
+            )}
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {l.title}
+            </span>
+          </button>
+        );
+      })}
+      {(mod.subModuleList || []).map(sub => (
+        <SidebarModule
+          key={sub.id}
+          mod={sub}
+          depth={depth + 1}
+          activeLessonId={activeLessonId}
+          onPickLesson={onPickLesson}
+        />
+      ))}
     </div>
   );
 }
@@ -332,16 +471,18 @@ export default function CourseDetail({ course, onBack }) {
 // authenticated coaches can write it via the /api/content/lessons PUT
 // route — same trust model as workout descriptions and exercise notes.
 function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete, toggling }) {
-  // Flatten the moduleList into an ordered lesson array so Next/Prev
-  // can walk across module boundaries without the player needing to
-  // know which module a lesson is in.
+  // Flatten the moduleList (recursing into sub-modules) into an ordered
+  // lesson array so Next/Prev can walk across module + sub-module
+  // boundaries without the player needing to know hierarchy.
   const flatLessons = useMemo(() => {
     const out = [];
-    (course.moduleList || []).forEach(mod => {
+    const walk = (mod) => {
       (mod.lessonList || [])
         .filter(l => l.status !== 'draft')
         .forEach(l => out.push({ ...l, _moduleTitle: mod.title, _moduleId: mod.id }));
-    });
+      (mod.subModuleList || []).forEach(walk);
+    };
+    (course.moduleList || []).forEach(walk);
     return out;
   }, [course.moduleList]);
 
@@ -398,55 +539,30 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
           background: 'var(--bg-card)', borderRadius: 12, padding: '8px 10px',
           alignSelf: 'flex-start', maxHeight: 'calc(100vh - 140px)', overflow: 'auto',
         }}>
-          {(course.moduleList || []).map((mod, mi) => (
-            <div key={mod.id} style={{ marginBottom: 8 }}>
-              <p style={{
-                fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6,
-                color: 'var(--text-secondary)', padding: '8px 6px 4px',
-              }}>{mod.title}</p>
-              {(mod.lessonList || []).filter(l => l.status !== 'draft').map(l => {
-                const active = l.id === lesson.id;
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => onPickLesson(l.id)}
-                    style={{
-                      width: '100%', textAlign: 'left',
-                      padding: '8px 10px', borderRadius: 8, border: 'none',
-                      background: active ? 'rgba(255,140,0,0.14)' : 'transparent',
-                      color: active ? 'var(--accent)' : 'var(--text-primary)',
-                      fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 8,
-                    }}
-                  >
-                    {l.completed ? (
-                      <span style={{
-                        width: 16, height: 16, borderRadius: '50%', background: 'var(--accent-mint)',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      </span>
-                    ) : (
-                      <span style={{ width: 16, height: 16, flexShrink: 0 }} />
-                    )}
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {l.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Sidebar walks the module tree recursively so nested
+              sub-modules (e.g. Feet/Spine/Hips/Shoulders) all show. */}
+          {(course.moduleList || []).map(mod => (
+            <SidebarModule key={mod.id} mod={mod} depth={0} activeLessonId={lesson.id} onPickLesson={onPickLesson} />
           ))}
         </aside>
 
         {/* Main lesson body */}
         <div>
-          {/* Video — Vimeo embed if a URL is set, otherwise placeholder.
-              Mint glow matches the AM logo treatment in global.css.
-              16:9 aspect-ratio container so the iframe matches the actual
-              video shape — fixed-height was leaving black bars top/bottom
-              when the player letterboxed a 16:9 source into a taller box. */}
-          {lesson.video_url ? (
+          {/* Quiz lesson: replaces the standard video + description
+              layout entirely. The renderer handles its own state,
+              scoring, and pass/fail routing. */}
+          {lesson.quiz ? (
+            <QuizPlayer
+              quiz={lesson.quiz}
+              flatLessons={flatLessons}
+              onPickLesson={onPickLesson}
+              onBack={onBack}
+            />
+          ) : (
+            <>
+          {/* Video — Vimeo embed if a URL is set. Text-only lessons skip
+              the player entirely so the description leads. */}
+          {lesson.video_url && (
             <div style={{
               position: 'relative', aspectRatio: '16 / 9',
               borderRadius: 12, overflow: 'hidden', marginBottom: 14, background: '#000',
@@ -460,25 +576,16 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
                 style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
               />
             </div>
-          ) : (
-            <div style={{
-              borderRadius: 12, marginBottom: 14, padding: '40px 20px', textAlign: 'center',
-              background: 'rgba(255,255,255,0.04)', border: '1px dashed var(--divider)',
-              color: 'var(--text-tertiary)', fontSize: 13,
-            }}>
-              No video for this lesson yet.
-            </div>
           )}
 
           {/* Description — rich HTML from the admin TipTap editor.
               Typography rules live in components/rich-text.css so the
-              authoring view and the rendered view stay identical. */}
+              authoring view and the rendered view stay identical.
+              Special token {{coaches}} expands inline into the public
+              coach roster (Team admin → Coach profiles), so support /
+              meet-the-team lessons stay in sync with that one source. */}
           {lesson.description && (
-            <div
-              className="lesson-description"
-              style={{ marginBottom: 18 }}
-              dangerouslySetInnerHTML={{ __html: lesson.description }}
-            />
+            <LessonDescription html={lesson.description} />
           )}
 
           {/* Attachments */}
@@ -571,8 +678,379 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               ) : 'Mark As Complete'}
             </button>
           </div>
+            </>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Quiz player — assessment with A/B/C answers + scoring + routing
+// ─────────────────────────────────────────────────────────────────────
+// Lesson.quiz schema (defined in server/src/db/pool.js comment, seeded
+// directly via SQL for now). Renders the question list with optional
+// per-question Vimeo videos, collects A/B/C selections, computes score
+// (sum of option.score / question count), and shows a pass or fail
+// result screen with routing CTAs (next quiz / program enrolment).
+function QuizPlayer({ quiz, flatLessons, onPickLesson, onBack }) {
+  const [selections, setSelections] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const allAnswered = quiz.questions.every(q => selections[q.id]);
+  const score = quiz.questions.reduce((sum, q) => {
+    const sel = selections[q.id];
+    const opt = q.options.find(o => o.label === sel);
+    return sum + (opt?.score || 0);
+  }, 0);
+  const pct = quiz.questions.length > 0
+    ? Math.round((score / quiz.questions.length) * 100)
+    : 0;
+  // Any single C answer is an automatic fail regardless of total score.
+  // The threshold check is a belt-and-braces backstop on top of that.
+  const hasCAnswer = quiz.questions.some(q => selections[q.id] === 'C');
+  const passed = !hasCAnswer && pct >= (quiz.pass_pct || 66);
+
+  if (submitted) {
+    return (
+      <QuizResult
+        quiz={quiz}
+        passed={passed}
+        pct={pct}
+        flatLessons={flatLessons}
+        onPickLesson={onPickLesson}
+        onRetry={() => { setSelections({}); setSubmitted(false); }}
+        onBack={onBack}
+      />
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--accent)', marginBottom: 4 }}>
+          Assessment Quiz
+        </p>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{quiz.level_label}</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          {quiz.questions.length} questions
+        </p>
+      </div>
+
+      {quiz.questions.map((q, i) => (
+        <div
+          key={q.id}
+          style={{
+            background: 'var(--bg-card)', borderRadius: 14, padding: 16, marginBottom: 16,
+          }}
+        >
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
+            Question {i + 1} of {quiz.questions.length}
+          </p>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{q.title}</h3>
+          {q.video_url && (
+            <div style={{
+              position: 'relative', aspectRatio: '16 / 9',
+              borderRadius: 10, overflow: 'hidden', marginBottom: 12, background: '#000',
+            }}>
+              <VimeoEmbed
+                url={q.video_url}
+                width="100%" height="100%"
+                style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
+              />
+            </div>
+          )}
+          {q.instructions && (
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.55 }}>
+              {q.instructions}
+            </p>
+          )}
+          {q.prompt && (
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>{q.prompt}</p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {q.options.map(opt => {
+              const selected = selections[q.id] === opt.label;
+              return (
+                <button
+                  key={opt.label}
+                  onClick={() => setSelections(s => ({ ...s, [q.id]: opt.label }))}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    padding: '12px 14px', borderRadius: 10,
+                    border: selected ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                    background: selected ? 'rgba(255,140,0,0.08)' : 'transparent',
+                    color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.5,
+                    textAlign: 'left', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{
+                    flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                    background: selected ? 'var(--accent)' : 'var(--divider)',
+                    color: selected ? '#fff' : 'var(--text-secondary)',
+                    fontWeight: 700, fontSize: 12,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{opt.label}</span>
+                  <span style={{ flex: 1 }}>{opt.text}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 24px' }}>
+        <button
+          onClick={() => setSubmitted(true)}
+          disabled={!allAnswered}
+          style={{
+            padding: '14px 32px', borderRadius: 12, border: 'none',
+            background: allAnswered ? 'var(--accent)' : 'var(--divider)',
+            color: '#fff', fontSize: 15, fontWeight: 700,
+            cursor: allAnswered ? 'pointer' : 'not-allowed',
+            opacity: allAnswered ? 1 : 0.6,
+          }}
+        >
+          {allAnswered ? 'Submit Quiz' : `Answer all ${quiz.questions.length} questions to submit`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onBack }) {
+  const { token } = useAuth();
+  const result = passed ? quiz.pass : quiz.fail;
+  const nextQuiz = passed && quiz.pass_next_quiz_lesson_id
+    ? flatLessons.find(l => l.id === quiz.pass_next_quiz_lesson_id)
+    : null;
+  const programId = !passed ? quiz.fail_program_id : null;
+  // Enrolment state: idle / enrolling / replace_prompt / done / error.
+  // Replace prompt covers the 409 case where the user is already on a
+  // different program — they confirm to overwrite.
+  const [enrol, setEnrol] = useState({ status: 'idle' });
+
+  const doEnrol = async (force = false) => {
+    setEnrol({ status: 'enrolling' });
+    try {
+      const res = await fetch(`/api/explore/programs/${programId}/enroll`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force }),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        setEnrol({ status: 'replace_prompt', current: data.current_program });
+        return;
+      }
+      if (!res.ok) throw new Error('Enrol failed');
+      setEnrol({ status: 'done' });
+    } catch (err) {
+      setEnrol({ status: 'error', message: 'Could not add to schedule. Try again from the Explore tab.' });
+    }
+  };
+
+  return (
+    <div style={{ paddingBottom: 40 }}>
+      <div style={{
+        background: 'var(--bg-card)', borderRadius: 16, padding: '28px 22px',
+        marginBottom: 18, border: passed ? '1.5px solid var(--accent-mint)' : '1.5px solid var(--accent-orange)',
+      }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
+          Score: {pct}%
+        </p>
+        <h2 style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.25, marginBottom: 12 }}>
+          {result.title}
+        </h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+          {result.body}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Pass: drive forward to the next quiz */}
+        {nextQuiz && (
+          <button
+            onClick={() => onPickLesson(nextQuiz.id)}
+            style={{
+              padding: '14px 18px', borderRadius: 12, border: 'none',
+              background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Try the {nextQuiz.title} quiz next →
+          </button>
+        )}
+
+        {/* Fail: one-tap enrolment in the recommended program. The
+            5-step "find this program in Explore" explainer is gone —
+            this button does it for them so they don't get lost. */}
+        {!passed && programId && enrol.status === 'idle' && (
+          <button
+            onClick={() => doEnrol(false)}
+            style={{
+              padding: '14px 18px', borderRadius: 12, border: 'none',
+              background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Add {quiz.level_label} to my schedule
+          </button>
+        )}
+
+        {enrol.status === 'enrolling' && (
+          <button disabled style={{
+            padding: '14px 18px', borderRadius: 12, border: 'none',
+            background: 'var(--divider)', color: 'var(--text-secondary)',
+            fontSize: 15, fontWeight: 700, cursor: 'wait',
+          }}>Adding to schedule…</button>
+        )}
+
+        {enrol.status === 'replace_prompt' && (
+          <div style={{
+            background: 'var(--bg-card)', borderRadius: 14, padding: 16,
+            border: '1px solid var(--accent-orange)',
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+              You're currently on <strong>{enrol.current?.title || 'another program'}</strong>.
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+              Switching to {quiz.level_label} will replace it. Your history stays saved.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => doEnrol(true)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 10, border: 'none',
+                  background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                }}
+              >Replace</button>
+              <button
+                onClick={() => setEnrol({ status: 'idle' })}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 10,
+                  border: '1px solid var(--divider)', background: 'transparent',
+                  color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >Keep current</button>
+            </div>
+          </div>
+        )}
+
+        {enrol.status === 'done' && (
+          <div style={{
+            background: 'rgba(133, 255, 186, 0.08)', borderRadius: 14, padding: 16,
+            border: '1px solid var(--accent-mint)',
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent-mint)', marginBottom: 4 }}>
+              ✓ Added to your schedule
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              Find {quiz.level_label} on the calendar in your <strong>Home</strong> tab.
+            </p>
+          </div>
+        )}
+
+        {enrol.status === 'error' && (
+          <p style={{ fontSize: 13, color: 'var(--accent-orange)', textAlign: 'center', padding: '8px 0' }}>
+            {enrol.message}
+          </p>
+        )}
+
+        <button
+          onClick={onRetry}
+          style={{
+            padding: '12px 18px', borderRadius: 12,
+            border: '1px solid var(--divider)', background: 'transparent',
+            color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          Retake quiz
+        </button>
+        <button
+          onClick={onBack}
+          style={{
+            padding: '12px 18px', borderRadius: 12,
+            border: 'none', background: 'transparent',
+            color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}
+        >
+          Back to course
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Lesson description — HTML with optional {{coaches}} token expansion
+// ─────────────────────────────────────────────────────────────────────
+// Most lessons are pure HTML from the TipTap editor. The "meet the
+// support coaches" lesson uses a {{coaches}} token that's replaced
+// inline by the public coach roster. That keeps coach bios + photos
+// editable in one place (Team admin) instead of duplicated into the
+// lesson HTML.
+function LessonDescription({ html }) {
+  const TOKEN = '{{coaches}}';
+  if (!html.includes(TOKEN)) {
+    return (
+      <div
+        className="lesson-description"
+        style={{ marginBottom: 18 }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+  const [before, after] = html.split(TOKEN);
+  return (
+    <div className="lesson-description" style={{ marginBottom: 18 }}>
+      {before && <div dangerouslySetInnerHTML={{ __html: before }} />}
+      <CoachesRoster />
+      {after && <div dangerouslySetInnerHTML={{ __html: after }} />}
+    </div>
+  );
+}
+
+function CoachesRoster() {
+  const { token } = useAuth();
+  const [coaches, setCoaches] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/coaches/', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(d => setCoaches(d.coaches || []))
+      .catch(() => setCoaches([]));
+  }, [token]);
+
+  if (coaches === null) return null;
+  // Only render coaches who have both a bio and a photo — anyone half-
+  // configured in the admin shouldn't show up on a public roster.
+  const visible = coaches.filter(c => c.bio && (c.photo_url || c.avatar_url));
+  if (visible.length === 0) return null;
+
+  return (
+    <div>
+      {visible.map((c, i) => (
+        <div key={c.id}>
+          {i > 0 && <hr />}
+          <h3 style={{ textAlign: 'center', marginBottom: 0 }}>{c.name}</h3>
+          {(c.tagline || c.headline) && (
+            <p style={{
+              textAlign: 'center', color: 'var(--text-secondary)',
+              fontSize: 13, marginTop: 2, marginBottom: 8,
+            }}>
+              {c.tagline || c.headline}
+            </p>
+          )}
+          <p style={{ textAlign: 'center', margin: 0 }}>
+            <img
+              src={c.photo_url || c.avatar_url}
+              alt={c.name}
+              style={{ width: 240, height: 'auto', margin: '0 auto', display: 'block' }}
+            />
+          </p>
+          <p style={{ marginTop: 14, whiteSpace: 'pre-wrap' }}>{c.bio}</p>
+        </div>
+      ))}
     </div>
   );
 }

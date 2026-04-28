@@ -283,8 +283,9 @@
   text-underline-offset: 3px;
 }
 
-/* Images — full width by default, rounded corners, subtle border so
-   they sit nicely on the navy bg without fighting it. */
+/* Images — full width by default. No frame: PNGs with transparent
+   backgrounds (e.g. coach headshots in orange rings) carry their own
+   shape, and a generic border just fights the artwork. */
 .rt-content-wrap .ProseMirror img,
 .lesson-description img,
 .rt-content-wrap .ProseMirror .rt-image,
@@ -292,8 +293,6 @@
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: 10px;
-  border: 1px solid var(--divider);
   margin: 14px 0;
 }
 

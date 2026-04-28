@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { enforceTier } from '../middleware/tier.js';
+import { fetchVimeoThumbnail } from '../lib/vimeoOembed.js';
 
 const router = Router();
 
@@ -556,32 +557,76 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
   ).rows;
   const completedSet = new Set(completions.map((c) => c.lesson_id));
 
-  const modules = pool.query('SELECT * FROM course_modules WHERE course_id = ? ORDER BY sort_order', [req.params.id]);
+  // Modules can nest one level deep (STEP 2 → Feet/Spine/Hips/Shoulders).
+  // Build a map of all modules for this course, attach lessons, then
+  // collect sub-modules under each parent. The response only lists
+  // top-level modules at the root; sub-modules live under
+  // parent.subModuleList. Progress totals roll up from the deepest
+  // lessons regardless of nesting depth.
+  const allModules = pool.query(
+    'SELECT * FROM course_modules WHERE course_id = ? ORDER BY sort_order',
+    [req.params.id],
+  ).rows;
+
   let totalLessons = 0;
   let totalCompleted = 0;
-  const moduleList = modules.rows.map(mod => {
+
+  const buildModule = (mod) => {
     const lessons = pool.query('SELECT * FROM course_lessons WHERE module_id = ? ORDER BY sort_order', [mod.id]);
     let modCompleted = 0;
     const lessonList = lessons.rows.map(lesson => {
       const resources = pool.query('SELECT * FROM lesson_resources WHERE lesson_id = ? ORDER BY sort_order', [lesson.id]);
       const completed = completedSet.has(lesson.id);
       if (completed) modCompleted++;
-      return { ...lesson, resources: resources.rows, completed };
+      // Parse quiz_data into a structured object so the client doesn't
+      // need to JSON.parse it. Bad JSON falls through to null and the
+      // lesson renders as a plain (non-quiz) lesson.
+      let quiz = null;
+      if (lesson.quiz_data) {
+        try { quiz = JSON.parse(lesson.quiz_data); }
+        catch (e) { /* malformed — treat as no quiz */ }
+      }
+      return { ...lesson, resources: resources.rows, completed, quiz };
     });
-    totalLessons += lessonList.length;
+
+    // Recurse into sub-modules so progress counts include their lessons.
+    const subModuleList = allModules
+      .filter(m => m.parent_module_id === mod.id)
+      .map(buildModule);
+    let subLessonCount = 0;
+    let subCompletedCount = 0;
+    for (const sm of subModuleList) {
+      subLessonCount += sm.total_lessons;
+      subCompletedCount += sm.completed_count;
+    }
+
+    const ownTotal = lessonList.length;
+    const lessonTotal = ownTotal + subLessonCount;
+    const lessonCompleted = modCompleted + subCompletedCount;
+    totalLessons += ownTotal;
     totalCompleted += modCompleted;
+
     return {
       ...mod,
       lessonList,
-      completed_count: modCompleted,
-      completed: lessonList.length > 0 && modCompleted === lessonList.length,
+      subModuleList,
+      // Rolled-up: includes own lessons + everything in sub-modules.
+      // Renderers should prefer total_lessons / completed_count over
+      // lessonList.length so nested counts read correctly.
+      total_lessons: lessonTotal,
+      completed_count: lessonCompleted,
+      completed: lessonTotal > 0 && lessonCompleted === lessonTotal,
     };
-  });
+  };
+
+  const cleanModuleList = allModules
+    .filter(m => !m.parent_module_id)
+    .map(buildModule);
 
   res.json({
     course: {
       ...course.rows[0],
-      moduleList,
+      moduleList: cleanModuleList,
       progress: {
         total_lessons: totalLessons,
         completed_lessons: totalCompleted,
@@ -734,16 +779,33 @@ router.post('/course-modules/:id/lessons', authenticateToken, requireRole('coach
   res.json({ lesson: result.rows[0] });
 });
 
-router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), (req, res) => {
+router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), async (req, res) => {
   const { title, description, video_url, video_thumbnail, thumbnail_url, duration, status } = req.body;
   const lesson = pool.query('SELECT * FROM course_lessons WHERE id = ?', [req.params.id]);
   if (lesson.rows.length === 0) return res.status(404).json({ error: 'Lesson not found' });
   const l = lesson.rows[0];
+
+  // Auto-fetch Vimeo thumbnail when the coach pastes a new video URL
+  // and didn't already provide a manual thumbnail. Done synchronously
+  // BEFORE the save so the response includes the populated thumbnail
+  // and the client doesn't have to refetch. Failures fall through
+  // silently — coach can still save the lesson without it.
+  let resolvedThumbnail = video_thumbnail ?? l.video_thumbnail;
+  const newVideoUrl = video_url ?? l.video_url;
+  const videoChanged = video_url && video_url !== l.video_url;
+  const needsThumb = !resolvedThumbnail || videoChanged;
+  if (needsThumb && newVideoUrl) {
+    try {
+      const fetched = await fetchVimeoThumbnail(newVideoUrl);
+      if (fetched) resolvedThumbnail = fetched;
+    } catch (e) { /* ignore — save still proceeds without thumb */ }
+  }
+
   pool.query(
     'UPDATE course_lessons SET title=?, description=?, video_url=?, video_thumbnail=?, thumbnail_url=?, duration=?, status=? WHERE id=?',
-    [title ?? l.title, description ?? l.description, video_url ?? l.video_url, video_thumbnail ?? l.video_thumbnail, thumbnail_url ?? l.thumbnail_url, duration ?? l.duration, status ?? l.status, req.params.id]
+    [title ?? l.title, description ?? l.description, newVideoUrl, resolvedThumbnail, thumbnail_url ?? l.thumbnail_url, duration ?? l.duration, status ?? l.status, req.params.id]
   );
-  res.json({ success: true });
+  res.json({ success: true, video_thumbnail: resolvedThumbnail });
 });
 
 router.delete('/course-lessons/:id', authenticateToken, requireRole('coach'), (req, res) => {

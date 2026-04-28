@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Component } from 'react';
+import { Component, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Error boundary that prevents a blank screen when a route component throws.
@@ -186,6 +186,17 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  // Reset scroll on every route change. The actual scroll container is
+  // .page-content (overflow-y: auto in global.css), not the window —
+  // pages were keeping the previous page's scroll offset and landing
+  // users mid-page after navigating. Window scroll is a belt-and-braces
+  // fallback for routes that don't use .page-content.
+  useEffect(() => {
+    const pageContent = document.querySelector('.page-content');
+    if (pageContent) pageContent.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -256,7 +267,16 @@ function AppRoutes() {
       </Routes>
       </RouteErrorBoundary>
 
-      {user && !location.pathname.startsWith('/admin') && <BottomNav />}
+      {user
+        && !location.pathname.startsWith('/admin')
+        // Onboarding is a guided funnel — the bottom nav distracts from
+        // the question flow and the tier-pick step. Hide it everywhere
+        // under /onboarding and on the auth funnel pages too.
+        && !location.pathname.startsWith('/onboarding')
+        && !location.pathname.startsWith('/welcome')
+        && location.pathname !== '/login'
+        && location.pathname !== '/register'
+        && <BottomNav />}
     </div>
   );
 }

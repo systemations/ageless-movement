@@ -596,27 +596,6 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
             <h1 style={titleStyle}>Here's what we'd suggest</h1>
           )}
 
-          {/* Nutrition target preview — shown above the cards because
-              every tier inherits the same daily target. */}
-          {targets.calorie_target && (
-            <div style={nutritionCard}>
-              <div style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(133,255,186,0.85)', fontWeight: 800, marginBottom: 8 }}>
-                YOUR DAILY TARGETS
-              </div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
-                {targets.calorie_target.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>kcal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, gap: 8 }}>
-                <MacroPill label="Protein" grams={targets.protein_target} color="#FF6B9D" />
-                <MacroPill label="Fat"     grams={targets.fat_target}     color="#FFD166" />
-                <MacroPill label="Carbs"   grams={targets.carbs_target}   color="#85FFBA" />
-              </div>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 12, lineHeight: 1.5 }}>
-                {targets.style.label} split · BMR {targets.bmr} kcal · Editable any time
-              </p>
-            </div>
-          )}
-
           {/* The three tier cards. Free is always the matched program;
               Prime + Elite come from the tiers table for live-edit
               copy. Coach-side updates to features/description in the

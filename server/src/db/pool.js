@@ -674,10 +674,22 @@ const alterStatements = [
   "ALTER TABLE programs ADD COLUMN visible INTEGER DEFAULT 1",
   "ALTER TABLE programs ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE programs ADD COLUMN featured INTEGER DEFAULT 0",
+  "ALTER TABLE programs ADD COLUMN intro_video_url TEXT",
   "ALTER TABLE workouts ADD COLUMN visible INTEGER DEFAULT 1",
   "ALTER TABLE workouts ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE client_profiles ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE course_modules ADD COLUMN status TEXT DEFAULT 'published'",
+  // Sub-modules: a module can nest under another (e.g. STEP 2 contains
+  // Feet / Spine / Hips / Shoulders sub-sections, each with their own
+  // lessons). Top-level modules have parent_module_id = NULL.
+  "ALTER TABLE course_modules ADD COLUMN parent_module_id INTEGER REFERENCES course_modules(id) ON DELETE CASCADE",
+  // Quiz lessons: a single JSON blob holds the question list (each
+  // with title, instructions, video_url, prompt, options A/B/C and
+  // option scores) + pass threshold + result messaging. When set, the
+  // lesson renders as <QuizPlayer> instead of the standard description
+  // + video. Routing on submit (next quiz / program recommendation)
+  // is encoded inside the result config.
+  "ALTER TABLE course_lessons ADD COLUMN quiz_data TEXT",
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",

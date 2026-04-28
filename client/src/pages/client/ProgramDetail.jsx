@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import WorkoutThumb from '../../components/WorkoutThumb';
+import VimeoEmbed from '../../components/VimeoEmbed';
 
 export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
   const { token } = useAuth();
@@ -94,6 +95,25 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
         <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', border: '1px solid rgba(61,255,210,0.08)' }} />
         <img src="/logo.png" alt="" style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, opacity: 0.8 }} />
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, lineHeight: 1.2 }}>{program.title}</h1>
+
+        {/* Coach intro video — sits just under the title so the program
+            opens with the pitch before the meta + description. Optional;
+            renders only when intro_video_url is set on the program. */}
+        {program.intro_video_url && (
+          <div style={{
+            position: 'relative', aspectRatio: '16 / 9',
+            borderRadius: 12, overflow: 'hidden', margin: '4px 0 16px', background: '#000',
+            border: '1.5px solid rgba(255, 255, 255, 0.18)',
+            boxShadow: '0 10px 32px rgba(133, 255, 186, 0.22)',
+          }}>
+            <VimeoEmbed
+              url={program.intro_video_url}
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
+            />
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

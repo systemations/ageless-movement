@@ -1283,6 +1283,12 @@ export default function Home() {
           is already on file. */}
       <NutritionSetupPromptCard profile={profile} token={token} onComplete={fetchDashboard} />
 
+      {/* Daily Targets — shows once onboarding (or the setup prompt
+          modal) has populated calorie_target + macros. Mutually
+          exclusive with NutritionSetupPromptCard above: one shows when
+          the inputs aren't set, this one when they are. */}
+      <DailyTargetsCard profile={profile} />
+
       {/* Today's Meal Plan */}
       {todayMealPlan && (
         <>
@@ -1494,6 +1500,61 @@ function ChallengesCard({ token, onOpen }) {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Daily Targets card
+// ─────────────────────────────────────────────────────────────────────
+// Shows the client's calorie + macro targets on Home once onboarding
+// (or the BMR setup modal) has computed them. Same visual treatment as
+// the targets card on the post-onboarding tier-pick screen so the
+// transition feels continuous. Auto-hides if calorie_target isn't set.
+function DailyTargetsCard({ profile }) {
+  const cals = profile?.calorie_target;
+  if (!cals) return null;
+  const macros = [
+    { label: 'PROTEIN', g: profile.protein_target, color: '#FF6B9D' },
+    { label: 'FAT',     g: profile.fat_target,     color: '#FFD166' },
+    { label: 'CARBS',   g: profile.carbs_target,   color: '#85FFBA' },
+  ].filter(m => m.g != null);
+  const styleLabel = ({
+    balanced: 'Balanced',
+    high_protein: 'High protein',
+    keto: 'Keto',
+    carnivore: 'Carnivore',
+    plant_based: 'Plant-based',
+  })[profile.eating_style] || null;
+
+  return (
+    <div className="card" style={{
+      marginTop: 12, padding: '16px 18px',
+      background: 'var(--bg-card)',
+      border: '1px solid rgba(133,255,186,0.18)',
+    }}>
+      <div style={{
+        fontSize: 11, letterSpacing: 2, color: 'rgba(133,255,186,0.85)',
+        fontWeight: 800, marginBottom: 8, textAlign: 'center',
+      }}>
+        YOUR DAILY TARGETS
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 900, color: '#fff', lineHeight: 1, textAlign: 'center' }}>
+        {cals.toLocaleString()} <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)' }}>kcal</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, gap: 8 }}>
+        {macros.map(m => (
+          <div key={m.label} style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: m.color }}>{m.g}g</p>
+            <p style={{ fontSize: 9, color: 'var(--text-tertiary)', fontWeight: 700, letterSpacing: 0.6 }}>{m.label}</p>
+          </div>
+        ))}
+      </div>
+      {styleLabel && (
+        <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12, textAlign: 'center' }}>
+          {styleLabel} split · Editable any time
+        </p>
       )}
     </div>
   );

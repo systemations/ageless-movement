@@ -22,6 +22,7 @@ import benchmarkRoutes from './routes/benchmarks.js';
 import onboardingRoutes from './routes/onboarding.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
+import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
 
 dotenv.config();
 
@@ -114,4 +115,8 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startPostSignupJobRunner();
+  // Idempotent content seeders. Each one only writes when its target
+  // rows are still empty, so this is safe to run on every start (local
+  // dev + Render prod). Adds new content without touching coach edits.
+  seedAssessmentLessons();
 });

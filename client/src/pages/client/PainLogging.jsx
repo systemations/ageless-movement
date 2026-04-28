@@ -9,11 +9,13 @@ import { useAuth } from '../../context/AuthContext';
 //
 // Data model + spec lives in project_pain_log_todo.md.
 
-// 17 body regions ordered head-to-foot. Position percents are for the
-// minimal body silhouette below — anatomical-ish dot map, not pixel-
-// perfect art. Good enough for V1; can swap for a real SVG later.
+// 17 body regions, ordered head-to-foot. Position percents are joint
+// anchors used both as tap targets and as endpoints for skeleton
+// lines connecting them. Slight gender-specific tweaks (wider
+// shoulders for male, wider hips for female) come from the
+// genderAdjustments map below.
 const BODY_REGIONS = [
-  { key: 'neck',         label: 'Neck',                x: 50, y: 10 },
+  { key: 'neck',         label: 'Neck',                x: 50, y: 11 },
   { key: 'shoulder_l',   label: 'Left Shoulder',       x: 30, y: 18 },
   { key: 'shoulder_r',   label: 'Right Shoulder',      x: 70, y: 18 },
   { key: 'elbow_l',      label: 'Left Elbow',          x: 22, y: 32 },
@@ -31,6 +33,40 @@ const BODY_REGIONS = [
   { key: 'foot_l',       label: 'Left Foot',           x: 38, y: 94 },
   { key: 'foot_r',       label: 'Right Foot',          x: 62, y: 94 },
 ];
+
+// Skeleton line connections — each pair is an edge in the joint graph.
+// Drawn as glowing lines on top of a faint body shadow, VALD-style.
+const SKELETON_EDGES = [
+  ['neck', 'upper_back'],
+  ['neck', 'shoulder_l'], ['neck', 'shoulder_r'],
+  ['shoulder_l', 'upper_back'], ['shoulder_r', 'upper_back'],
+  ['upper_back', 'lower_back'],
+  ['shoulder_l', 'elbow_l'], ['elbow_l', 'wrist_l'],
+  ['shoulder_r', 'elbow_r'], ['elbow_r', 'wrist_r'],
+  ['lower_back', 'hip_l'], ['lower_back', 'hip_r'],
+  ['hip_l', 'knee_l'], ['knee_l', 'ankle_l'], ['ankle_l', 'foot_l'],
+  ['hip_r', 'knee_r'], ['knee_r', 'ankle_r'], ['ankle_r', 'foot_r'],
+];
+
+// Adjust joint x-positions per gender so the skeleton + silhouette
+// shadow read correctly: male wider shoulders, female wider hips.
+const genderAdjustedRegions = (sex) => {
+  if (sex === 'female') {
+    return BODY_REGIONS.map(r => {
+      if (r.key === 'shoulder_l') return { ...r, x: 33 };
+      if (r.key === 'shoulder_r') return { ...r, x: 67 };
+      if (r.key === 'hip_l') return { ...r, x: 36 };
+      if (r.key === 'hip_r') return { ...r, x: 64 };
+      return r;
+    });
+  }
+  // Male / unset
+  return BODY_REGIONS.map(r => {
+    if (r.key === 'shoulder_l') return { ...r, x: 28 };
+    if (r.key === 'shoulder_r') return { ...r, x: 72 };
+    return r;
+  });
+};
 
 const regionLabel = (key) => BODY_REGIONS.find(r => r.key === key)?.label || 'Other';
 
@@ -197,95 +233,131 @@ function IssueCard({ issue, onTap, onLog }) {
   );
 }
 
-// Body region picker: tap a dot on the silhouette to choose a region.
-// SVG anatomical figure — front view, arms slightly out, neutral. Dots
-// are absolutely positioned over the SVG using the same x,y percent
-// coords stored on each region. Single-path silhouette so it scales
-// crisp at any size and matches the navy theme.
+// VALD HumanTrak-inspired pose overlay. Faint body shadow for context,
+// glowing skeleton lines connecting joints, prominent joint dots that
+// double as tap targets. Two gendered shadow shapes (broader-shoulder
+// male / wider-hip female); skeleton geometry comes from the joint
+// region coords with gender adjustments.
+
+const SHADOW_FILL = 'rgba(255,255,255,0.04)';
+
+// Subtle body shadow behind the skeleton. Drawn as separate paths
+// (head / torso / arms / legs) so each shape stays clean.
+function BodyShadow({ sex }) {
+  const female = sex === 'female';
+  return (
+    <g fill={SHADOW_FILL}>
+      {/* Head */}
+      <ellipse cx="50" cy="14" rx={female ? '7' : '7.5'} ry={female ? '8.5' : '9'} />
+      {/* Neck */}
+      <rect x={female ? '47' : '46'} y="21" width={female ? '6' : '8'} height="5" />
+      {/* Torso — male V-shape vs female hourglass */}
+      {female ? (
+        <path d="M33,28 Q30,30 31,40 L34,54 Q32,62 33,72 Q31,82 31,92 Q31,100 36,101 L64,101 Q69,100 69,92 Q69,82 67,72 Q68,62 66,54 L69,40 Q70,30 67,28 L58,26 L42,26 Z" />
+      ) : (
+        <path d="M28,28 Q24,30 26,40 L29,58 Q31,80 33,94 Q33,99 38,99 L62,99 Q67,99 67,94 Q69,80 71,58 L74,40 Q76,30 72,28 L60,26 L40,26 Z" />
+      )}
+      {/* Arms */}
+      <path d={female
+        ? "M33,28 Q26,32 22,44 Q19,58 19,76 Q19,86 21,92 Q24,93 26,90 Q28,75 29,62 Q30,48 32,40 Z"
+        : "M28,28 Q22,32 18,44 Q15,58 15,76 Q15,86 17,92 Q20,93 22,90 Q24,75 26,62 Q27,48 29,40 Z"
+      } />
+      <path d={female
+        ? "M67,28 Q74,32 78,44 Q81,58 81,76 Q81,86 79,92 Q76,93 74,90 Q72,75 71,62 Q70,48 68,40 Z"
+        : "M72,28 Q78,32 82,44 Q85,58 85,76 Q85,86 83,92 Q80,93 78,90 Q76,75 74,62 Q73,48 71,40 Z"
+      } />
+      {/* Legs */}
+      <path d="M37,99 Q34,102 34,110 L33,150 Q33,172 34,182 Q34,186 37,186 L45,186 Q48,186 48,182 Q49,172 48,150 L48,110 Q48,102 46,99 Z" />
+      <path d="M63,99 Q66,102 66,110 L67,150 Q67,172 66,182 Q66,186 63,186 L55,186 Q52,186 52,182 Q51,172 52,150 L52,110 Q52,102 54,99 Z" />
+      {/* Feet */}
+      <ellipse cx="40" cy="188" rx="5" ry="2.5" />
+      <ellipse cx="60" cy="188" rx="5" ry="2.5" />
+    </g>
+  );
+}
+
+// Skeleton overlay — bright lines + halo glow connecting joint dots.
+// BODY_REGIONS y values are 0-100 (percent of container) but the SVG
+// viewBox is 0-200 in Y so the body shadow paths can use anatomical
+// proportions cleanly. We scale region.y * 2 inside the SVG so dot +
+// edge geometry maps back to the same anchors used by the percentage
+// dot positions before this overlay-style rebuild.
+const sx = (v) => v;
+const sy = (v) => v * 2;
+
+function Skeleton({ regions, selectedKey }) {
+  const byKey = Object.fromEntries(regions.map(r => [r.key, r]));
+  return (
+    <g>
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="1.2" result="b" />
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      {SKELETON_EDGES.map(([a, b]) => {
+        const A = byKey[a]; const B = byKey[b];
+        if (!A || !B) return null;
+        const hot = selectedKey === a || selectedKey === b;
+        return (
+          <line
+            key={`${a}-${b}`}
+            x1={sx(A.x)} y1={sy(A.y)} x2={sx(B.x)} y2={sy(B.y)}
+            stroke={hot ? 'var(--accent)' : 'rgba(255,156,51,0.55)'}
+            strokeWidth={hot ? '1.6' : '1.1'}
+            strokeLinecap="round"
+            filter="url(#glow)"
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+// Body region picker: VALD-style pose overlay. Skeleton lines connect
+// joint dots over a faint body shadow. Selecting a joint highlights
+// it + its connected limbs.
 function BodyMap({ value, onChange }) {
+  const { profile } = useAuth();
+  const sex = profile?.sex || 'male';
+  const regions = genderAdjustedRegions(sex);
   return (
     <div>
       <div style={{
-        position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto 12px',
-        aspectRatio: '1/2', background: 'var(--bg-card)', borderRadius: 16,
-        padding: 0, overflow: 'hidden',
+        position: 'relative', width: '100%', maxWidth: 260, margin: '0 auto 12px',
+        aspectRatio: '1/2',
+        background: 'radial-gradient(ellipse at center, rgba(255,156,51,0.05), var(--bg-card) 70%)',
+        borderRadius: 16, padding: 0, overflow: 'hidden',
       }}>
         <svg
           viewBox="0 0 100 200"
           preserveAspectRatio="xMidYMid meet"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         >
-          {/* Single front-view silhouette: head, neck, shoulders, torso,
-              arms hanging slightly out, legs, feet. Drawn as one path
-              with the navy fill + a soft outline so the dots read on top. */}
-          <path
-            d="
-              M50 8
-              C55 8 59 12 59 17
-              C59 22 56 25 53 26
-              L53 30
-              C61 30 68 32 73 36
-              C76 39 78 43 78 48
-              L80 60
-              C82 70 82 80 80 90
-              C79 95 78 100 76 105
-              L74 100
-              C72 90 70 75 70 60
-              L70 96
-              C70 110 72 130 70 175
-              C70 184 68 188 64 188
-              L58 188
-              C57 188 56 187 56 185
-              L55 175
-              C55 130 54 110 54 96
-              L54 70
-              L46 70
-              L46 96
-              C46 110 45 130 45 175
-              L44 185
-              C44 187 43 188 42 188
-              L36 188
-              C32 188 30 184 30 175
-              C28 130 30 110 30 96
-              L30 60
-              C30 75 28 90 26 100
-              L24 105
-              C22 100 21 95 20 90
-              C18 80 18 70 20 60
-              L22 48
-              C22 43 24 39 27 36
-              C32 32 39 30 47 30
-              L47 26
-              C44 25 41 22 41 17
-              C41 12 45 8 50 8
-              Z
-            "
-            fill="rgba(255,255,255,0.05)"
-            stroke="var(--divider)"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
+          <BodyShadow sex={sex} />
+          <Skeleton regions={regions} selectedKey={value} />
+          {/* Joint dots rendered inside the SVG so they scale with it.
+              Each dot sits at the region's (x,y) and acts as a tap
+              target via onClick on the <circle>. */}
+          {regions.map(r => {
+            const selected = value === r.key;
+            return (
+              <g key={r.key} style={{ cursor: 'pointer' }} onClick={() => onChange(r.key)}>
+                <circle
+                  cx={sx(r.x)} cy={sy(r.y)} r={selected ? 3.5 : 2.4}
+                  fill={selected ? 'var(--accent)' : '#FF9C33'}
+                  stroke="#fff"
+                  strokeWidth={selected ? '0.8' : '0.5'}
+                  filter="url(#glow)"
+                />
+                {/* Invisible larger hit target so the dot is easy to tap on mobile */}
+                <circle cx={sx(r.x)} cy={sy(r.y)} r="6" fill="rgba(0,0,0,0)">
+                  <title>{r.label}</title>
+                </circle>
+              </g>
+            );
+          })}
         </svg>
-        {BODY_REGIONS.map(r => {
-          const selected = value === r.key;
-          return (
-            <button
-              key={r.key}
-              onClick={() => onChange(r.key)}
-              title={r.label}
-              style={{
-                position: 'absolute', left: `${r.x}%`, top: `${r.y}%`, transform: 'translate(-50%, -50%)',
-                width: selected ? 22 : 16, height: selected ? 22 : 16, borderRadius: '50%',
-                border: selected ? 'none' : '2px solid rgba(255,255,255,0.45)',
-                cursor: 'pointer',
-                background: selected ? 'var(--accent)' : 'rgba(0,0,0,0.45)',
-                boxShadow: selected ? '0 0 14px var(--accent)' : '0 1px 4px rgba(0,0,0,0.4)',
-                transition: 'all 0.15s',
-                zIndex: 1,
-              }}
-            />
-          );
-        })}
       </div>
       {value && (
         <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--accent)', marginBottom: 16 }}>

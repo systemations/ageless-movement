@@ -163,6 +163,18 @@ export function seedAssessmentLessons() {
     pool.query('UPDATE course_lessons SET description = ? WHERE id = ?', [seed.html, seed.id]);
     updated.push(seed.id);
   }
+  // Idempotent cleanup: lesson id 28 ("What do I do Now?") was the
+  // original placeholder wrap-up at the end of the Shoulders sub-
+  // module. Dan dropped it 2026-04-28 — Shoulder Internal Rotation is
+  // a clean stopping point. We delete by both id AND title so we
+  // never accidentally remove a re-used row. ON DELETE CASCADE on
+  // related response tables keeps things clean.
+  const wrapUp = pool.query("SELECT id FROM course_lessons WHERE id = 28 AND title = 'What do I do Now?'").rows[0];
+  if (wrapUp) {
+    pool.query('DELETE FROM course_lessons WHERE id = 28');
+    console.log('[assessment-seed] removed legacy lesson 28 (What do I do Now?)');
+  }
+
   if (updated.length || skipped.length) {
     console.log(`[assessment-seed] updated=${updated.length} skipped=${skipped.length}`);
   }

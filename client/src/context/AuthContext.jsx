@@ -80,18 +80,25 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error(data.error);
     localStorage.setItem('am_token', data.token);
     localStorage.removeItem('am_onboarding_answers');
-    setToken(data.token);
-    setUser(data.user);
-    // Pull the freshly-created profile so the routing guard can decide
-    // whether to lock them on /onboarding (slim signup path) or send
-    // them straight to /home (legacy path with onboarding inline).
+    // IMPORTANT: fetch the profile BEFORE flipping user, then commit
+    // both together. If user lands first, /register's route element
+    // immediately Navigates to defaultRoute (/home) because user is
+    // truthy. ProtectedRoute on /home can't redirect to /onboarding
+    // yet (it requires profile to be present), so Home flashes for a
+    // frame until profile arrives. Awaiting /me before setUser closes
+    // that race so the user goes straight from /register -> /onboarding
+    // with no flash.
+    let freshProfile = null;
     try {
       const meRes = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${data.token}` } });
       if (meRes.ok) {
         const me = await meRes.json();
-        setProfile(me.profile);
+        freshProfile = me.profile;
       }
     } catch {}
+    setProfile(freshProfile);
+    setToken(data.token);
+    setUser(data.user);
     return data;
   };
 

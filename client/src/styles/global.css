@@ -44,7 +44,10 @@
   --accent-active: #D47A10;
   --accent-mint: #85FFBA;
   --mint-read: #6FA88B;
-  --accent-orange: #FF9C33;
+  /* Darker variant of the brand orange — #FF9C33 fails WCAG against
+     white cards (contrast ~2.6). Deeper shade keeps the identity while
+     making text readable, e.g. the calorie target on Home. */
+  --accent-orange: #C75D00;
   --text-primary: #0A0A0A;
   --text-secondary: #6C6C70;
   --text-tertiary: #AEAEB2;

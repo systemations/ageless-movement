@@ -752,6 +752,19 @@ const alterStatements = [
   "ALTER TABLE goals ADD COLUMN metric_type TEXT DEFAULT 'manual'",
   "ALTER TABLE goals ADD COLUMN target_value REAL",
   "CREATE INDEX IF NOT EXISTS idx_goals_user_achieved ON goals(user_id, achieved, created_at DESC)",
+  // Onboarding checklist: 5 first-action tasks the new client sees on
+  // Home until each is done. Most are auto-detected from real signals
+  // (quiz attempts, goals count, check-ins, messages). The community
+  // welcome task has no derivable signal so it's manually checked off
+  // and stored here. UNIQUE keeps it idempotent.
+  `CREATE TABLE IF NOT EXISTS onboarding_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    task_key TEXT NOT NULL,
+    completed_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, task_key)
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_user ON onboarding_tasks(user_id)",
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",

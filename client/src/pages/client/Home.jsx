@@ -1276,6 +1276,10 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Onboarding checklist — 5 first-action tasks. Auto-hides as
+          soon as all 5 are complete. */}
+      <OnboardingChecklistCard token={token} />
+
       {/* Nutrition setup prompt — empty-state CTA shown when the client
           hasn't filled in the BMR inputs yet. Once they tap through and
           save, this card disappears and the calculated targets show in
@@ -1501,6 +1505,122 @@ function ChallengesCard({ token, onOpen }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Onboarding checklist
+// ─────────────────────────────────────────────────────────────────────
+// 5 first-action tasks shown to new clients on Home. Each task auto-
+// detects from real signals (quiz attempted, goals set, check-in
+// submitted, message sent) plus one manual task (community welcome).
+// Auto-hides once all 5 are done so it doesn't clutter Home for
+// established clients.
+function OnboardingChecklistCard({ token }) {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [marking, setMarking] = useState(null);
+
+  const fetchChecklist = () => {
+    fetch('/api/onboarding/checklist', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(setData)
+      .catch(() => {});
+  };
+  useEffect(fetchChecklist, [token]);
+
+  const markComplete = async (key) => {
+    setMarking(key);
+    await fetch(`/api/onboarding/checklist/${key}/complete`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchChecklist();
+    setMarking(null);
+  };
+
+  if (!data || data.all_done) return null;
+
+  const pct = Math.round((data.done / data.total) * 100);
+
+  return (
+    <div className="card" style={{
+      marginTop: 12, padding: 0, overflow: 'hidden',
+      border: '1.5px solid rgba(255,140,0,0.30)',
+      background: 'linear-gradient(135deg, rgba(255,140,0,0.08) 0%, rgba(255,140,0,0.02) 100%)',
+    }}>
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--divider)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+            background: 'rgba(255,140,0,0.18)', color: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18,
+          }}>🚀</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>Get started</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              {data.done} of {data.total} complete · {pct}%
+            </p>
+          </div>
+        </div>
+        <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.3s' }} />
+        </div>
+      </div>
+      <div style={{ padding: '4px 0' }}>
+        {data.tasks.map(t => (
+          <div
+            key={t.key}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+            }}
+          >
+            <div style={{
+              width: 24, height: 24, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+              background: t.completed ? 'var(--accent-mint)' : 'transparent',
+              border: t.completed ? 'none' : '1.5px solid var(--divider)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {t.completed && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                fontSize: 13, fontWeight: 600,
+                textDecoration: t.completed ? 'line-through' : 'none',
+                color: t.completed ? 'var(--text-secondary)' : 'var(--text-primary)',
+              }}>{t.title}</p>
+              {!t.completed && (
+                <p style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.4, marginTop: 2 }}>{t.description}</p>
+              )}
+              {!t.completed && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button
+                    onClick={() => navigate(t.cta_route)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 8, border: 'none',
+                      background: 'var(--accent)', color: '#fff',
+                      fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >{t.cta_label}</button>
+                  {t.manual && (
+                    <button
+                      onClick={() => markComplete(t.key)}
+                      disabled={marking === t.key}
+                      style={{
+                        padding: '6px 12px', borderRadius: 8,
+                        border: '1px solid var(--divider)', background: 'transparent',
+                        color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >{marking === t.key ? '…' : 'Mark done'}</button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

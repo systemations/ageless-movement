@@ -116,4 +116,142 @@ router.post('/finalize', authenticateToken, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────
+// Onboarding checklist — 5 first-action tasks shown on Home
+// ─────────────────────────────────────────────────────────────────────
+// Each task has an auto-detect rule so we only need a manual mark
+// when there's no derivable signal (community_welcome). The card on
+// Home polls /checklist and the task ticks off as soon as the
+// underlying action happens (quiz attempted, goal added, check-in
+// submitted, message sent).
+
+const CHECKLIST_TASKS = [
+  {
+    key: 'assessment_course',
+    title: 'Complete the AMS Getting Started course',
+    description: 'Walk through the assessment lessons + take the level quiz.',
+    cta_label: 'Open the course',
+    cta_route: '/explore',
+  },
+  {
+    key: 'set_goals',
+    title: 'Set 1 - 3 goals for the next 90 days',
+    description: 'Mobility, consistency, body comp - whatever matters most to you.',
+    cta_label: 'Add a goal',
+    cta_route: '/progress',
+  },
+  {
+    key: 'community_welcome',
+    title: 'Welcome yourself in the Active Clients group',
+    description: 'Drop a hello in the community chat so we know who you are.',
+    cta_label: 'Open Messages',
+    cta_route: '/messages',
+    manual: true,
+  },
+  {
+    key: 'first_checkin',
+    title: 'Submit your first check-in',
+    description: 'Front, side, back photos. Captures your visual baseline.',
+    cta_label: 'Start check-in',
+    cta_route: '/progress',
+  },
+  {
+    key: 'coach_hello',
+    title: 'Send your coach a hello message',
+    description: 'Quick intro so the support channel is open from day one.',
+    cta_label: 'Open Messages',
+    cta_route: '/messages',
+  },
+];
+
+// Live signal lookups used by /checklist. Each returns a boolean.
+const detectComplete = (taskKey, userId) => {
+  switch (taskKey) {
+    case 'assessment_course':
+      return (pool.query(
+        'SELECT 1 FROM quiz_attempts WHERE user_id = ? LIMIT 1',
+        [userId],
+      ).rows[0] || null) !== null;
+    case 'set_goals':
+      return (pool.query(
+        'SELECT 1 FROM goals WHERE user_id = ? LIMIT 1',
+        [userId],
+      ).rows[0] || null) !== null;
+    case 'first_checkin':
+      return (pool.query(
+        'SELECT 1 FROM checkins WHERE user_id = ? LIMIT 1',
+        [userId],
+      ).rows[0] || null) !== null;
+    case 'coach_hello':
+      // Any message they've sent in any conversation. Most clients'
+      // first message is to their coach so we don't bother filtering.
+      return (pool.query(
+        'SELECT 1 FROM messages WHERE sender_id = ? LIMIT 1',
+        [userId],
+      ).rows[0] || null) !== null;
+    default:
+      return false;
+  }
+};
+
+router.get('/checklist', authenticateToken, (req, res) => {
+  try {
+    const manual = pool.query(
+      'SELECT task_key, completed_at FROM onboarding_tasks WHERE user_id = ?',
+      [req.user.id],
+    ).rows;
+    const manualMap = new Map(manual.map(r => [r.task_key, r.completed_at]));
+
+    const tasks = CHECKLIST_TASKS.map(t => {
+      const manualCompletedAt = manualMap.get(t.key);
+      const auto = !t.manual && detectComplete(t.key, req.user.id);
+      const completed = !!(manualCompletedAt || auto);
+      return {
+        key: t.key,
+        title: t.title,
+        description: t.description,
+        cta_label: t.cta_label,
+        cta_route: t.cta_route,
+        manual: !!t.manual,
+        completed,
+        completed_at: manualCompletedAt || null,
+      };
+    });
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    res.json({ tasks, total, done, all_done: done === total });
+  } catch (err) {
+    console.error('checklist error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/checklist/:key/complete', authenticateToken, (req, res) => {
+  try {
+    const def = CHECKLIST_TASKS.find(t => t.key === req.params.key);
+    if (!def) return res.status(404).json({ error: 'Task not found' });
+    pool.query(
+      `INSERT OR IGNORE INTO onboarding_tasks (user_id, task_key) VALUES (?, ?)`,
+      [req.user.id, def.key],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('checklist complete error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/checklist/:key/uncomplete', authenticateToken, (req, res) => {
+  try {
+    pool.query(
+      'DELETE FROM onboarding_tasks WHERE user_id = ? AND task_key = ?',
+      [req.user.id, req.params.key],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('checklist uncomplete error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;

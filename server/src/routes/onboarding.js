@@ -254,4 +254,120 @@ router.post('/checklist/:key/uncomplete', authenticateToken, (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────
+// My Profile — view + patch onboarding answers
+// ─────────────────────────────────────────────────────────────────────
+// Combines BMR-relevant fields (sex/height/weight/age/activity_level/
+// eating_style) from client_profiles with the rest (goal/sport/
+// experience/equipment/days/injuries) from onboarding_answers.
+//
+// PATCH writes the right table for the field, then recomputes targets
+// if a BMR-affecting field changed so the cards on Home stay in sync.
+
+router.get('/answers', authenticateToken, (req, res) => {
+  try {
+    const profile = pool.query('SELECT * FROM client_profiles WHERE user_id = ?', [req.user.id]).rows[0] || {};
+    const ob = pool.query('SELECT * FROM onboarding_answers WHERE user_id = ?', [req.user.id]).rows[0] || {};
+    let json = {};
+    try { json = ob.answers_json ? JSON.parse(ob.answers_json) : {}; } catch {}
+    res.json({
+      // BMR-relevant (live on client_profiles)
+      sex: profile.sex || null,
+      age: profile.age != null ? profile.age : null,
+      height_cm: profile.height_cm != null ? profile.height_cm : null,
+      weight_kg: profile.weight_kg != null ? profile.weight_kg : null,
+      activity_level: profile.activity_level || null,
+      eating_style: profile.eating_style || null,
+      // BMI on the fly from height + weight
+      bmi: (profile.height_cm && profile.weight_kg)
+        ? +(profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)
+        : null,
+      // Lifestyle answers (live on onboarding_answers)
+      goal:       json.goal       || null,
+      sport:      json.sport      || null,
+      experience: json.experience || null,
+      equipment:  json.equipment  || null,
+      days:       json.days != null ? json.days : null,
+      injuries:   Array.isArray(json.injuries) ? json.injuries : (json.injuries ? [json.injuries] : []),
+      // Targets so the editor can show them next to BMR fields
+      calorie_target: profile.calorie_target,
+      protein_target: profile.protein_target,
+      fat_target:     profile.fat_target,
+      carbs_target:   profile.carbs_target,
+    });
+  } catch (err) {
+    console.error('answers get error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const BMR_FIELDS = new Set(['sex', 'age', 'height_cm', 'weight_kg', 'activity_level', 'eating_style']);
+const LIFESTYLE_FIELDS = new Set(['goal', 'sport', 'experience', 'equipment', 'days', 'injuries']);
+
+router.patch('/answers', authenticateToken, async (req, res) => {
+  try {
+    const { field, value } = req.body || {};
+    if (!field || (!BMR_FIELDS.has(field) && !LIFESTYLE_FIELDS.has(field))) {
+      return res.status(400).json({ error: 'unknown field' });
+    }
+
+    if (BMR_FIELDS.has(field)) {
+      pool.query(`UPDATE client_profiles SET ${field} = ? WHERE user_id = ?`, [value, req.user.id]);
+
+      // Recompute targets if any BMR input changed. Read freshest values.
+      const p = pool.query('SELECT * FROM client_profiles WHERE user_id = ?', [req.user.id]).rows[0] || {};
+      const { calculateTargets } = await import('../lib/nutritionTargets.js');
+      const t = calculateTargets({
+        sex: p.sex, weight_kg: p.weight_kg, height_cm: p.height_cm, age: p.age,
+        activity_level: p.activity_level, eating_style: p.eating_style,
+      });
+      // Only overwrite if the user hasn't manually customized targets in
+      // the Nutrition Targets editor (targets_custom = 1).
+      if (t.calorie_target && !p.targets_custom) {
+        pool.query(
+          'UPDATE client_profiles SET calorie_target = ?, protein_target = ?, fat_target = ?, carbs_target = ? WHERE user_id = ?',
+          [t.calorie_target, t.protein_target, t.fat_target, t.carbs_target, req.user.id],
+        );
+      }
+    } else {
+      // Lifestyle field — patch onboarding_answers.answers_json + the
+      // first-class column when it exists.
+      const ob = pool.query('SELECT * FROM onboarding_answers WHERE user_id = ?', [req.user.id]).rows[0];
+      let json = {};
+      try { json = ob?.answers_json ? JSON.parse(ob.answers_json) : {}; } catch {}
+      json[field] = value;
+
+      if (!ob) {
+        // Edge case: no onboarding row yet (legacy account). Insert one.
+        pool.query(
+          `INSERT INTO onboarding_answers (user_id, answers_json) VALUES (?, ?)`,
+          [req.user.id, JSON.stringify(json)],
+        );
+      } else {
+        // Update both the JSON blob + the first-class column (if it
+        // exists in the schema) so coach-side queries that read columns
+        // stay current.
+        const colMap = { goal: 'goal', experience: 'experience', equipment: 'equipment', injuries: 'injuries', days: 'schedule' };
+        const col = colMap[field];
+        if (col) {
+          const v = field === 'injuries' && Array.isArray(value) ? value.join(',') : (field === 'days' ? String(value) : value);
+          pool.query(
+            `UPDATE onboarding_answers SET answers_json = ?, ${col} = ? WHERE user_id = ?`,
+            [JSON.stringify(json), v, req.user.id],
+          );
+        } else {
+          pool.query(
+            'UPDATE onboarding_answers SET answers_json = ? WHERE user_id = ?',
+            [JSON.stringify(json), req.user.id],
+          );
+        }
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('answers patch error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;

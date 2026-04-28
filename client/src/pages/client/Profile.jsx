@@ -90,6 +90,10 @@ export default function Profile({ onBack }) {
   }, []);
 
   // Sub-pages
+  if (showSubPage === 'profile') {
+    return <MyProfilePage onBack={() => setShowSubPage(null)} token={token} user={user} />;
+  }
+
   if (showSubPage === 'nutrition') {
     return <NutritionTargetsPage onBack={() => setShowSubPage(null)} token={token} initialProfile={profile} />;
   }
@@ -611,6 +615,308 @@ function renewalStatus(dateStr) {
 // inputs accept, conversion happens before commit. Server runs the
 // same calc + writes the same fields, so a tampered request can't
 // underwrite calories without underwriting the inputs too.
+// ─────────────────────────────────────────────────────────────────────
+// My Profile — view + edit onboarding answers
+// ─────────────────────────────────────────────────────────────────────
+// Header: avatar, name, age (M/F), height, weight, BMI badge.
+// Body:   12 onboarding questions, each tappable to edit. BMR-relevant
+//         changes (sex/height/weight/age/activity/eating_style) trigger
+//         a server-side target recompute so the Daily Targets card
+//         on Home updates next mount.
+
+const PROFILE_QUESTIONS = [
+  { key: 'sex',            label: 'Biological sex',            type: 'single', options: [
+      { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' },
+  ]},
+  { key: 'age',            label: 'Age',                       type: 'number', min: 18, max: 110, suffix: 'years' },
+  { key: 'height_cm',      label: 'Height',                    type: 'number', min: 100, max: 230, suffix: 'cm' },
+  { key: 'weight_kg',      label: 'Weight',                    type: 'number', min: 30,  max: 250, suffix: 'kg', step: 0.1 },
+  { key: 'activity_level', label: 'Activity outside training', type: 'single', options: [
+      { value: 'sedentary', label: 'Sedentary' },
+      { value: 'light',     label: 'Lightly active' },
+      { value: 'moderate',  label: 'Moderately active' },
+      { value: 'very',      label: 'Very active' },
+      { value: 'extreme',   label: 'Extremely active' },
+  ]},
+  { key: 'eating_style',   label: 'Eating style',              type: 'single', options: [
+      { value: 'balanced',     label: 'Balanced' },
+      { value: 'high_protein', label: 'High protein' },
+      { value: 'mediterranean',label: 'Mediterranean' },
+      { value: 'low_carb',     label: 'Low carb' },
+      { value: 'keto',         label: 'Keto' },
+      { value: 'carnivore',    label: 'Carnivore' },
+      { value: 'plant_based',  label: 'Plant-based' },
+  ]},
+  { key: 'goal',           label: 'Primary goal',              type: 'single', options: [
+      { value: 'move_pain_free', label: 'Move without pain' },
+      { value: 'mobility',       label: 'Get more mobile' },
+      { value: 'strength',       label: 'Build strength' },
+      { value: 'sport',          label: 'Improve at my sport' },
+      { value: 'active_healthy', label: 'Stay active + healthy' },
+  ]},
+  { key: 'sport',          label: 'Sport',                     type: 'single', options: [
+      { value: 'none',       label: 'No sport' },
+      { value: 'pickleball', label: 'Pickleball' },
+      { value: 'tennis',     label: 'Tennis' },
+      { value: 'golf',       label: 'Golf' },
+      { value: 'running',    label: 'Running' },
+      { value: 'other',      label: 'Other' },
+  ]},
+  { key: 'experience',     label: 'Training experience',       type: 'single', options: [
+      { value: 'just_starting', label: 'Just starting out' },
+      { value: 'occasional',    label: 'Occasionally active' },
+      { value: 'consistent',    label: 'Training consistently' },
+      { value: 'advanced',      label: 'Advanced / athletic' },
+  ]},
+  { key: 'equipment',      label: 'Where you train',           type: 'single', options: [
+      { value: 'home_bodyweight', label: 'Home (bodyweight)' },
+      { value: 'home_basics',     label: 'Home (basics)' },
+      { value: 'home_gym',        label: 'Home gym' },
+      { value: 'full_gym',        label: 'Full commercial gym' },
+  ]},
+  { key: 'days',           label: 'Training days / week',      type: 'single', options: [
+      { value: 1, label: '1 day' }, { value: 2, label: '2 days' }, { value: 3, label: '3 days' },
+      { value: 4, label: '4 days' }, { value: 5, label: '5 days' }, { value: 6, label: '6 days' },
+      { value: 7, label: 'Every day' },
+  ]},
+  { key: 'injuries',       label: 'Injuries / areas to mind',  type: 'multi', options: [
+      { value: 'none',     label: 'None' },
+      { value: 'knee',     label: 'Knee' },
+      { value: 'back',     label: 'Back' },
+      { value: 'shoulder', label: 'Shoulder' },
+      { value: 'hip',      label: 'Hip' },
+      { value: 'neck',     label: 'Neck' },
+      { value: 'wrist',    label: 'Wrist' },
+  ]},
+];
+
+// BMI number is shown but no judgement label — "Overweight" / "Obese"
+// pills triggered clients. Coach can still read the number; client
+// gets factual data without the chip telling them how to feel.
+
+const renderAnswer = (q, value) => {
+  if (value == null || (Array.isArray(value) && value.length === 0)) return null;
+  if (q.type === 'multi') {
+    return value.map(v => q.options.find(o => o.value === v)?.label || v).join(', ');
+  }
+  if (q.type === 'single') {
+    return q.options.find(o => o.value === value)?.label || String(value);
+  }
+  if (q.type === 'number') {
+    return q.suffix ? `${value} ${q.suffix}` : String(value);
+  }
+  return String(value);
+};
+
+function MyProfilePage({ onBack, token, user }) {
+  const [answers, setAnswers] = useState(null);
+  const [editing, setEditing] = useState(null); // question key being edited
+
+  const fetchAnswers = () => {
+    fetch('/api/onboarding/answers', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : {})
+      .then(setAnswers)
+      .catch(() => {});
+  };
+  useEffect(fetchAnswers, [token]);
+
+  if (!answers) return <div className="page-content"><p style={{ color: 'var(--text-tertiary)', padding: 24 }}>Loading…</p></div>;
+
+  const bmi = answers.bmi;
+  const editingQ = PROFILE_QUESTIONS.find(q => q.key === editing);
+
+  return (
+    <div className="page-content" style={{ paddingBottom: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <button onClick={onBack} style={{
+          width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>My Profile</h1>
+      </div>
+
+      {/* Header card */}
+      <div className="card" style={{ marginBottom: 16, textAlign: 'center', padding: '24px 20px' }}>
+        <div style={{
+          width: 96, height: 96, borderRadius: '50%', margin: '0 auto 14px',
+          background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 36, fontWeight: 800, color: '#fff',
+        }}>
+          {user?.name?.[0]?.toUpperCase() || '?'}
+        </div>
+        <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{user?.name || 'You'}</p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+          {answers.age != null && <span><strong style={{ color: 'var(--text-primary)' }}>{answers.age}</strong> {answers.sex === 'female' ? '(F)' : answers.sex === 'male' ? '(M)' : ''}</span>}
+          {answers.height_cm != null && <span><strong style={{ color: 'var(--text-primary)' }}>{answers.height_cm}</strong> cm</span>}
+          {answers.weight_kg != null && <span><strong style={{ color: 'var(--text-primary)' }}>{answers.weight_kg}</strong> kg</span>}
+        </div>
+        {bmi != null && (
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            BMI <strong style={{ color: 'var(--text-primary)' }}>{bmi}</strong>
+          </p>
+        )}
+      </div>
+
+      {/* Question rows */}
+      <div className="card" style={{ padding: 0 }}>
+        {PROFILE_QUESTIONS.map((q, i) => {
+          const answer = renderAnswer(q, answers[q.key]);
+          return (
+            <div
+              key={q.key}
+              onClick={() => setEditing(q.key)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '14px 16px', cursor: 'pointer',
+                borderBottom: i < PROFILE_QUESTIONS.length - 1 ? '1px solid var(--divider)' : 'none',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{q.label}</p>
+                <p style={{ fontSize: 15, fontWeight: answer ? 600 : 500, color: answer ? 'var(--text-primary)' : 'var(--accent-mint)' }}>
+                  {answer || 'Add Answer'}
+                </p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.5" style={{ flexShrink: 0, marginTop: 4 }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Edit modal */}
+      {editingQ && (
+        <ProfileFieldEditor
+          question={editingQ}
+          currentValue={answers[editing]}
+          token={token}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); fetchAnswers(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProfileFieldEditor({ question, currentValue, token, onClose, onSaved }) {
+  const [value, setValue] = useState(currentValue ?? (question.type === 'multi' ? [] : ''));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    let payloadValue = value;
+    if (question.type === 'number') {
+      const n = parseFloat(value);
+      if (Number.isNaN(n)) { setError('Enter a number'); setSaving(false); return; }
+      if (question.min != null && n < question.min) { setError(`Min: ${question.min}`); setSaving(false); return; }
+      if (question.max != null && n > question.max) { setError(`Max: ${question.max}`); setSaving(false); return; }
+      payloadValue = n;
+    }
+    try {
+      const r = await fetch('/api/onboarding/answers', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: question.key, value: payloadValue }),
+      });
+      if (!r.ok) throw new Error('save');
+      onSaved();
+    } catch (e) { setError('Could not save. Try again.'); setSaving(false); }
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
+      display: 'flex', alignItems: 'flex-end',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+        width: '100%', maxWidth: 480, margin: '0 auto', padding: '16px 16px 32px',
+        maxHeight: '80vh', overflow: 'auto',
+      }}>
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 16px' }} />
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{question.label}</h3>
+
+        {question.type === 'number' && (
+          <input
+            type="number"
+            min={question.min}
+            max={question.max}
+            step={question.step || 1}
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            placeholder={question.suffix}
+            className="input-field"
+            style={{ marginBottom: 12, fontSize: 16 }}
+            autoFocus
+          />
+        )}
+
+        {question.type === 'single' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {question.options.map(opt => {
+              const selected = value === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setValue(opt.value)}
+                  style={{
+                    padding: '12px 14px', borderRadius: 10,
+                    border: selected ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                    background: selected ? 'rgba(255,140,0,0.10)' : 'transparent',
+                    color: 'var(--text-primary)', fontSize: 14, fontWeight: 600,
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >{opt.label}</button>
+              );
+            })}
+          </div>
+        )}
+
+        {question.type === 'multi' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {question.options.map(opt => {
+              const selected = Array.isArray(value) && value.includes(opt.value);
+              const toggle = () => {
+                const arr = Array.isArray(value) ? value : [];
+                if (opt.value === 'none') { setValue(['none']); return; }
+                const without = arr.filter(v => v !== 'none');
+                if (without.includes(opt.value)) setValue(without.filter(v => v !== opt.value));
+                else setValue([...without, opt.value]);
+              };
+              return (
+                <button
+                  key={opt.value}
+                  onClick={toggle}
+                  style={{
+                    padding: '12px 14px', borderRadius: 10,
+                    border: selected ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                    background: selected ? 'rgba(255,140,0,0.10)' : 'transparent',
+                    color: 'var(--text-primary)', fontSize: 14, fontWeight: 600,
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >{opt.label}</button>
+              );
+            })}
+          </div>
+        )}
+
+        {error && <p style={{ color: 'var(--accent-orange)', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+          <button onClick={save} disabled={saving} className="btn-primary" style={{ flex: 2 }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NutritionTargetsPage({ onBack, token, initialProfile }) {
   const [profile, setProfile] = useState(initialProfile || null);
   const [loading, setLoading] = useState(!initialProfile);

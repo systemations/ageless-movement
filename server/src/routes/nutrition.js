@@ -52,9 +52,20 @@ router.get('/diary', authenticateToken, async (req, res) => {
           [userId, p.active_meal_schedule_id]
         ).rows[0];
         const sched = pool.query('SELECT * FROM meal_schedules WHERE id = ?', [p.active_meal_schedule_id]).rows[0];
-        if (sched && assignment) {
-          const startDate = assignment.started_at || sched.created_at?.split('T')[0] || date;
-          const totalWeeks = sched.total_weeks || 1;
+        // Dashboard endpoint tolerates a missing client_meal_schedules
+        // assignment row; do the same here. Coaches who set
+        // client_profiles.active_meal_schedule_id directly without
+        // creating a client_meal_schedules row would otherwise see an
+        // empty Food Diary.
+        if (sched) {
+          const startDate = assignment?.started_at || sched.created_at?.split('T')[0] || date;
+          // Schema column is duration_weeks (not total_weeks). Dashboard
+          // and /api/athlete/today both use duration_weeks; this endpoint
+          // had a stale name that silently broke the meal-plan suggested
+          // items list — the math returned NaN and no schedule entry
+          // matched, so the Food Diary surfaced nothing to log against
+          // today's plan.
+          const totalWeeks = sched.duration_weeks || 1;
           const totalDays = totalWeeks * 7;
           const daysSinceStart = Math.max(0, Math.floor((new Date(date) - new Date(startDate)) / 86400000));
           const dayIndex = sched.repeating ? (daysSinceStart % totalDays) : Math.min(daysSinceStart, totalDays - 1);
@@ -68,7 +79,7 @@ router.get('/diary', authenticateToken, async (req, res) => {
             const { loadPlan, scalePlanForClient } = await import('../lib/mealScaling.js');
             const loaded = loadPlan(entry.meal_plan_id);
             if (loaded) {
-              const calTarget = assignment.calorie_override || p.calorie_target || null;
+              const calTarget = assignment?.calorie_override || p.calorie_target || null;
               const scaled = scalePlanForClient(loaded, calTarget);
               // Group primary items by meal_type, attach alternatives as swap options
               const allItems = scaled.items;

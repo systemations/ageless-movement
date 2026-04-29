@@ -36,7 +36,7 @@ const fadeSlideStyle = {
   animation: 'fadeSlideIn 0.3s ease-out forwards',
 };
 
-export default function EnhancedToday({ features, onNavigateWorkout, onNavigateNutrition, onActiveBlock }) {
+export default function EnhancedToday({ features, onNavigateWorkout, onNavigateNutrition, onActiveBlock, onEditTargets }) {
   const { token } = useAuth();
   const [today, setToday] = useState(todayCache.today);
   const [loading, setLoading] = useState(!todayCache.today);
@@ -371,7 +371,23 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
         }}>
           <div style={{ padding: '16px 18px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>Targets</h3>
+              <h3
+                onClick={onEditTargets}
+                style={{
+                  fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
+                  cursor: onEditTargets ? 'pointer' : 'default',
+                }}
+              >
+                Targets
+                {onEditTargets && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
+                    marginLeft: 8, letterSpacing: 0.6,
+                  }}>
+                    EDIT →
+                  </span>
+                )}
+              </h3>
               <span style={{
                 fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 8,
                 letterSpacing: 0.8, textTransform: 'uppercase',

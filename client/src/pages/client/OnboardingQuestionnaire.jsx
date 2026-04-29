@@ -174,6 +174,8 @@ export default function OnboardingQuestionnaire() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState(loadSaved);
   const [showSuggestion, setShowSuggestion] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => { persist(answers); }, [answers]);
 
@@ -214,21 +216,34 @@ export default function OnboardingQuestionnaire() {
     // Logged-out users hit the legacy SuggestionScreen which routes
     // them to /register first (no account = no plan to attach to).
     if (!isLoggedIn) { setShowSuggestion(true); return; }
+
+    // HARD GATE: finalize MUST succeed before we move on. Pre-today the
+    // catch swallowed every error (including non-2xx responses) and the
+    // user proceeded to Packages with un-saved answers, leaving them on
+    // schema-default 2200 kcal forever. Now: any failure keeps them on
+    // this step with an error + retry. localStorage is only cleared
+    // after the server confirms.
+    setSaving(true);
+    setSaveError(null);
     try {
-      // Persist answers server-side before routing to /packages so the
-      // coach's priority inbox sees them even if the client closes the
-      // app on the Packages screen. Finalize flips onboarding_complete=1
-      // so the routing gate stops bouncing the user back here after
-      // they've picked a plan.
-      await fetch('/api/onboarding/finalize', {
+      const res = await fetch('/api/onboarding/finalize', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Save failed (${res.status})`);
+      }
       try { localStorage.removeItem(STORAGE_KEY); } catch {}
       await refreshProfile();
-    } catch (e) { /* fall through — Packages still works without the persist */ }
-    navigate('/onboarding/packages');
+      setSaving(false);
+      navigate('/onboarding/packages');
+    } catch (err) {
+      console.error('Finalize failed:', err);
+      setSaving(false);
+      setSaveError(err.message || 'Could not save your answers. Tap Continue to try again.');
+    }
   };
 
   const back = () => {
@@ -327,12 +342,17 @@ export default function OnboardingQuestionnaire() {
         </div>
 
         <div style={footer}>
+          {saveError && (
+            <p style={{ color: '#FF5E5E', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>
+              {saveError}
+            </p>
+          )}
           <button
             onClick={next}
-            disabled={!canAdvance()}
-            style={{ ...ctaBtn, opacity: canAdvance() ? 1 : 0.35 }}
+            disabled={!canAdvance() || saving}
+            style={{ ...ctaBtn, opacity: (!canAdvance() || saving) ? 0.35 : 1 }}
           >
-            {isLast ? 'See my plan' : 'Continue'} →
+            {saving ? 'Saving…' : (isLast ? 'See my plan' : 'Continue')} {!saving && '→'}
           </button>
         </div>
       </div>

@@ -35,7 +35,7 @@ function getWeekDates() {
 }
 
 export default function Home() {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, profile: authProfile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { favourites } = useFavourites() || { favourites: [] };
@@ -76,6 +76,37 @@ export default function Home() {
     fetchNotifications();
     fetchOnboardingStatus();
   }, []);
+
+  // BMR recovery — silent self-heal for users whose questionnaire never
+  // landed server-side (e.g. closed the app between the last question
+  // and the SuggestionScreen / Packages step pre-2026-04-29). If profile
+  // is loaded with no biology fields AND we still have their answers in
+  // localStorage, re-fire finalize once so their targets compute and
+  // persist. Idempotent: profile.calorie_target jumping off 2200 default
+  // is the visible signal that recovery worked.
+  useEffect(() => {
+    if (!authProfile || !token) return;
+    const missingBio = !authProfile.sex && !authProfile.height_cm && !authProfile.weight_kg;
+    if (!missingBio) return;
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem('am_onboarding_answers') || 'null'); } catch {}
+    if (!stored || typeof stored !== 'object') return;
+    const hasBmrInputs =
+      typeof stored.age === 'number'
+      && typeof stored.sex === 'string'
+      && typeof stored.height_cm === 'number'
+      && typeof stored.weight_kg === 'number';
+    if (!hasBmrInputs) return;
+    fetch('/api/onboarding/finalize', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: stored }),
+    }).then((r) => {
+      if (!r.ok) return;
+      try { localStorage.removeItem('am_onboarding_answers'); } catch {}
+      refreshProfile?.();
+    }).catch(() => { /* silent — user can still use the prompt card */ });
+  }, [authProfile?.user_id, token]);
 
   // Lightweight poll of the onboarding checklist so Today's Tasks
   // appears the moment the client finishes their 5 first-actions.

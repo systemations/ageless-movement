@@ -79,7 +79,10 @@ router.post('/finalize', authenticateToken, async (req, res) => {
   try {
     const answers = req.body?.answers || {};
     const tierChoice = req.body?.tier_choice || 'free';
-    if (!answers || typeof answers !== 'object') {
+    if (!answers || typeof answers !== 'object' || Object.keys(answers).length === 0) {
+      // Reject empty / missing answers — the routing gate flips
+      // onboarding_complete=1 here, so accepting empty payloads would
+      // strand a client on default 2200 kcal forever (Gillian-style).
       return res.status(400).json({ error: 'answers required' });
     }
 

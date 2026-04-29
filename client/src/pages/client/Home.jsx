@@ -64,6 +64,14 @@ export default function Home() {
   const [athleteFeatures, setAthleteFeatures] = useState(homeCache.athleteFeatures);
   const [hasEnhancedToday, setHasEnhancedToday] = useState(homeCache.hasEnhancedToday);
   const [notifications, setNotifications] = useState([]);
+  // Reminder preferences. Default-ON so existing surfaces keep rendering
+  // until the user explicitly toggles something off in Profile -> Reminders.
+  // Read on mount; refetch when window regains focus so toggle changes
+  // made in another tab apply without a full reload.
+  const [prefs, setPrefs] = useState({
+    workout_reminder: true, meal_logging: true, water_intake: true,
+    daily_checkin: true, weekly_checkin: true, supplement_reminder: true,
+  });
   const today = new Date();
   const weekDates = getWeekDates();
   const todayStr = today.toLocaleDateString('en-IE', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -75,7 +83,22 @@ export default function Home() {
     fetchAthleteFeatures();
     fetchNotifications();
     fetchOnboardingStatus();
+    fetchPrefs();
   }, []);
+
+  // Pull the user's reminder toggles. Missing keys mean "default ON" so
+  // existing rows in client_profiles.reminder_preferences with only a
+  // subset of keys still behave sensibly.
+  const fetchPrefs = async () => {
+    try {
+      const r = await fetch('/api/athlete/preferences', { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d?.preferences && typeof d.preferences === 'object') {
+        setPrefs((prev) => ({ ...prev, ...d.preferences }));
+      }
+    } catch {}
+  };
 
   // BMR recovery — silent self-heal for users whose questionnaire never
   // landed server-side (e.g. closed the app between the last question
@@ -1352,8 +1375,10 @@ export default function Home() {
           the inputs aren't set, this one when they are. */}
       <DailyTargetsCard profile={profile} />
 
-      {/* Today's Meal Plan */}
-      {todayMealPlan && (
+      {/* Today's Meal Plan — hidden when client toggles Meal Logging off
+          in Profile -> Reminders. Coach-prescribed plans still exist on
+          /nutrition for active logging; this is just the home surface. */}
+      {todayMealPlan && prefs.meal_logging !== false && (
         <>
           <div className="section-header" style={{ marginTop: 8 }}>
             <h2>Today's Meals</h2>
@@ -1400,7 +1425,10 @@ export default function Home() {
         <h2>Activity</h2>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
-        {/* Water */}
+        {/* Water — hidden when client toggles Water Intake off in
+            Profile -> Reminders. Steps stays on its own and stretches
+            to full width via flex when water is gone. */}
+        {prefs.water_intake !== false && (
         <div className="card" style={{ flex: 1 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
@@ -1426,6 +1454,7 @@ export default function Home() {
             + 250ml
           </button>
         </div>
+        )}
         {/* Steps */}
         <div className="card" style={{ flex: 1 }}>
           <div style={{
@@ -1473,13 +1502,25 @@ export default function Home() {
         </div>
       ))}
 
-      {notifications.length > 0 && (
-        <NotificationPopup
-          notification={notifications[0]}
-          onDismiss={() => dismissNotification(notifications[0])}
-          onCompleteCheckin={(payload) => completeCheckin(notifications[0], payload)}
-        />
-      )}
+      {/* Skip daily_checkin notifications when the client toggles
+          Daily Check-in off in Profile -> Reminders. Other notification
+          kinds (announcement, offer, challenge, custom) still show
+          regardless because those are coach-driven business comms,
+          not the optional check-in nudge. */}
+      {(() => {
+        const visibleNotifs = notifications.filter(
+          (n) => prefs.daily_checkin !== false || n.kind !== 'daily_checkin',
+        );
+        if (visibleNotifs.length === 0) return null;
+        const head = visibleNotifs[0];
+        return (
+          <NotificationPopup
+            notification={head}
+            onDismiss={() => dismissNotification(head)}
+            onCompleteCheckin={(payload) => completeCheckin(head, payload)}
+          />
+        );
+      })()}
     </div>
   );
 }

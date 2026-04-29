@@ -18,11 +18,15 @@ export default function Profile({ onBack }) {
   const [showSubPage, setShowSubPage] = useState(initialSection === 'nutrition' ? 'profile' : null);
   const [scrollTarget, setScrollTarget] = useState(initialSection === 'nutrition' ? 'nutrition' : null);
   const [unitSystem, setUnitSystem] = useState({ weight: 'kg', height: 'cm' });
+  // Reminder preferences. Defaults are ON so every surface (water card,
+  // meal logging, daily check-in popup, etc.) renders out of the box.
+  // Toggling OFF hides / silences that surface. Stored on
+  // client_profiles.reminder_preferences JSON.
   const [reminders, setReminders] = useState({
     workout_reminder: true,
     meal_logging: true,
-    water_intake: false,
-    daily_checkin: false,
+    water_intake: true,
+    daily_checkin: true,
     weekly_checkin: true,
     supplement_reminder: true,
   });
@@ -127,12 +131,12 @@ export default function Profile({ onBack }) {
         </p>
 
         {[
-          { key: 'workout_reminder', label: 'Workout Reminder', desc: 'Daily nudge to complete your session', icon: '🏋️' },
-          { key: 'meal_logging', label: 'Meal Logging', desc: 'Remind to log your meals', icon: '🍖' },
-          { key: 'supplement_reminder', label: 'Supplement Reminder', desc: 'Daily reminder to take your supps', icon: '💊' },
-          { key: 'water_intake', label: 'Water Intake', desc: 'Periodic water intake reminders', icon: '💧' },
-          { key: 'daily_checkin', label: 'Daily Check-in', desc: 'Log sleep, energy, soreness & mood each day', icon: '📋' },
-          { key: 'weekly_checkin', label: 'Weekly Check-in', desc: 'Submit progress photos & measurements weekly', icon: '📊' },
+          { key: 'water_intake',       label: 'Water Intake',        desc: 'Show the water tracker on Home', icon: '💧' },
+          { key: 'meal_logging',       label: 'Meal Logging',        desc: 'Show today\'s meals on Home', icon: '🍖' },
+          { key: 'daily_checkin',      label: 'Daily Check-in',      desc: 'Pop-up to log sleep, energy, soreness & mood', icon: '📋' },
+          { key: 'weekly_checkin',     label: 'Weekly Check-in',     desc: 'Sunday 10am notification to submit progress photos', icon: '📊' },
+          { key: 'supplement_reminder',label: 'Supplement Reminder', desc: 'Daily reminder to take your supplements', icon: '💊' },
+          { key: 'workout_reminder',   label: 'Workout Reminders',   desc: 'Allow your coach to send a nudge on workout days', icon: '🏋️' },
         ].map(({ key, label, desc, icon }) => (
           <div key={key} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -315,7 +319,6 @@ export default function Profile({ onBack }) {
         {[
           { icon: '👤', label: 'My Profile', action: () => setShowSubPage('profile') },
           { icon: '🔔', label: 'Reminders', action: () => setShowSubPage('reminders') },
-          { icon: '📏', label: 'Measurement Goals', action: () => navigate('/progress') },
           { icon: '⌚', label: 'Connected Apps', action: () => setShowSubPage('connected') },
           { icon: '🔄', label: 'Unit System', action: () => setShowSubPage('units') },
         ].map(({ icon, label, action }, i, arr) => (

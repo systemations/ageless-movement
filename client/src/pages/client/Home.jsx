@@ -1376,51 +1376,45 @@ export default function Home() {
           navigate to /profile?section=nutrition for editing — the
           discoverability affordance lives there instead. */}
 
-      {/* Today's Meal Plan — hidden when client toggles Meal Logging
-          off in Profile -> Reminders. Header card with kcal + macro
-          totals; the Next Meal preview and Log Meals/Supps buttons
-          live inside EnhancedToday's Targets card above to avoid
-          duplicating that section. */}
+      {/* Today's Meal Plan — slim plan-header bar only. The kcal/macro
+          numbers used to repeat here but they duplicate the Targets
+          card above, so this is now just a tappable plan title +
+          schedule + week/day so the user knows which plan is assigned
+          and can jump to /nutrition to log against it. Hidden when
+          client toggles Meal Logging off in Profile -> Reminders. */}
       {todayMealPlan && prefs.meal_logging !== false && (
-        <>
-          <div className="section-header" style={{ marginTop: 8 }}>
-            <h2>Today's Meals</h2>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Week {todayMealPlan.week_number}, Day {todayMealPlan.day_number}
-            </span>
+        <div
+          className="card"
+          onClick={() => navigate('/nutrition')}
+          role="button"
+          tabIndex={0}
+          style={{
+            marginTop: 12, cursor: 'pointer', padding: '12px 16px',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 8, background: 'rgba(255,140,0,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 16 }}>🍽</span>
           </div>
-          <div className="card" onClick={() => navigate('/nutrition')} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,140,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 16 }}>🍽</span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todayMealPlan.plan_title}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{todayMealPlan.schedule_title}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>{Math.round(todayMealPlan.day_totals?.calories || 0)}</p>
-                <p style={{ fontSize: 9, color: 'var(--text-tertiary)', fontWeight: 700 }}>kcal</p>
-              </div>
-            </div>
-            <div style={{ padding: '10px 16px' }}>
-              {/* Macro bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10, paddingTop: 6 }}>
-                {[
-                  { label: 'Protein', value: Math.round(todayMealPlan.day_totals?.protein || 0), unit: 'g', color: '#3DFFD2' },
-                  { label: 'Fat', value: Math.round(todayMealPlan.day_totals?.fat || 0), unit: 'g', color: '#FF9500' },
-                  { label: 'Carbs', value: Math.round(todayMealPlan.day_totals?.carbs || 0), unit: 'g', color: '#64D2FF' },
-                ].map(({ label, value, unit, color }) => (
-                  <div key={label} style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color }}>{value}{unit}</p>
-                    <p style={{ fontSize: 9, color: 'var(--text-tertiary)', fontWeight: 600 }}>{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              fontSize: 14, fontWeight: 700,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{todayMealPlan.plan_title}</p>
+            <p style={{
+              fontSize: 11, color: 'var(--text-tertiary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {todayMealPlan.schedule_title} · Week {todayMealPlan.week_number}, Day {todayMealPlan.day_number}
+            </p>
           </div>
-        </>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </div>
       )}
 
       {/* Activity Section */}

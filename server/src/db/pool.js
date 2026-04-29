@@ -1026,6 +1026,30 @@ for (const sql of alterStatements) {
   try { db.exec(sql); } catch (e) { /* column already exists */ }
 }
 
+// Backfill onboarding_complete for clients who clearly predate the flag.
+// onboarding_complete defaults to 0 and only flips to 1 when someone runs
+// through the post-register questionnaire. Existing users (FitBudd
+// migration, seed accounts, anyone created before slim register) get
+// stuck on the questionnaire forever otherwise. Any of these signals
+// means "this client has already used the app and shouldn't see the
+// questionnaire again": age set, weight set, has an enrolled program,
+// has logged a workout, or has any check-in row. Idempotent — the
+// WHERE clause matches nothing on subsequent boots.
+try {
+  db.exec(`
+    UPDATE client_profiles
+       SET onboarding_complete = 1
+     WHERE onboarding_complete = 0
+       AND (
+         age IS NOT NULL
+         OR weight_kg IS NOT NULL
+         OR EXISTS (SELECT 1 FROM client_programs WHERE client_programs.user_id = client_profiles.user_id)
+         OR EXISTS (SELECT 1 FROM workout_logs WHERE workout_logs.user_id = client_profiles.user_id)
+         OR EXISTS (SELECT 1 FROM checkins WHERE checkins.user_id = client_profiles.user_id)
+       )
+  `);
+} catch (e) { /* checkins / workout_logs may not exist on a stripped DB */ }
+
 // Relax the in_app_notifications.audience CHECK constraint so it accepts
 // 'user' (per-user nudges like the 24h post-signup plans banner). SQLite
 // can't ALTER a CHECK, so we detect the old constraint by inspecting

@@ -36,7 +36,7 @@ const fadeSlideStyle = {
   animation: 'fadeSlideIn 0.3s ease-out forwards',
 };
 
-export default function EnhancedToday({ features, onNavigateWorkout, onNavigateNutrition, onActiveBlock, onEditTargets }) {
+export default function EnhancedToday({ features, onNavigateWorkout, onNavigateNutrition, onActiveBlock, onEditTargets, mealPlan }) {
   const { token } = useAuth();
   const [today, setToday] = useState(todayCache.today);
   const [loading, setLoading] = useState(!todayCache.today);
@@ -362,7 +362,29 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
       {/* ═══════════════════════════════════════════════════════
           4. MACRO TARGETS
           ═══════════════════════════════════════════════════════ */}
-      {features?.smart_targets?.unlocked && today?.calorie_targets && (
+      {features?.smart_targets?.unlocked && today?.calorie_targets && (() => {
+        // When a coach has assigned a meal plan, the plan IS the target —
+        // the BMR figure was just the calc that informed the prescription.
+        // Show plan totals + plan title here so we don't render two
+        // contradictory targets on the same screen. Falls back to BMR
+        // when no plan is assigned.
+        const usePlan = !!mealPlan;
+        const targetCals = usePlan
+          ? Math.round(mealPlan.day_totals?.calories || 0)
+          : today.calorie_targets.calories;
+        const targetP = usePlan
+          ? Math.round(mealPlan.day_totals?.protein || 0)
+          : today.calorie_targets.protein;
+        const targetF = usePlan
+          ? Math.round(mealPlan.day_totals?.fat || 0)
+          : today.calorie_targets.fat;
+        const targetC = usePlan
+          ? Math.round(mealPlan.day_totals?.carbs || 0)
+          : today.calorie_targets.carbs;
+        const subtitle = usePlan
+          ? `${mealPlan.plan_title} · Week ${mealPlan.week_number}, Day ${mealPlan.day_number}`
+          : null;
+        return (
         <div style={{
           borderRadius: 16, overflow: 'hidden', marginBottom: 14,
           background: 'var(--bg-card)',
@@ -370,27 +392,35 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
           animationDelay: '0.15s',
         }}>
           <div style={{ padding: '16px 18px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3
-                onClick={onEditTargets}
-                style={{
-                  fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
-                  cursor: onEditTargets ? 'pointer' : 'default',
-                }}
-              >
-                Targets
-                {onEditTargets && (
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
-                    marginLeft: 8, letterSpacing: 0.6,
-                  }}>
-                    EDIT →
-                  </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3
+                  onClick={onEditTargets}
+                  style={{
+                    fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
+                    cursor: onEditTargets ? 'pointer' : 'default',
+                  }}
+                >
+                  Targets
+                  {onEditTargets && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
+                      marginLeft: 8, letterSpacing: 0.6,
+                    }}>
+                      EDIT →
+                    </span>
+                  )}
+                </h3>
+                {subtitle && (
+                  <p style={{
+                    fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{subtitle}</p>
                 )}
-              </h3>
+              </div>
               <span style={{
                 fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 8,
-                letterSpacing: 0.8, textTransform: 'uppercase',
+                letterSpacing: 0.8, textTransform: 'uppercase', flexShrink: 0,
                 background: today.is_training_day
                   ? 'linear-gradient(135deg, rgba(61,255,210,0.15), rgba(61,255,210,0.05))'
                   : 'rgba(142,142,147,0.12)',
@@ -408,7 +438,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
                 color: 'var(--accent-orange)',
                 lineHeight: 1,
               }}>
-                {today.calorie_targets.calories}
+                {targetCals}
               </span>
               <span style={{
                 fontSize: 14, fontWeight: 600, color: 'var(--text-tertiary)',
@@ -419,9 +449,9 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
             {/* Macro pills */}
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { label: 'Protein', value: today.calorie_targets.protein, unit: 'g', color: '#85FFBA', bg: 'rgba(61,255,210,0.1)' },
-                { label: 'Fat', value: today.calorie_targets.fat, unit: 'g', color: '#FF6B6B', bg: 'rgba(255,107,107,0.1)' },
-                { label: 'Carbs', value: today.calorie_targets.carbs, unit: 'g', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
+                { label: 'Protein', value: targetP, unit: 'g', color: '#85FFBA', bg: 'rgba(61,255,210,0.1)' },
+                { label: 'Fat', value: targetF, unit: 'g', color: '#FF6B6B', bg: 'rgba(255,107,107,0.1)' },
+                { label: 'Carbs', value: targetC, unit: 'g', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
               ].map(m => (
                 <div key={m.label} style={{
                   flex: 1, textAlign: 'center', padding: '12px 8px',
@@ -550,7 +580,8 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
             })()}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Daily check-in removed from homepage - will be notification-driven */}
     </>

@@ -702,10 +702,15 @@ export default function Home() {
       </div>
       )}
 
-      {/* Enhanced Today -- phase banner, sessions, meals, supplements */}
+      {/* Enhanced Today -- phase banner, sessions, meals, supplements.
+          mealPlan prop overrides the BMR-derived targets with the
+          coach-prescribed plan when one is assigned, so the Targets
+          card represents the active prescription instead of two
+          competing numbers. */}
       {athleteFeatures && (
         <EnhancedToday
           features={athleteFeatures}
+          mealPlan={prefs.meal_logging !== false ? todayMealPlan : null}
           onNavigateWorkout={(workoutId) => navigate(`/explore?workout=${workoutId}`)}
           onNavigateNutrition={(tab) => navigate(`/nutrition${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`)}
           onActiveBlock={(active) => { homeCache.hasEnhancedToday = active; setHasEnhancedToday(active); }}
@@ -1376,46 +1381,11 @@ export default function Home() {
           navigate to /profile?section=nutrition for editing — the
           discoverability affordance lives there instead. */}
 
-      {/* Today's Meal Plan — slim plan-header bar only. The kcal/macro
-          numbers used to repeat here but they duplicate the Targets
-          card above, so this is now just a tappable plan title +
-          schedule + week/day so the user knows which plan is assigned
-          and can jump to /nutrition to log against it. Hidden when
-          client toggles Meal Logging off in Profile -> Reminders. */}
-      {todayMealPlan && prefs.meal_logging !== false && (
-        <div
-          className="card"
-          onClick={() => navigate('/nutrition')}
-          role="button"
-          tabIndex={0}
-          style={{
-            marginTop: 12, cursor: 'pointer', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}
-        >
-          <div style={{
-            width: 36, height: 36, borderRadius: 8, background: 'rgba(255,140,0,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 16 }}>🍽</span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{
-              fontSize: 14, fontWeight: 700,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{todayMealPlan.plan_title}</p>
-            <p style={{
-              fontSize: 11, color: 'var(--text-tertiary)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {todayMealPlan.schedule_title} · Week {todayMealPlan.week_number}, Day {todayMealPlan.day_number}
-            </p>
-          </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </div>
-      )}
+      {/* Today's Meal Plan strip removed 2026-04-29 — the plan title
+          + schedule + week/day now appear inline on the Targets card
+          via the mealPlan prop, and the Log Meals button on that card
+          handles the tap-through. Single source of truth for the
+          day's nutrition prescription. */}
 
       {/* Activity Section */}
       <div className="section-header">

@@ -1697,6 +1697,16 @@ if (ftrCount.c === 0) {
   insertFtr.run('shopping_list',      3, 'Shopping List',         'Weekly shopping list from meal plan');
 }
 
+// Backfill: if a coach assigns a meal plan / supplements / smart targets
+// to a Free or low-tier client, the client should still see the full UI
+// for what was assigned. Original tier gates were too aggressive — they
+// hid the Next Meal preview and Log Supps button on Home for any client
+// below tier 2/3 even when they had data. Idempotent: subsequent boots
+// see the values already set and the UPDATE no-ops.
+try {
+  db.prepare("UPDATE feature_tier_requirements SET min_tier_level = 0 WHERE feature_key IN ('meal_templates','supplement_tracker','smart_targets') AND min_tier_level > 0").run();
+} catch {}
+
 // ---------------------------------------------------------------------
 // Mock client roster — 20 seeded clients across ages, genders, tiers,
 // and full onboarding answers. Only runs on an empty client roster so

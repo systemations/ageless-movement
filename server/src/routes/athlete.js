@@ -39,8 +39,18 @@ router.get('/features', authenticateToken, (req, res) => {
       smart_targets: (
         pool.query('SELECT 1 FROM phase_calorie_targets pct JOIN block_phases bp ON bp.id = pct.block_phase_id JOIN training_blocks tb ON tb.id = bp.block_id WHERE tb.user_id = ? LIMIT 1', [userId]).rows.length > 0
         || pool.query('SELECT 1 FROM meal_day_templates mdt JOIN training_blocks tb ON tb.id = mdt.block_id WHERE tb.user_id = ? LIMIT 1', [userId]).rows.length > 0
+        // Modern path: any client with a meal_schedule assigned has
+        // computed calorie + macro targets, even without a phase block.
+        || pool.query('SELECT 1 FROM client_profiles WHERE user_id = ? AND active_meal_schedule_id IS NOT NULL LIMIT 1', [userId]).rows.length > 0
       ),
-      meal_templates: pool.query('SELECT 1 FROM meal_day_templates mdt JOIN training_blocks tb ON tb.id = mdt.block_id WHERE tb.user_id = ? LIMIT 1', [userId]).rows.length > 0,
+      // Two systems can populate this: legacy meal_day_templates (block-bound)
+      // OR the modern meal_schedules path (active_meal_schedule_id on the
+      // profile). Either yields a meal_template shape on /api/athlete/today
+      // so EnhancedToday's Targets card with Next Meal + Log buttons renders.
+      meal_templates: (
+        pool.query('SELECT 1 FROM meal_day_templates mdt JOIN training_blocks tb ON tb.id = mdt.block_id WHERE tb.user_id = ? LIMIT 1', [userId]).rows.length > 0
+        || pool.query('SELECT 1 FROM client_profiles WHERE user_id = ? AND active_meal_schedule_id IS NOT NULL LIMIT 1', [userId]).rows.length > 0
+      ),
       weekly_meal_plan: pool.query('SELECT 1 FROM weekly_meal_plans wmp JOIN training_blocks tb ON tb.id = wmp.block_id WHERE tb.user_id = ? LIMIT 1', [userId]).rows.length > 0,
       supplement_tracker: pool.query('SELECT 1 FROM supplements WHERE user_id = ? LIMIT 1', [userId]).rows.length > 0,
       daily_checkin: true, // basic checkin always has data potential
@@ -265,18 +275,88 @@ router.get('/today', authenticateToken, (req, res) => {
       }
     }
 
-    // Get supplements
-    let supplements = [];
-    if (tierLevel >= 3) {
-      supplements = pool.query(
-        'SELECT * FROM supplements WHERE user_id = ? ORDER BY is_conditional, name', [userId]
-      ).rows;
-      supplements = supplements.map(s => ({
-        ...s,
-        double_on_days: s.double_on_days ? JSON.parse(s.double_on_days) : null,
-        is_double_day: s.double_on_days ? JSON.parse(s.double_on_days).includes(dayOfWeek) : false,
-      }));
+    // Modern fallback: most clients are on the meal_schedules system,
+    // not the legacy training_blocks → meal_day_templates path. Build
+    // an equivalent meal_template shape from active_meal_schedule_id
+    // so EnhancedToday's Targets card with Next Meal + Log buttons
+    // renders. Each meal_type group (Early Morning, Breakfast, Lunch,
+    // ...) becomes a meals[] entry with a default time-of-day.
+    if (!mealTemplate) {
+      const profileRow = pool.query(
+        'SELECT active_meal_schedule_id, calorie_target FROM client_profiles WHERE user_id = ?',
+        [userId],
+      ).rows[0];
+      if (profileRow?.active_meal_schedule_id) {
+        try {
+          const assignment = pool.query(
+            'SELECT calorie_override, started_at FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+            [userId, profileRow.active_meal_schedule_id],
+          ).rows[0];
+          const sched = pool.query(
+            'SELECT * FROM meal_schedules WHERE id = ?',
+            [profileRow.active_meal_schedule_id],
+          ).rows[0];
+          if (sched) {
+            const startDate = assignment?.started_at ? new Date(assignment.started_at) : new Date();
+            const daysSinceStart = Math.max(0, Math.floor((new Date(date) - new Date(startDate.toISOString().split('T')[0])) / 86400000));
+            const totalDays = (sched.duration_weeks || 1) * 7;
+            const dayIndex = sched.repeating ? (daysSinceStart % totalDays) : Math.min(daysSinceStart, totalDays - 1);
+            const weekNumber = Math.floor(dayIndex / 7) + 1;
+            const dayNumber = (dayIndex % 7) + 1;
+            const entry = pool.query(
+              'SELECT meal_plan_id FROM meal_schedule_entries WHERE schedule_id = ? AND week_number = ? AND day_number = ?',
+              [sched.id, weekNumber, dayNumber],
+            ).rows[0];
+            if (entry?.meal_plan_id) {
+              // Pull items grouped by meal_type, hydrate recipe titles
+              // so the EnhancedToday preview shows actual food names.
+              const items = pool.query(
+                `SELECT mpi.meal_type, mpi.sort_order, mpi.serving_qty,
+                        mpi.custom_name, r.title AS recipe_title
+                 FROM meal_plan_items mpi
+                 LEFT JOIN recipes r ON r.id = mpi.recipe_id
+                 WHERE mpi.meal_plan_id = ?
+                 ORDER BY mpi.sort_order`,
+                [entry.meal_plan_id],
+              ).rows;
+              const SLOT_HOUR = {
+                'early morning': '06:00', 'pre breakfast': '06:30', 'breakfast': '08:00',
+                'mid morning': '10:00', 'brunch': '10:30', 'lunch': '12:30',
+                'mid afternoon': '15:00', 'afternoon snack': '15:00', 'pre dinner': '17:00',
+                'dinner': '18:30', 'late snack': '20:00', 'pre bed': '21:00',
+              };
+              const slots = new Map();
+              for (const it of items) {
+                const k = it.meal_type || 'Meal';
+                if (!slots.has(k)) slots.set(k, []);
+                const name = it.recipe_title || it.custom_name;
+                if (name) slots.get(k).push(name);
+              }
+              const meals = Array.from(slots.entries()).map(([meal, mealItems]) => ({
+                meal,
+                time: SLOT_HOUR[meal.toLowerCase()] || null,
+                items: mealItems,
+              }));
+              if (meals.length > 0) {
+                mealTemplate = { meals };
+              }
+            }
+          }
+        } catch (e) { /* fall through — Targets card just hides */ }
+      }
     }
+
+    // Get supplements. Tier gate dropped: if a coach has assigned
+    // supplements to this client (any tier), the client sees the stack
+    // and the Log Supps button.
+    let supplements = pool.query(
+      'SELECT * FROM supplements WHERE user_id = ? ORDER BY is_conditional, name', [userId]
+    ).rows;
+    supplements = supplements.map(s => ({
+      ...s,
+      double_on_days: s.double_on_days ? JSON.parse(s.double_on_days) : null,
+      is_double_day: s.double_on_days ? JSON.parse(s.double_on_days).includes(dayOfWeek) : false,
+    }));
 
     // Get metrics to log today
     let metricsToLog = [];

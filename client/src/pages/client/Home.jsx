@@ -1375,47 +1375,12 @@ export default function Home() {
           the inputs aren't set, this one when they are. */}
       <DailyTargetsCard profile={profile} />
 
-      {/* Today's Meal Plan — hidden when client toggles Meal Logging off
-          in Profile -> Reminders. Coach-prescribed plans still exist on
-          /nutrition for active logging; this surface adds a Next Meal
-          quickview, the day's meal slots, and a logged-vs-target
-          progress line so the user has at-a-glance status without
-          tapping through. */}
-      {todayMealPlan && prefs.meal_logging !== false && (() => {
-        const items = todayMealPlan.items || [];
-        // Group items by meal_type preserving sort order. Map gives O(1)
-        // ordered slot lookup for next-meal computation below.
-        const slots = new Map();
-        for (const it of items) {
-          const k = it.meal_type || 'Meal';
-          if (!slots.has(k)) slots.set(k, []);
-          slots.get(k).push(it);
-        }
-        const slotKeys = Array.from(slots.keys());
-        // Rough time-of-day defaults per meal_type so we can pick the
-        // next slot from now. Coach-side time-prescriptions land here
-        // later; defaults are typical Australian eating windows.
-        const SLOT_HOUR = {
-          'early morning': 6, 'pre breakfast': 6, 'breakfast': 8,
-          'mid morning': 10, 'brunch': 10, 'lunch': 12.5,
-          'mid afternoon': 15, 'afternoon snack': 15, 'pre dinner': 17,
-          'dinner': 18.5, 'late snack': 20, 'pre bed': 21,
-        };
-        const now = new Date();
-        const nowH = now.getHours() + now.getMinutes() / 60;
-        let nextKey = null;
-        for (const k of slotKeys) {
-          const h = SLOT_HOUR[k.toLowerCase()] ?? null;
-          if (h != null && h >= nowH) { nextKey = k; break; }
-        }
-        if (!nextKey && slotKeys.length > 0) nextKey = slotKeys[0];
-        const nextItems = nextKey ? slots.get(nextKey) : [];
-        // Logged vs target. dashboard.nutrition has the totals the
-        // client has actually eaten today (food diary).
-        const targetKcal = Math.round(todayMealPlan.day_totals?.calories || 0);
-        const loggedKcal = Math.round(dashboard?.nutrition?.calories || 0);
-        const pct = targetKcal > 0 ? Math.min(100, Math.round((loggedKcal / targetKcal) * 100)) : 0;
-        return (
+      {/* Today's Meal Plan — hidden when client toggles Meal Logging
+          off in Profile -> Reminders. Header card with kcal + macro
+          totals; the Next Meal preview and Log Meals/Supps buttons
+          live inside EnhancedToday's Targets card above to avoid
+          duplicating that section. */}
+      {todayMealPlan && prefs.meal_logging !== false && (
         <>
           <div className="section-header" style={{ marginTop: 8 }}>
             <h2>Today's Meals</h2>
@@ -1434,37 +1399,13 @@ export default function Home() {
                 <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{todayMealPlan.schedule_title}</p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>{targetKcal}</p>
-                <p style={{ fontSize: 9, color: 'var(--text-tertiary)', fontWeight: 700 }}>kcal target</p>
+                <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>{Math.round(todayMealPlan.day_totals?.calories || 0)}</p>
+                <p style={{ fontSize: 9, color: 'var(--text-tertiary)', fontWeight: 700 }}>kcal</p>
               </div>
             </div>
-
-            {/* Next meal quickview */}
-            {nextKey && nextItems.length > 0 && (
-              <div style={{
-                padding: '10px 16px', borderBottom: '1px solid var(--divider)',
-                background: 'rgba(255,140,0,0.05)',
-              }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 800, color: 'var(--accent)',
-                  textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4,
-                }}>
-                  Next: {nextKey}
-                </div>
-                <p style={{
-                  fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4,
-                  overflow: 'hidden', textOverflow: 'ellipsis',
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                }}>
-                  {nextItems.slice(0, 4).map(i => i.recipe_title || i.custom_name).filter(Boolean).join(' · ')}
-                  {nextItems.length > 4 ? ` +${nextItems.length - 4} more` : ''}
-                </p>
-              </div>
-            )}
-
             <div style={{ padding: '10px 16px' }}>
-              {/* Macro target row */}
-              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 4, paddingTop: 4 }}>
+              {/* Macro bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10, paddingTop: 6 }}>
                 {[
                   { label: 'Protein', value: Math.round(todayMealPlan.day_totals?.protein || 0), unit: 'g', color: '#3DFFD2' },
                   { label: 'Fat', value: Math.round(todayMealPlan.day_totals?.fat || 0), unit: 'g', color: '#FF9500' },
@@ -1476,54 +1417,10 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-
-              {/* Logged-vs-target progress */}
-              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--divider)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                    Logged today
-                  </span>
-                  <span style={{ fontSize: 12, fontWeight: 700 }}>
-                    <span style={{ color: 'var(--text-primary)' }}>{loggedKcal}</span>
-                    <span style={{ color: 'var(--text-tertiary)' }}> / {targetKcal} kcal</span>
-                  </span>
-                </div>
-                <div style={{ height: 4, background: 'var(--divider)', borderRadius: 2 }}>
-                  <div style={{
-                    height: '100%', width: `${pct}%`,
-                    background: pct >= 95 ? 'var(--accent-mint)' : 'var(--accent)',
-                    borderRadius: 2, transition: 'width 0.3s',
-                  }} />
-                </div>
-              </div>
-
-              {/* Slot list — quick visual of which meals are planned today */}
-              {slotKeys.length > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {slotKeys.map((k) => (
-                    <span key={k} style={{
-                      fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 12,
-                      background: k === nextKey ? 'rgba(255,140,0,0.18)' : 'rgba(255,255,255,0.04)',
-                      color: k === nextKey ? 'var(--accent)' : 'var(--text-tertiary)',
-                      border: k === nextKey ? '1px solid rgba(255,140,0,0.4)' : '1px solid var(--divider)',
-                      letterSpacing: 0.3,
-                    }}>{k}</span>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Supplements card — separate fetch, only renders when the
-              client has supplements assigned (sections with items). */}
-          <SupplementsCard
-            token={token}
-            visible={prefs.supplement_reminder !== false}
-            onOpen={() => navigate('/nutrition?tab=Supplements')}
-          />
         </>
-        );
-      })()}
+      )}
 
       {/* Activity Section */}
       <div className="section-header">
@@ -1824,73 +1721,6 @@ function OnboardingChecklistCard({ token }) {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// Supplements card
-// ─────────────────────────────────────────────────────────────────────
-// Lightweight self-contained card that fetches today's supplement
-// stack + log state. Renders nothing when there's no stack assigned
-// or the client has toggled Supplement Reminder off in Profile. Tap
-// the card OR a row to navigate to the full Supplements tab where the
-// client can mark them taken.
-function SupplementsCard({ token, visible, onOpen }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    if (!visible || !token) return;
-    const today = new Date().toISOString().slice(0, 10);
-    fetch(`/api/nutrition/supplements?date=${today}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setData)
-      .catch(() => {});
-  }, [token, visible]);
-  if (!visible || !data || !data.sections || data.sections.length === 0) return null;
-  // Flatten all supplement items across sections so we can show counts
-  // on the home card. Sections (e.g. "Upon Waking", "After Breakfast")
-  // are still surfaced via the row labels on /nutrition?tab=Supplements.
-  const allItems = data.sections.flatMap((s) => s.items || []);
-  if (allItems.length === 0) return null;
-  const taken = allItems.filter((i) => i.taken_today).length;
-  return (
-    <div
-      onClick={onOpen}
-      className="card"
-      style={{ cursor: 'pointer', marginTop: 12, padding: 0, overflow: 'hidden' }}
-    >
-      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 8, background: 'rgba(133,255,186,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 16 }}>💊</span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>{data.title || 'Supplement Stack'}</p>
-          <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-            {taken} / {allItems.length} taken today
-          </p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{
-            fontSize: 11, fontWeight: 800, color: taken === allItems.length ? 'var(--accent-mint)' : 'var(--accent)',
-            textTransform: 'uppercase', letterSpacing: 0.5,
-          }}>
-            {taken === allItems.length ? 'Done' : 'Log →'}
-          </p>
-        </div>
-      </div>
-      {/* Mini progress bar */}
-      <div style={{ height: 3, background: 'var(--divider)' }}>
-        <div style={{
-          height: '100%', width: `${(taken / allItems.length) * 100}%`,
-          background: taken === allItems.length ? 'var(--accent-mint)' : 'var(--accent)',
-          transition: 'width 0.3s',
-        }} />
       </div>
     </div>
   );

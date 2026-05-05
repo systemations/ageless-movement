@@ -606,6 +606,16 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
       )
     : new Set();
 
+  // Lessons where this user has at least one saved assessment response.
+  // Used by the client to gate the Next button on movement-assessment
+  // lessons until the user has logged a pick.
+  const respondedAssessmentLessonIds = new Set(
+    pool.query(
+      'SELECT DISTINCT lesson_id FROM assessment_responses WHERE user_id = ?',
+      [req.user.id],
+    ).rows.map(r => r.lesson_id),
+  );
+
   let totalLessons = 0;
   let totalCompleted = 0;
 
@@ -641,6 +651,7 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
       return {
         ...lesson, resources: resources.rows, completed, quiz,
         is_movement_assessment: isMovementAssessment,
+        has_assessment_response: isMovementAssessment && respondedAssessmentLessonIds.has(lesson.id),
         quiz_prerequisite: prereq || null,
         quiz_locked: quizLocked,
       };

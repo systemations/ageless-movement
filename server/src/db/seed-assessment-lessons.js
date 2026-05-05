@@ -25,7 +25,7 @@ const img = (file, alt) =>
 // Common closing block - tells the client to capture a baseline photo.
 // Ties into the upcoming assessment_responses feature (planned for next
 // session) so the copy reads consistently once that ships.
-const captureBaseline = `<p>Capture a side or front photo of yourself in this end position. Save it somewhere named "mobility progress" so you can compare against your re-test in 4 weeks.</p>`;
+const captureBaseline = `<p>Capture a side or front photo of yourself in this end position. Save it to a photo album on your phone called "mobility progress" - create the album first if you don't have one. We'll compare against this in 4 weeks.</p>`;
 
 // Each entry: id, expected title, html. The seeder asserts the title
 // matches before writing — so if a coach renames a lesson the seeder
@@ -150,6 +150,24 @@ ${img('shoulder-internal-rotation-1.webp', 'Cactus down starting position')}
 ${img('shoulder-internal-rotation-2.webp', 'Cactus down target position')}
 ${captureBaseline}`,
   },
+  // STEP 3 quiz intros. Render above the questions so the page isn't
+  // blank before the user starts answering. Coach can replace via the
+  // admin TipTap editor — the seeder skips any lesson with a populated
+  // description, so edits stick.
+  {
+    id: 29, title: 'AMS | Ground Zero™',
+    html: `<p>Six quick movements to find your starting level. Watch each clip, then pick A, B or C based on what feels true for you today. Don't grade yourself harder than the test asks.</p>
+<p>Pass and you'll unlock the Re-Build quiz. Anything less and we'll route you to the Ground Zero program, which is exactly where you should start.</p>`,
+  },
+  {
+    id: 30, title: 'AMS | Re-Build™',
+    html: `<p>You've cleared Ground Zero. This one tests if your foundations are ready for the Re-Build training load. Same A/B/C format, same honesty rule.</p>
+<p>Pass and Prime unlocks next. If not, Re-Build is the right next step.</p>`,
+  },
+  {
+    id: 31, title: 'AMS | Prime™',
+    html: `<p>The final tier. Pass this and you've earned a spot on Prime — full intensity, full range. Take your time on each question and answer for where your body is right now, not where you want it to be.</p>`,
+  },
 ];
 
 // Run the seeder. Returns a count of lessons updated. Skips lessons
@@ -158,6 +176,26 @@ ${captureBaseline}`,
 // (defensive: the lesson list should be stable but if a row got
 // renamed/replaced, do nothing rather than overwrite the wrong row).
 export function seedAssessmentLessons() {
+  // Idempotent copy migration: the original "save it somewhere named
+  // 'mobility progress'" line was confusing — clients didn't know
+  // where "somewhere" was. New copy points them at a named phone
+  // album with explicit "create one if you don't have it" guidance.
+  // Only fires when the old wording is found, so it's safe on every
+  // boot and won't undo coach edits.
+  const OLD_CAPTURE = 'Save it somewhere named "mobility progress" so you can compare against your re-test in 4 weeks.';
+  const NEW_CAPTURE = 'Save it to a photo album on your phone called "mobility progress" - create the album first if you don\'t have one. We\'ll compare against this in 4 weeks.';
+  const oldCount = pool.query(
+    'SELECT COUNT(*) as c FROM course_lessons WHERE description LIKE ?',
+    [`%${OLD_CAPTURE}%`],
+  ).rows[0]?.c || 0;
+  if (oldCount > 0) {
+    pool.query(
+      'UPDATE course_lessons SET description = REPLACE(description, ?, ?) WHERE description LIKE ?',
+      [OLD_CAPTURE, NEW_CAPTURE, `%${OLD_CAPTURE}%`],
+    );
+    console.log(`[assessment-seed] migrated capture-baseline copy on ${oldCount} lesson(s)`);
+  }
+
   const updated = [];
   const skipped = [];
   for (const seed of LESSONS) {

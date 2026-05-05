@@ -781,7 +781,7 @@ function TiersTab({ tiers, headers, onRefresh }) {
                 style={{ ...inputStyle, opacity: editing.cta_type === 'booking_link' ? 1 : 0.5 }}
                 value={editing.cta_url || ''}
                 onChange={e => setEditing({ ...editing, cta_url: e.target.value })}
-                placeholder="https://systemations.com/..."
+                placeholder="https://handsdan.com/..."
                 disabled={editing.cta_type !== 'booking_link'}
               />
             </div>

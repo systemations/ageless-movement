@@ -15,8 +15,7 @@ export default function Terms() {
 
       <Section title="1. Service">
         Ageless Movement is a fitness + mobility coaching platform operated
-        by Systemations (Ireland). By creating an account you agree to these
-        terms.
+        by Handsdan. By creating an account you agree to these terms.
       </Section>
 
       <Section title="2. Eligibility">
@@ -59,7 +58,7 @@ export default function Terms() {
 
       <Section title="8. Limitation of liability">
         To the maximum extent permitted by law, Ageless Movement and
-        Systemations are not liable for any indirect or consequential loss
+        Handsdan are not liable for any indirect or consequential loss
         arising from use of the service. Our total liability is capped at the
         fees you have paid us in the 12 months preceding the claim.
       </Section>
@@ -70,7 +69,7 @@ export default function Terms() {
       </Section>
 
       <Section title="10. Contact">
-        info@systemations.io
+        admin@handsdan.com
       </Section>
 
       <p style={footer}>Last updated: 2026-04-22 (placeholder).</p>

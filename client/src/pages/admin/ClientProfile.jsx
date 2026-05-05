@@ -13,7 +13,7 @@ import WorkoutBuilder from './WorkoutBuilder';
 //     always visible; `conversationId` + `clientName` = Chats tab renders
 //     the MessageThread inline in the center pane (FitBudd-style 3-column)
 
-const TABS = ['Overview', 'Goals', 'Check-ins', 'Chats', 'Habits', 'Pain', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
+const TABS = ['Overview', 'Profile', 'Goals', 'Check-ins', 'Chats', 'Habits', 'Pain', 'Workout', 'Nutrition', 'Levels', 'Assessments', 'Gallery', 'Notes', 'Calendar', 'Settings'];
 
 export default function ClientProfile({
   clientId,
@@ -166,6 +166,7 @@ export default function ClientProfile({
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
             {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} railMode />}
+            {activeTab === 'Profile' && <ClientProfileMirrorTab data={data} />}
             {activeTab === 'Goals' && <GoalsTab clientId={clientId} />}
             {activeTab === 'Check-ins' && <CheckinsTab data={{ ...data, _refetch: refetch }} />}
             {activeTab === 'Chats' && (
@@ -189,6 +190,7 @@ export default function ClientProfile({
       ) : (
         <>
           {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} />}
+          {activeTab === 'Profile' && <ClientProfileMirrorTab data={data} />}
           {activeTab === 'Goals' && <GoalsTab clientId={clientId} />}
           {activeTab === 'Check-ins' && <CheckinsTab data={{ ...data, _refetch: refetch }} />}
           {activeTab === 'Chats' && (
@@ -1821,6 +1823,118 @@ function autoLabel(metric_type, target_value) {
   }
 }
 
+// Coach mirror of the client's "My Profile" page. Read-only single source of
+// the onboarding answers + vitals so the coach doesn't have to hunt for them
+// across OverviewTab, Settings, and Notes. Same labels + value formatting as
+// the client side so the coach is looking at exactly what the client sees.
+const MIRROR_VITALS = [
+  { key: 'sex',       label: 'Biological sex' },
+  { key: 'age',       label: 'Age',    suffix: 'years' },
+  { key: 'height_cm', label: 'Height', suffix: 'cm' },
+  { key: 'weight_kg', label: 'Weight', suffix: 'kg' },
+];
+
+const MIRROR_LIFESTYLE = [
+  { key: 'activity_level', label: 'Activity outside training', map: {
+    sedentary: 'Sedentary', light: 'Lightly active', moderate: 'Moderately active',
+    very: 'Very active', extreme: 'Extremely active',
+  }},
+  { key: 'eating_style', label: 'Eating style', map: {
+    balanced: 'Balanced', high_protein: 'High protein', mediterranean: 'Mediterranean',
+    low_carb: 'Low carb', keto: 'Keto', carnivore: 'Carnivore', plant_based: 'Plant-based',
+  }},
+  { key: 'goal', label: 'Primary goal', map: {
+    move_pain_free: 'Move without pain', mobility: 'Get more mobile', strength: 'Build strength',
+    sport: 'Improve at my sport', active_healthy: 'Stay active + healthy',
+  }},
+  { key: 'sport', label: 'Sport', map: {
+    none: 'No sport', pickleball: 'Pickleball', tennis: 'Tennis',
+    golf: 'Golf', running: 'Running', other: 'Other',
+  }, source: 'answers_json' },
+  { key: 'experience', label: 'Training experience', map: {
+    just_starting: 'Just starting out', occasional: 'Occasionally active',
+    consistent: 'Training consistently', advanced: 'Advanced / athletic',
+  }},
+  { key: 'equipment', label: 'Where they train', map: {
+    home_bodyweight: 'Home (bodyweight)', home_basics: 'Home (basics)',
+    home_gym: 'Home gym', full_gym: 'Full commercial gym',
+  }},
+  { key: 'days', label: 'Training days / week', source: 'answers_json' },
+  { key: 'injuries', label: 'Injuries / areas to mind', multi: true },
+  { key: 'sleep', label: 'Sleep', source: 'answers_json' },
+  { key: 'dietary', label: 'Dietary notes' },
+  { key: 'anything_else', label: 'Anything else from onboarding' },
+];
+
+function ClientProfileMirrorTab({ data }) {
+  const c = data.client || {};
+  let answers = {};
+  if (c.answers_json) {
+    try { answers = JSON.parse(c.answers_json) || {}; } catch { answers = {}; }
+  }
+  const heightFt = c.height_cm ? Math.round((c.height_cm / 2.54) * 10) / 10 : null;
+  const weightLb = c.weight_kg ? Math.round(c.weight_kg * 2.2046 * 10) / 10 : null;
+
+  const readValue = (q) => {
+    if (q.source === 'answers_json') return answers[q.key] ?? null;
+    return c[q.key] ?? null;
+  };
+  const formatValue = (q) => {
+    const v = readValue(q);
+    if (v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) return null;
+    if (q.multi) {
+      const arr = Array.isArray(v) ? v : String(v).split(',').map(s => s.trim()).filter(Boolean);
+      return arr.join(', ');
+    }
+    if (q.map && q.map[v]) return q.map[v];
+    if (q.suffix) return `${v} ${q.suffix}`;
+    return String(v);
+  };
+
+  return (
+    <div style={{ maxWidth: 720, display: 'grid', gap: 16 }}>
+      <Card title="Vitals">
+        <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 10 }}>
+          Same numbers the client edits on their My Profile page.
+        </p>
+        {MIRROR_VITALS.map((q) => (
+          <Row
+            key={q.key}
+            label={q.label}
+            value={formatValue(q) || '-'}
+          />
+        ))}
+        {(heightFt || weightLb) && (
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8 }}>
+            {heightFt ? `≈ ${Math.floor(heightFt / 12)}' ${Math.round(heightFt % 12)}"` : ''}
+            {heightFt && weightLb ? ' · ' : ''}
+            {weightLb ? `≈ ${weightLb} lb` : ''}
+          </p>
+        )}
+      </Card>
+
+      <Card title="Onboarding answers">
+        <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 10 }}>
+          Answered during signup. Client can edit any of these from their Profile page.
+        </p>
+        {MIRROR_LIFESTYLE.map((q) => {
+          const v = formatValue(q);
+          if (!v) return null;
+          return <Row key={q.key} label={q.label} value={v} />;
+        })}
+      </Card>
+
+      <Card title="Targets snapshot">
+        <Row label="Daily calories" value={c.calorie_target ? `${c.calorie_target} kcal` : '-'} />
+        <Row label="Protein" value={c.protein_target ? `${c.protein_target} g` : '-'} />
+        <Row label="Carbs" value={c.carbs_target ? `${c.carbs_target} g` : '-'} />
+        <Row label="Fat" value={c.fat_target ? `${c.fat_target} g` : '-'} />
+        <Row label="Water" value={c.water_target ? `${c.water_target} ml` : '-'} />
+      </Card>
+    </div>
+  );
+}
+
 function GoalsTab({ clientId }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
@@ -2660,19 +2774,95 @@ function SettingsTab({ data }) {
     <div style={{ maxWidth: 600, display: 'grid', gap: 16 }}>
       <Card title="Client settings">
         <Row label="Email" value={data.client.email} />
-        <Row label="Timezone" value="-" />
+        <Row label="Timezone" value={data.client.timezone || '- (not captured)'} />
         <Row label="Check-ins enabled" value="Yes" />
         <Row label="Workout intensity" value="Use coach default" />
       </Card>
 
       <TierEditorCard client={data.client} onChange={data._refetch} />
       <AccountLifecycleCard client={data.client} onChange={data._refetch} />
+      <CoachPrefsCard client={data.client} />
       <ResetPasswordCard client={data.client} />
 
       {/* Recent logins moved here from the rail - useful context but too
           noisy to show alongside every tab. */}
       <RecentLoginsCard logins={data.recentLogins || []} />
     </div>
+  );
+}
+
+// Coach-controlled reminder toggles for this client. The client also has an
+// independent opt-out toggle on Profile -> Reminders. When push notifications
+// land in Phase 3, both must be true for a workout-day reminder to fire.
+function CoachPrefsCard({ client }) {
+  const { token } = useAuth();
+  const [enabled, setEnabled] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/coach/clients/${client.id}/coach-prefs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : { workout_reminders_enabled: 1 })
+      .then(d => { if (!cancelled) { setEnabled(!!d.workout_reminders_enabled); setLoaded(true); } })
+      .catch(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [client.id, token]);
+
+  const toggle = async () => {
+    const next = !enabled;
+    setEnabled(next);
+    setSaving(true);
+    await fetch(`/api/coach/clients/${client.id}/coach-prefs`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workout_reminders_enabled: next }),
+    });
+    setSaving(false);
+  };
+
+  return (
+    <Card title="Coach reminder settings">
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.45 }}>
+        Send {client.name?.split(' ')[0] || 'this client'} a notification on days they have a workout scheduled.
+        The client can also opt out from their own Profile.
+      </p>
+      <button
+        onClick={toggle}
+        disabled={!loaded || saving}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+          padding: '10px 12px', borderRadius: 8,
+          background: 'rgba(255,255,255,0.04)', border: '1px solid var(--divider)',
+          color: 'var(--text-primary)', cursor: loaded ? 'pointer' : 'default', textAlign: 'left',
+          opacity: loaded ? 1 : 0.6,
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Workout-day reminders</p>
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            {enabled ? 'On - reminder fires on prescribed workout days' : 'Off - no reminders sent'}
+          </p>
+        </div>
+        <span style={{
+          width: 38, height: 22, borderRadius: 11,
+          background: enabled ? 'var(--accent-mint)' : 'rgba(255,255,255,0.15)',
+          position: 'relative', flexShrink: 0, transition: 'background 120ms',
+        }}>
+          <span style={{
+            position: 'absolute', top: 2, left: enabled ? 18 : 2,
+            width: 18, height: 18, borderRadius: '50%', background: '#fff',
+            transition: 'left 120ms',
+          }} />
+        </span>
+      </button>
+      <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8 }}>
+        Reminder push notifications are not yet wired. This setting saves your intent so
+        notifications fire automatically when the scheduler ships.
+      </p>
+    </Card>
   );
 }
 

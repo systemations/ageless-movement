@@ -363,6 +363,15 @@ export default function CourseBuilder({ courseId, onBack }) {
 // LESSON EDITOR
 // ═══════════════════════════════════════════════════
 function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }) {
+  // Parse the saved quiz_data once on mount. Server stores it as a JSON
+  // string; the editor works with the structured object and re-stringifies
+  // on save. Bad/malformed JSON drops to null so the editor isn't blocked.
+  const initialQuiz = (() => {
+    if (!lesson.quiz_data) return null;
+    if (typeof lesson.quiz_data === 'object') return lesson.quiz_data;
+    try { return JSON.parse(lesson.quiz_data); } catch { return null; }
+  })();
+
   const [form, setForm] = useState({
     title: lesson.title || '',
     description: lesson.description || '',
@@ -370,6 +379,7 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
     thumbnail_url: lesson.thumbnail_url || '',
     duration: lesson.duration || '',
     status: lesson.status || 'published',
+    quiz_data: initialQuiz,
   });
   const [resources, setResources] = useState(lesson.resources || []);
   const [saving, setSaving] = useState(false);
@@ -388,7 +398,9 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
     setSaving(true);
     const desc = editorRef.current?.getHTML() ?? form.description;
     const status = publish ? 'published' : (form.status || 'draft');
-    await onSave(lesson.id, { ...form, description: desc, status });
+    // quiz_data: send the structured object so the server stringifies it
+    // consistently. Send null when the coach has cleared the quiz.
+    await onSave(lesson.id, { ...form, description: desc, status, quiz_data: form.quiz_data || null });
     setDirty(false);
     setSaving(false);
   };
@@ -518,6 +530,14 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
               onRemove={removeResource}
             />
           </div>
+
+          {/* Quiz authoring */}
+          <div style={{ marginBottom: 24 }}>
+            <QuizEditor
+              quiz={form.quiz_data}
+              onChange={(next) => update('quiz_data', next)}
+            />
+          </div>
         </div>
       </div>
 
@@ -544,6 +564,269 @@ function LessonEditor({ lesson, parentModule, onSave, onDelete, headers, token }
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════
+// QUIZ EDITOR
+// Structured editor for course_lessons.quiz_data. Empty state shows a
+// "Make this lesson a quiz" button that scaffolds the JSON shape used by
+// the client quiz player + the server quiz-attempt validator. Mirrors
+// the shape returned by /api/content/courses/:id (see content.js).
+// ═══════════════════════════════════════════════════
+function QuizEditor({ quiz, onChange }) {
+  if (!quiz) {
+    return (
+      <div style={{
+        padding: 16, borderRadius: 12, background: 'var(--bg-card)',
+        border: '1px dashed var(--divider)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>This lesson is not a quiz.</p>
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+            Quizzes show A / B / C self-rated questions and gate the next quiz in the chain.
+          </p>
+        </div>
+        <button
+          onClick={() => onChange({
+            id: '',
+            level_label: '',
+            pass_pct: 66,
+            questions: [],
+            pass: { title: 'Passed', body: '' },
+            fail: { title: 'Recommended level', body: '' },
+            pass_next_quiz_lesson_id: null,
+            fail_program_id: null,
+          })}
+          style={{
+            padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700,
+          }}
+        >
+          + Make this a quiz
+        </button>
+      </div>
+    );
+  }
+
+  const set = (patch) => onChange({ ...quiz, ...patch });
+  const setQ = (idx, patch) => {
+    const next = [...(quiz.questions || [])];
+    next[idx] = { ...next[idx], ...patch };
+    set({ questions: next });
+  };
+  const setOpt = (qIdx, oIdx, patch) => {
+    const next = [...(quiz.questions || [])];
+    const opts = [...(next[qIdx].options || [])];
+    opts[oIdx] = { ...opts[oIdx], ...patch };
+    next[qIdx] = { ...next[qIdx], options: opts };
+    set({ questions: next });
+  };
+  const addQuestion = () => {
+    const i = (quiz.questions || []).length + 1;
+    set({
+      questions: [...(quiz.questions || []), {
+        id: `q${i}`,
+        title: `${i}. New question`,
+        instructions: '',
+        video_url: '',
+        prompt: 'Which best describes you?',
+        options: [
+          { label: 'A', text: '', score: 1 },
+          { label: 'B', text: '', score: 0.5 },
+          { label: 'C', text: '', score: 0 },
+        ],
+      }],
+    });
+  };
+  const removeQuestion = (idx) => {
+    if (!confirm('Remove this question?')) return;
+    set({ questions: quiz.questions.filter((_, i) => i !== idx) });
+  };
+  const moveQuestion = (idx, dir) => {
+    const next = [...quiz.questions];
+    const target = dir === 'up' ? idx - 1 : idx + 1;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    set({ questions: next });
+  };
+  const addOption = (qIdx) => {
+    const next = [...quiz.questions];
+    const opts = [...(next[qIdx].options || [])];
+    const nextLabel = String.fromCharCode(65 + opts.length); // A, B, C, D...
+    opts.push({ label: nextLabel, text: '', score: 0 });
+    next[qIdx] = { ...next[qIdx], options: opts };
+    set({ questions: next });
+  };
+  const removeOption = (qIdx, oIdx) => {
+    const next = [...quiz.questions];
+    next[qIdx] = { ...next[qIdx], options: next[qIdx].options.filter((_, i) => i !== oIdx) };
+    set({ questions: next });
+  };
+
+  const sectionH = { fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 };
+  const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
+
+  return (
+    <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-card)', border: '1px solid var(--divider)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <p style={{ fontSize: 14, fontWeight: 800 }}>📝 Quiz</p>
+        <button
+          onClick={() => { if (confirm('Remove the quiz from this lesson?')) onChange(null); }}
+          style={{ background: 'none', border: 'none', color: '#FF3B30', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+        >Remove quiz</button>
+      </div>
+
+      {/* Top-level metadata */}
+      <p style={sectionH}>Quiz meta</p>
+      <div style={grid}>
+        <div>
+          <label style={labelStyle}>Quiz id (slug)</label>
+          <input style={inputStyle} value={quiz.id || ''} onChange={(e) => set({ id: e.target.value })} placeholder="ams-ground-zero" />
+        </div>
+        <div>
+          <label style={labelStyle}>Level label (shown to client)</label>
+          <input style={inputStyle} value={quiz.level_label || ''} onChange={(e) => set({ level_label: e.target.value })} placeholder="AMS | Ground Zero™" />
+        </div>
+      </div>
+      <div style={{ ...grid, marginTop: 10 }}>
+        <div>
+          <label style={labelStyle}>Pass threshold (%)</label>
+          <input
+            style={inputStyle} type="number" min="0" max="100"
+            value={quiz.pass_pct ?? 66}
+            onChange={(e) => set({ pass_pct: parseInt(e.target.value, 10) || 0 })}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Next quiz lesson id (on pass)</label>
+          <input
+            style={inputStyle} type="number"
+            value={quiz.pass_next_quiz_lesson_id ?? ''}
+            onChange={(e) => set({ pass_next_quiz_lesson_id: e.target.value ? parseInt(e.target.value, 10) : null })}
+            placeholder="e.g. 30"
+          />
+        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={labelStyle}>Program id (recommended on fail)</label>
+        <input
+          style={inputStyle} type="number"
+          value={quiz.fail_program_id ?? ''}
+          onChange={(e) => set({ fail_program_id: e.target.value ? parseInt(e.target.value, 10) : null })}
+          placeholder="e.g. 1"
+        />
+      </div>
+
+      {/* Pass / fail outcome copy */}
+      <p style={{ ...sectionH, marginTop: 18 }}>Outcome copy</p>
+      <div style={grid}>
+        <div>
+          <label style={labelStyle}>Pass title</label>
+          <input style={inputStyle} value={quiz.pass?.title || ''} onChange={(e) => set({ pass: { ...quiz.pass, title: e.target.value } })} />
+          <label style={{ ...labelStyle, marginTop: 8 }}>Pass body</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 100, fontFamily: 'inherit' }}
+            value={quiz.pass?.body || ''}
+            onChange={(e) => set({ pass: { ...quiz.pass, body: e.target.value } })}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Fail title</label>
+          <input style={inputStyle} value={quiz.fail?.title || ''} onChange={(e) => set({ fail: { ...quiz.fail, title: e.target.value } })} />
+          <label style={{ ...labelStyle, marginTop: 8 }}>Fail body</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 100, fontFamily: 'inherit' }}
+            value={quiz.fail?.body || ''}
+            onChange={(e) => set({ fail: { ...quiz.fail, body: e.target.value } })}
+          />
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
+        <p style={{ ...sectionH, marginBottom: 0 }}>Questions ({(quiz.questions || []).length})</p>
+        <button onClick={addQuestion} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--accent)', background: 'rgba(255,140,0,0.08)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+          + Add question
+        </button>
+      </div>
+
+      {(quiz.questions || []).map((q, qIdx) => (
+        <div key={qIdx} style={{
+          padding: 12, borderRadius: 10, background: 'var(--bg-primary)',
+          border: '1px solid var(--divider)', marginBottom: 10,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>Question {qIdx + 1}</p>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => moveQuestion(qIdx, 'up')} disabled={qIdx === 0} style={miniBtn}>↑</button>
+              <button onClick={() => moveQuestion(qIdx, 'down')} disabled={qIdx === quiz.questions.length - 1} style={miniBtn}>↓</button>
+              <button onClick={() => removeQuestion(qIdx)} style={{ ...miniBtn, color: '#FF3B30' }}>×</button>
+            </div>
+          </div>
+          <div style={grid}>
+            <div>
+              <label style={labelStyle}>Question id</label>
+              <input style={inputStyle} value={q.id || ''} onChange={(e) => setQ(qIdx, { id: e.target.value })} placeholder={`q${qIdx + 1}`} />
+            </div>
+            <div>
+              <label style={labelStyle}>Title</label>
+              <input style={inputStyle} value={q.title || ''} onChange={(e) => setQ(qIdx, { title: e.target.value })} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <label style={labelStyle}>Instructions</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 60, fontFamily: 'inherit' }}
+              value={q.instructions || ''}
+              onChange={(e) => setQ(qIdx, { instructions: e.target.value })}
+            />
+          </div>
+          <div style={{ ...grid, marginTop: 8 }}>
+            <div>
+              <label style={labelStyle}>Video URL (Vimeo)</label>
+              <input style={inputStyle} value={q.video_url || ''} onChange={(e) => setQ(qIdx, { video_url: e.target.value })} placeholder="https://vimeo.com/..." />
+            </div>
+            <div>
+              <label style={labelStyle}>Prompt</label>
+              <input style={inputStyle} value={q.prompt || ''} onChange={(e) => setQ(qIdx, { prompt: e.target.value })} placeholder="Which best describes you?" />
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Options</label>
+              <button onClick={() => addOption(qIdx)} style={{ ...miniBtn, color: 'var(--accent)' }}>+ Add option</button>
+            </div>
+            {(q.options || []).map((o, oIdx) => (
+              <div key={oIdx} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 30px', gap: 6, marginBottom: 4, alignItems: 'center' }}>
+                <input style={{ ...inputStyle, padding: '6px 8px', textAlign: 'center', fontWeight: 700 }} value={o.label || ''} onChange={(e) => setOpt(qIdx, oIdx, { label: e.target.value })} />
+                <input style={{ ...inputStyle, padding: '6px 8px' }} value={o.text || ''} onChange={(e) => setOpt(qIdx, oIdx, { text: e.target.value })} placeholder="Answer text" />
+                <input
+                  style={{ ...inputStyle, padding: '6px 8px', textAlign: 'center' }}
+                  type="number" step="0.1" min="0" max="1"
+                  value={o.score ?? 0}
+                  onChange={(e) => setOpt(qIdx, oIdx, { score: parseFloat(e.target.value) || 0 })}
+                />
+                <button onClick={() => removeOption(qIdx, oIdx)} style={{ ...miniBtn, color: '#FF3B30' }}>×</button>
+              </div>
+            ))}
+            <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>Score: 1 = pass-strong, 0.5 = partial, 0 = fail. Pass threshold averages across all questions.</p>
+          </div>
+        </div>
+      ))}
+
+      {(!quiz.questions || quiz.questions.length === 0) && (
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: 16, textAlign: 'center' }}>
+          No questions yet. Add the first one above.
+        </p>
+      )}
+    </div>
+  );
+}
+
+const miniBtn = {
+  padding: '3px 8px', borderRadius: 6, border: '1px solid var(--divider)',
+  background: 'transparent', color: 'var(--text-secondary)', fontSize: 11,
+  fontWeight: 700, cursor: 'pointer',
+};
 
 // ═══════════════════════════════════════════════════
 // RESOURCE UPLOADER

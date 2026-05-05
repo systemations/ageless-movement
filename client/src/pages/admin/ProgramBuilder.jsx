@@ -559,6 +559,19 @@ export default function ProgramBuilder({ onEditWorkout }) {
           label="Program Thumbnail"
         />
 
+        <div className="input-group">
+          <label>Intro video URL (Vimeo)</label>
+          <input
+            className="input-field"
+            value={form.intro_video_url || ''}
+            onChange={e => setForm({ ...form, intro_video_url: e.target.value })}
+            placeholder="https://vimeo.com/..."
+          />
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+            Optional. Plays at the top of the client's program detail page above the weeks list.
+          </p>
+        </div>
+
         {/* Duration block presets + manual override */}
         <div className="input-group">
           <label>Program Block Duration</label>

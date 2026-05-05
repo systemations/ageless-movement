@@ -53,7 +53,7 @@ const router = Router();
 //      flow is the only entry point everywhere.
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { email, password, name, role, onboarding } = req.body;
+    const { email, password, name, role, onboarding, timezone } = req.body;
 
     if (!email || !password || !name || !role) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -76,7 +76,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     );
 
     const user = result.rows[0];
-    await pool.query('INSERT INTO client_profiles (user_id) VALUES ($1)', [user.id]);
+    // Capture browser-detected IANA timezone if the client sent one. Falls
+    // back to NULL — the recurring scheduler treats NULL as UTC.
+    const tz = (typeof timezone === 'string' && /^[A-Za-z_+\-/0-9]+$/.test(timezone) && timezone.length < 64) ? timezone : null;
+    await pool.query('INSERT INTO client_profiles (user_id, timezone) VALUES ($1, $2)', [user.id, tz]);
 
     // Queue the deferred welcome DM + 24h plans nudge. Wrapped so any
     // scheduler failure never blocks the register response.
@@ -147,6 +150,18 @@ router.post('/login', loginLimiter, async (req, res) => {
         [user.id, ip, ua],
       );
       pool.query("UPDATE users SET last_active_at = datetime('now') WHERE id = $1", [user.id]);
+    } catch (e) { /* non-fatal */ }
+
+    // Refresh stored timezone if the client sent one. People travel, browsers
+    // change. The reminder scheduler reads whatever's most recent.
+    try {
+      const tz = req.body.timezone;
+      if (user.role === 'client' && typeof tz === 'string' && /^[A-Za-z_+\-/0-9]+$/.test(tz) && tz.length < 64) {
+        pool.query(
+          'UPDATE client_profiles SET timezone = $1 WHERE user_id = $2 AND (timezone IS NULL OR timezone != $1)',
+          [tz, user.id],
+        );
+      }
     } catch (e) { /* non-fatal */ }
 
     // Attach client status (paused/archived drive a banner on the client UI).

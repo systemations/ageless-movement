@@ -1174,6 +1174,33 @@ function ScheduledEventsTab({ coachId }) {
     fetchEvents();
   };
 
+  // Duplicate an event so the coach can re-run the same masterclass / webinar
+  // a month later without re-keying every field. We open the duplicate in the
+  // editor as a draft scheduled +28 days from the original so the coach picks
+  // a new date and clicks publish.
+  const handleDuplicate = (evt) => {
+    const original = new Date(evt.scheduled_at);
+    const next = new Date(original);
+    next.setDate(next.getDate() + 28);
+    const nextEnd = evt.end_at ? new Date(new Date(evt.end_at).getTime() + 28 * 86400000).toISOString() : null;
+    setEditing({
+      __new: true,
+      title: `${evt.title} (Copy)`,
+      description: evt.description || '',
+      event_format: evt.event_format || 'masterclass',
+      scheduled_at: next.toISOString(),
+      end_at: nextEnd,
+      duration_minutes: evt.duration_minutes || 60,
+      location: evt.location || '',
+      meeting_url: evt.meeting_url || '',
+      capacity: evt.capacity || '',
+      price_cents: evt.price_cents || 0,
+      thumbnail_url: evt.thumbnail_url || '',
+      status: 'draft',
+    });
+    setViewingRegsFor(null);
+  };
+
   const statusColor = (s) => s === 'published' ? '#16a34a' : s === 'cancelled' ? '#dc2626' : s === 'completed' ? '#6b7280' : '#f59e0b';
 
   return (
@@ -1245,6 +1272,13 @@ function ScheduledEventsTab({ coachId }) {
                     style={{ ...smallBtn, fontSize: 11, padding: '4px 10px' }}
                   >
                     👥
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDuplicate(evt); }}
+                    title="Duplicate event (re-run on a new date)"
+                    style={{ ...smallBtn, fontSize: 11, padding: '4px 10px' }}
+                  >
+                    ⎘
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(evt.id); }}

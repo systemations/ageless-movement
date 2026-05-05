@@ -75,6 +75,10 @@ export default function WorkoutBuilder({
   // Map of workout_id -> number of clients with a personalised version,
   // rendered as a badge in the library list.
   const [overrideCounts, setOverrideCounts] = useState({});
+  // Library list: search query + paged "show more" cap.
+  const [workoutSearch, setWorkoutSearch] = useState('');
+  const [workoutTypeFilter, setWorkoutTypeFilter] = useState('all'); // all | strength | follow_along | mobility | etc
+  const [workoutVisible, setWorkoutVisible] = useState(50);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -1083,13 +1087,29 @@ export default function WorkoutBuilder({
   }
 
   // ===== WORKOUT LIST =====
+  // Build a unique sorted list of workout types from the loaded data so the
+  // filter dropdown stays in sync with whatever's been seeded.
+  const workoutTypes = Array.from(new Set(workouts.map(w => w.workout_type).filter(Boolean))).sort();
+  const q = workoutSearch.trim().toLowerCase();
+  const filteredWorkouts = workouts.filter(w => {
+    if (workoutTypeFilter !== 'all' && w.workout_type !== workoutTypeFilter) return false;
+    if (!q) return true;
+    const hay = [w.title, w.program_title, w.tags, w.body_parts, w.intensity]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  const pagedWorkouts = filteredWorkouts.slice(0, workoutVisible);
   return (
     <>
     <div style={{ padding: '24px 40px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800 }}>Workouts</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{workouts.length} workouts</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            {filteredWorkouts.length === workouts.length
+              ? `${workouts.length} workouts`
+              : `${filteredWorkouts.length} of ${workouts.length} workouts`}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => setEditingFollowAlong('new')} style={{
@@ -1102,11 +1122,45 @@ export default function WorkoutBuilder({
         </div>
       </div>
 
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
+        <input
+          value={workoutSearch}
+          onChange={e => { setWorkoutSearch(e.target.value); setWorkoutVisible(50); }}
+          placeholder="Search by title, program, tag, body part..."
+          className="input-field"
+          style={{ flex: 1, fontSize: 14 }}
+        />
+        <select
+          value={workoutTypeFilter}
+          onChange={e => { setWorkoutTypeFilter(e.target.value); setWorkoutVisible(50); }}
+          className="input-field"
+          style={{ width: 180, fontSize: 14 }}
+        >
+          <option value="all">All types</option>
+          {workoutTypes.map(t => (
+            <option key={t} value={t}>
+              {t === 'follow_along' ? 'Follow-Along' : t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
+          ))}
+        </select>
+        {(workoutSearch || workoutTypeFilter !== 'all') && (
+          <button
+            onClick={() => { setWorkoutSearch(''); setWorkoutTypeFilter('all'); setWorkoutVisible(50); }}
+            style={{ background: 'transparent', border: '1px solid var(--divider)', color: 'var(--text-secondary)', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}
+          >Clear</button>
+        )}
+      </div>
+
       <div style={{ background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 100px 100px 80px', padding: '10px 16px', borderBottom: '1px solid var(--divider)', fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
           <span>Workout</span><span>Program</span><span>Week/Day</span><span>Duration</span><span>Type</span>
         </div>
-        {workouts.slice(0, 50).map(w => {
+        {pagedWorkouts.length === 0 && (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+            No workouts match your filters.
+          </div>
+        )}
+        {pagedWorkouts.map(w => {
           const personalisedCount = overrideCounts[w.id] || 0;
           return (
           <div key={w.id} onClick={() => loadWorkout(w)} style={{
@@ -1139,6 +1193,17 @@ export default function WorkoutBuilder({
           );
         })}
       </div>
+
+      {filteredWorkouts.length > workoutVisible && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button
+            onClick={() => setWorkoutVisible(v => v + 50)}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--divider)', color: 'var(--text-primary)', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Show 50 more · {filteredWorkouts.length - workoutVisible} remaining
+          </button>
+        </div>
+      )}
 
     </div>
 

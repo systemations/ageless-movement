@@ -664,8 +664,8 @@ const alterStatements = [
   // comparison card when a client taps a locked Explore item.
   "ALTER TABLE tiers ADD COLUMN features TEXT",
   // Tier upgrade CTA — 'message_coach' (default, routes to team inbox)
-  // or 'booking_link' (opens cta_url, e.g. Systemations call-booking link
-  // for the VIP tier where a call is required before onboarding).
+  // or 'booking_link' (opens cta_url, e.g. external call-booking page for
+  // the VIP tier where a call is required before onboarding).
   "ALTER TABLE tiers ADD COLUMN cta_type TEXT DEFAULT 'message_coach'",
   "ALTER TABLE tiers ADD COLUMN cta_url TEXT",
   "ALTER TABLE tiers ADD COLUMN cta_label TEXT",
@@ -1366,6 +1366,20 @@ try {
   db.exec("ALTER TABLE client_profiles ADD COLUMN reminder_preferences TEXT DEFAULT '{}'");
 } catch (e) { /* already exists */ }
 
+// Coach-controlled toggle for whether to send workout-day reminder pushes
+// to this client. Defaults ON. The client's own reminder_preferences.workout_reminder
+// is an independent opt-out — both must be true for a reminder to fire.
+try {
+  db.exec('ALTER TABLE client_profiles ADD COLUMN coach_workout_reminders_enabled INTEGER DEFAULT 1');
+} catch (e) { /* already exists */ }
+
+// IANA timezone (e.g. 'Europe/Dublin'). Captured from the browser on signup
+// and on every login as a refresh, so the recurring reminder scheduler can
+// localise notification fire times per client.
+try {
+  db.exec('ALTER TABLE client_profiles ADD COLUMN timezone TEXT');
+} catch (e) { /* already exists */ }
+
 // Add distance tracking columns to workout_logs
 try {
   db.exec('ALTER TABLE workout_logs ADD COLUMN distance REAL');
@@ -1640,10 +1654,10 @@ try {
 } catch (e) { /* ignore */ }
 
 // ── 1:1 booking link migration ────────────────────────────────────────
-// Old admin-set value pointed at systemations.com/book. Dan moved the
-// elite booking page to handsdan.com/vip-elite-coaching. Only update if
-// the row is still on the old URL so we don't clobber further edits
-// made through the admin Tier editor.
+// One-time cleanup: the Elite tier's CTA url was originally seeded with a
+// pre-rebrand external URL. Now points at handsdan.com/vip-elite-coaching.
+// Only update if the row still has the old value so we don't clobber any
+// further edits made through the admin Tier editor.
 try {
   db.prepare(
     `UPDATE tiers

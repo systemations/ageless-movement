@@ -45,7 +45,24 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
       // Double rAF so layout + any image metadata settle before we pin.
       requestAnimationFrame(() => requestAnimationFrame(pin));
       initialScrollDoneRef.current = true;
-      return;
+      // Re-pin when any image inside the thread finishes loading so a
+      // photo growing the scrollHeight can't strand the user mid-thread.
+      // Also re-pin a couple of times in the first second to cover late
+      // layout shifts (fonts, embeds). All gated on user not having
+      // scrolled away in the meantime.
+      const repinIfStillAtBottom = () => {
+        if (!messagesRef.current) return;
+        const m = messagesRef.current;
+        const dist = m.scrollHeight - m.scrollTop - m.clientHeight;
+        if (dist < 200) m.scrollTop = m.scrollHeight;
+      };
+      const imgs = el.querySelectorAll('img');
+      imgs.forEach(img => {
+        if (!img.complete) img.addEventListener('load', repinIfStillAtBottom, { once: true });
+      });
+      const t1 = setTimeout(repinIfStillAtBottom, 250);
+      const t2 = setTimeout(repinIfStillAtBottom, 750);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distanceFromBottom < 120) pin();

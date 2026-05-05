@@ -56,15 +56,32 @@ export function AuthProvider({ children }) {
     return null;
   };
 
+  const detectTimezone = () => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; }
+    catch { return null; }
+  };
+
   const login = async (email, password) => {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, timezone: detectTimezone() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     localStorage.setItem('am_token', data.token);
+    // Same race as register(): if setUser lands before profile, ProtectedRoute
+    // on /home renders for one frame before being redirected to /onboarding.
+    // Fetch profile first, commit token + user + profile in a single render.
+    let freshProfile = null;
+    try {
+      const meRes = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${data.token}` } });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        freshProfile = me.profile;
+      }
+    } catch {}
+    setProfile(freshProfile);
     setToken(data.token);
     setUser(data.user);
     return data;
@@ -74,7 +91,7 @@ export function AuthProvider({ children }) {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, role, onboarding }),
+      body: JSON.stringify({ email, password, name, role, onboarding, timezone: detectTimezone() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);

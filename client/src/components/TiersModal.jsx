@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 // comparison of every tier (price, description, feature checklist) with
 // the current tier marked, and a CTA button per tier:
 //   - message_coach → routes to the team inbox
-//   - booking_link  → opens cta_url in a new tab (e.g. Systemations call)
+//   - booking_link  → opens cta_url in a new tab (external booking page)
 // Context: {itemTitle, requiredTierName} so the modal opens with a framed
 // "Unlock {title}" header.
 

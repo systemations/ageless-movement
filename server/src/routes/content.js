@@ -13,20 +13,22 @@ router.get('/programs', authenticateToken, requireRole('coach'), (req, res) => {
 });
 
 router.post('/programs', authenticateToken, requireRole('coach'), (req, res) => {
-  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url } = req.body;
+  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url } = req.body;
   const result = pool.query(
-    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
-    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null]
+    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
+    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null, intro_video_url || null]
   );
   res.json({ program: result.rows[0] });
 });
 
 router.put('/programs/:id', authenticateToken, requireRole('coach'), (req, res) => {
-  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, tier_id, visible, featured } = req.body;
+  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, tier_id, visible, featured, intro_video_url } = req.body;
+  // intro_video_url is optional; null/undefined leave the existing value
+  // alone via COALESCE so partial PUTs from old clients don't wipe it.
   pool.query(
-    'UPDATE programs SET title=?, description=?, duration_weeks=?, workouts_per_week=?, min_duration=?, max_duration=?, image_url=?, tier_id=COALESCE(?, tier_id), visible=COALESCE(?, visible), featured=COALESCE(?, featured) WHERE id=?',
+    'UPDATE programs SET title=?, description=?, duration_weeks=?, workouts_per_week=?, min_duration=?, max_duration=?, image_url=?, tier_id=COALESCE(?, tier_id), visible=COALESCE(?, visible), featured=COALESCE(?, featured), intro_video_url=COALESCE(?, intro_video_url) WHERE id=?',
     [title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url,
-     tier_id ?? null, visible ?? null, featured ?? null, req.params.id]
+     tier_id ?? null, visible ?? null, featured ?? null, intro_video_url ?? null, req.params.id]
   );
   res.json({ success: true });
 });
@@ -989,7 +991,7 @@ router.post('/course-modules/:id/lessons', authenticateToken, requireRole('coach
 });
 
 router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), async (req, res) => {
-  const { title, description, video_url, video_thumbnail, thumbnail_url, duration, status } = req.body;
+  const { title, description, video_url, video_thumbnail, thumbnail_url, duration, status, quiz_data } = req.body;
   const lesson = pool.query('SELECT * FROM course_lessons WHERE id = ?', [req.params.id]);
   if (lesson.rows.length === 0) return res.status(404).json({ error: 'Lesson not found' });
   const l = lesson.rows[0];
@@ -1010,9 +1012,24 @@ router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), async
     } catch (e) { /* ignore — save still proceeds without thumb */ }
   }
 
+  // quiz_data is stored as serialised JSON. Accept either an object (we
+  // stringify here) or a JSON string. null/undefined leave the existing
+  // value untouched; an empty string clears the quiz.
+  let quizSerialised = l.quiz_data;
+  if (quiz_data !== undefined) {
+    if (quiz_data === null || quiz_data === '') {
+      quizSerialised = null;
+    } else if (typeof quiz_data === 'string') {
+      try { JSON.parse(quiz_data); quizSerialised = quiz_data; }
+      catch { return res.status(400).json({ error: 'quiz_data is not valid JSON' }); }
+    } else if (typeof quiz_data === 'object') {
+      quizSerialised = JSON.stringify(quiz_data);
+    }
+  }
+
   pool.query(
-    'UPDATE course_lessons SET title=?, description=?, video_url=?, video_thumbnail=?, thumbnail_url=?, duration=?, status=? WHERE id=?',
-    [title ?? l.title, description ?? l.description, newVideoUrl, resolvedThumbnail, thumbnail_url ?? l.thumbnail_url, duration ?? l.duration, status ?? l.status, req.params.id]
+    'UPDATE course_lessons SET title=?, description=?, video_url=?, video_thumbnail=?, thumbnail_url=?, duration=?, status=?, quiz_data=? WHERE id=?',
+    [title ?? l.title, description ?? l.description, newVideoUrl, resolvedThumbnail, thumbnail_url ?? l.thumbnail_url, duration ?? l.duration, status ?? l.status, quizSerialised, req.params.id]
   );
   res.json({ success: true, video_thumbnail: resolvedThumbnail });
 });

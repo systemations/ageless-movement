@@ -16,8 +16,8 @@ export default function Privacy() {
       </p>
 
       <Section title="Who we are">
-        Ageless Movement is operated by Systemations (Ireland). Controller
-        contact: info@systemations.io.
+        Ageless Movement is operated by Handsdan. Controller
+        contact: admin@handsdan.com.
       </Section>
 
       <Section title="What we collect">
@@ -47,7 +47,7 @@ export default function Privacy() {
 
       <Section title="Your rights (GDPR)">
         You have the right to access, correct, delete or export your data.
-        During alpha this is handled by emailing info@systemations.io. Self-
+        During alpha this is handled by emailing admin@handsdan.com. Self-
         serve export + deletion flows will ship before GA.
       </Section>
 
@@ -63,7 +63,7 @@ export default function Privacy() {
       </Section>
 
       <Section title="Contact">
-        Questions, corrections, or to exercise a right: info@systemations.io.
+        Questions, corrections, or to exercise a right: admin@handsdan.com.
       </Section>
 
       <p style={footer}>Last updated: 2026-04-22 (placeholder).</p>

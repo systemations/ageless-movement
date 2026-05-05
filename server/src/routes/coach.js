@@ -671,16 +671,19 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
     const id = req.params.id;
     const client = pool.query(`
       SELECT u.id, u.name, u.email, u.avatar_url, u.created_at, u.last_active_at,
-        cp.age, cp.gender, cp.location, cp.tier_id, cp.tier_requested_id,
+        cp.age, cp.gender, cp.sex, cp.height_cm, cp.weight_kg,
+        cp.activity_level, cp.eating_style,
+        cp.location, cp.tier_id, cp.tier_requested_id,
         cp.calorie_target, cp.protein_target, cp.fat_target, cp.carbs_target, cp.water_target,
         cp.plan_title, cp.plan_cycle, cp.plan_started_at, cp.plan_next_renewal_at,
-        cp.profile_image_url,
+        cp.profile_image_url, cp.timezone,
         COALESCE(cp.profile_image_url, u.avatar_url) as photo_url,
         COALESCE(cp.status, 'active') as status,
         cp.status_changed_at, cp.status_note,
         t.name as tier_name, t.level as tier_level,
         tr.name as tier_requested_name, tr.level as tier_requested_level,
-        oa.goal, oa.experience, oa.injuries, oa.schedule, oa.equipment, oa.dietary, oa.sleep, oa.anything_else
+        oa.goal, oa.experience, oa.injuries, oa.schedule, oa.equipment, oa.dietary, oa.sleep, oa.anything_else,
+        oa.answers_json
       FROM users u
       LEFT JOIN client_profiles cp ON cp.user_id = u.id
       LEFT JOIN tiers t ON t.id = cp.tier_id
@@ -1188,6 +1191,47 @@ router.patch('/clients/:id/status', authenticateToken, requireRole('coach'), req
     res.json({ ok: true, status });
   } catch (err) {
     console.error('Client status update error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Coach-controlled reminder prefs for a single client. Currently only the
+// workout-day reminder toggle. Defaults ON. The client's own opt-out toggle
+// in reminder_preferences.workout_reminder is independent — both must be true
+// for a notification to fire (when the scheduler lands in Phase 3).
+router.get('/clients/:id/coach-prefs', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
+  try {
+    const row = pool.query(
+      'SELECT coach_workout_reminders_enabled FROM client_profiles WHERE user_id = ?',
+      [req.params.id],
+    ).rows[0];
+    res.json({
+      workout_reminders_enabled: row?.coach_workout_reminders_enabled ?? 1,
+    });
+  } catch (err) {
+    console.error('Coach prefs fetch error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.patch('/clients/:id/coach-prefs', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
+  try {
+    const { workout_reminders_enabled } = req.body;
+    if (typeof workout_reminders_enabled !== 'boolean' && workout_reminders_enabled !== 0 && workout_reminders_enabled !== 1) {
+      return res.status(400).json({ error: 'workout_reminders_enabled must be boolean' });
+    }
+    const flag = workout_reminders_enabled ? 1 : 0;
+    const existing = pool.query('SELECT id FROM client_profiles WHERE user_id = ?', [req.params.id]).rows[0];
+    if (!existing) {
+      pool.query('INSERT INTO client_profiles (user_id) VALUES (?)', [req.params.id]);
+    }
+    pool.query(
+      'UPDATE client_profiles SET coach_workout_reminders_enabled = ? WHERE user_id = ?',
+      [flag, req.params.id],
+    );
+    res.json({ ok: true, workout_reminders_enabled: flag });
+  } catch (err) {
+    console.error('Coach prefs update error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

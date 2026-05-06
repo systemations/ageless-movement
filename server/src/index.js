@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import exploreRoutes from './routes/explore.js';
@@ -81,6 +83,40 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 // disk. URL path stays /uploads/* — clients and stored URLs don't change.
 const uploadsPath = path.join(__dirname, '..', 'data', 'uploads');
 app.use('/uploads', express.static(uploadsPath));
+
+// Global API rate limiter. Caps any single user (or anonymous IP) at
+// 100 requests/minute across the whole API surface. Real human use
+// is nowhere near this — opening Progress fires ~15 calls — so the
+// cap only bites at attack speeds (token scraping, runaway client
+// loops, DoS). Auth routes have their own per-action buckets in
+// routes/auth.js (login 10/15m, register 5/1h, reset 10/15m), so
+// we skip those here to avoid double-limiting. Health check is also
+// exempt so external uptime monitors don't trip the limit.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by user.id when we can read one from the JWT, else IP. This
+  // means clients behind a shared NAT (office/family/cafe) don't
+  // collectively exhaust the bucket. Decode-without-verify is fine
+  // for keying — actual trust still runs in authenticateToken.
+  keyGenerator: (req, res) => {
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+      try {
+        const claims = jwt.decode(auth.slice(7));
+        if (claims && claims.id) return `u:${claims.id}`;
+      } catch { /* fall through to IP */ }
+    }
+    // ipKeyGenerator normalises IPv6 (collapses /64 prefix) so an
+    // attacker can't trivially rotate addresses inside a single block.
+    return `ip:${ipKeyGenerator(req, res)}`;
+  },
+  skip: (req) => req.path.startsWith('/api/auth') || req.path === '/api/health',
+  message: { error: 'Too many requests, please slow down.' },
+});
+app.use('/api', apiLimiter);
 
 // API routes
 app.use('/api/auth', authRoutes);

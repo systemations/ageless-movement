@@ -854,6 +854,107 @@ router.get('/lessons/:id/assessment-responses', authenticateToken, (req, res) =>
   }
 });
 
+// Per-user roll-up of every movement-assessment lesson, grouped by
+// region (Spine / Hips / Shoulders) so the Progress tab can render a
+// "Movement Assessments" card without 13 round-trips. Only includes
+// lessons that match the same is_movement_assessment definition the
+// course endpoint uses (parent_module_id = 22, has img, no video) so
+// the surfaces stay in sync.
+router.get('/assessment-summary', authenticateToken, (req, res) => {
+  try {
+    const lessons = pool.query(
+      `SELECT l.id, l.title, l.description, l.video_url,
+              l.module_id, m.title AS module_title, m.sort_order AS module_sort,
+              l.sort_order AS lesson_sort
+         FROM course_lessons l
+         JOIN course_modules m ON m.id = l.module_id
+        WHERE m.parent_module_id = 22
+        ORDER BY m.sort_order, l.sort_order`,
+    ).rows;
+
+    const eligible = lessons.filter(l => {
+      const hasImg = !!l.description && /<img\b/i.test(l.description);
+      return hasImg && !l.video_url;
+    });
+    const eligibleIds = eligible.map(l => l.id);
+    if (eligibleIds.length === 0) {
+      return res.json({ regions: [], total_logged: 0, total_lessons: 0, latest_overall_at: null });
+    }
+
+    // Latest assessment response per (user, lesson) — one query, then
+    // map back into the lesson list. Plus a count of attempts so the
+    // card can show "3 attempts on file" if useful.
+    const responses = pool.query(
+      `SELECT lesson_id,
+              MAX(created_at) AS latest_at,
+              COUNT(*) AS attempts
+         FROM assessment_responses
+        WHERE user_id = ? AND lesson_id IN (${eligibleIds.map(() => '?').join(',')})
+        GROUP BY lesson_id`,
+      [req.user.id, ...eligibleIds],
+    ).rows;
+    const latestByLesson = new Map(responses.map(r => [r.lesson_id, r]));
+
+    // Pull the actual photo index for each lesson's latest row.
+    const latestPicks = pool.query(
+      `SELECT lesson_id, selected_photo_index
+         FROM assessment_responses ar
+        WHERE user_id = ?
+          AND lesson_id IN (${eligibleIds.map(() => '?').join(',')})
+          AND created_at = (
+            SELECT MAX(created_at) FROM assessment_responses
+             WHERE user_id = ar.user_id AND lesson_id = ar.lesson_id
+          )`,
+      [req.user.id, ...eligibleIds],
+    ).rows;
+    const pickByLesson = new Map(latestPicks.map(r => [r.lesson_id, r.selected_photo_index]));
+
+    const regions = new Map();
+    let totalLogged = 0;
+    let latestOverall = null;
+    for (const l of eligible) {
+      if (!regions.has(l.module_id)) {
+        regions.set(l.module_id, {
+          module_id: l.module_id,
+          module_title: l.module_title,
+          lessons: [],
+          counts: { A: 0, B: 0, C: 0, D: 0 },
+          logged: 0,
+          total: 0,
+        });
+      }
+      const r = regions.get(l.module_id);
+      r.total += 1;
+      const resp = latestByLesson.get(l.id);
+      const idx = pickByLesson.get(l.id) || null;
+      const letter = idx ? String.fromCharCode(64 + idx) : null;
+      if (resp) {
+        r.logged += 1;
+        totalLogged += 1;
+        if (letter && r.counts[letter] != null) r.counts[letter] += 1;
+        if (!latestOverall || resp.latest_at > latestOverall) latestOverall = resp.latest_at;
+      }
+      r.lessons.push({
+        lesson_id: l.id,
+        lesson_title: l.title,
+        latest_pick: letter,
+        latest_at: resp?.latest_at || null,
+        attempts: resp?.attempts || 0,
+      });
+    }
+
+    res.json({
+      regions: Array.from(regions.values()),
+      total_logged: totalLogged,
+      total_lessons: eligible.length,
+      latest_overall_at: latestOverall,
+    });
+  } catch (err) {
+    console.error('Assessment summary error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Coach view: every quiz attempt + assessment response for a client.
 // Used by ClientProfile → Assessments tab.
 router.get('/clients/:userId/assessment-history', authenticateToken, requireRole('coach'), (req, res) => {

@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CheckinForm from './CheckinForm';
 import ROMTracking from './ROMTracking';
 import PainLogging from './PainLogging';
 import ExerciseProgress from '../../components/ExerciseProgress';
+
+// Per-letter colour for the movement-assessment dots/pills. A is the
+// gold-star pick, B is the wobble, C is the "we need to work on this".
+// Same scale the coach sees on ClientProfile so the read is consistent.
+const ASSESSMENT_COLORS = {
+  A: 'var(--accent-mint)',
+  B: '#FFC152',
+  C: '#FF6B6B',
+  D: '#FF6B6B',
+};
 
 const tabs = ['Progress', 'Trends'];
 
@@ -48,6 +59,8 @@ const categoryColors = {
 
 export default function Progress() {
   const { token } = useAuth();
+  const navigate = useNavigate();
+  const [assessmentSummary, setAssessmentSummary] = useState(null);
   const [activeTab, setActiveTab] = useState('Progress');
   const [showAchieved, setShowAchieved] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -86,6 +99,19 @@ export default function Progress() {
   const [compareView, setCompareView] = useState(null); // { left, right }
 
   useEffect(() => { fetchGoals(); fetchCourses(); }, [token]);
+
+  // Roll-up of the AMS Getting Started movement assessments. Powers
+  // the "Movement Assessments" card up top so the client can see their
+  // last A/B/C per region without diving into the course.
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/content/assessment-summary', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setAssessmentSummary(d))
+      .catch(() => { /* non-blocking */ });
+  }, [token]);
 
   useEffect(() => {
     fetch('/api/explore/progress/exercises', {
@@ -194,8 +220,18 @@ export default function Progress() {
 
       {activeTab === 'Progress' && (
         <>
+          {/* Movement Assessments — roll-up of the AMS Getting Started
+              tap-to-pick lessons. Hidden until the client has seen at
+              least one assessment lesson (i.e. the API returns rows). */}
+          {assessmentSummary && assessmentSummary.total_lessons > 0 && (
+            <MovementAssessmentsCard
+              summary={assessmentSummary}
+              onOpenCourse={() => navigate('/explore')}
+            />
+          )}
+
           {/* Goals Section */}
-          <div className="section-header" style={{ marginTop: 0 }}>
+          <div className="section-header" style={{ marginTop: assessmentSummary?.total_lessons ? 24 : 0 }}>
             <h2>Goals</h2>
             <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
           </div>
@@ -742,6 +778,104 @@ export default function Progress() {
 // Side-by-side photo comparison. Older date on the left, newer on the right;
 // angle tabs let the user pivot through front/side/back if both check-ins
 // captured the same angle.
+// "Movement Assessments" card on the Progress tab. Renders a compact
+// per-region scoreboard of the AMS Getting Started tap-to-pick lessons
+// (Spine / Hips / Shoulders) so the client can see their last A/B/C
+// without opening the course. Source data comes from
+// /api/content/assessment-summary - see content.js for the shape.
+function MovementAssessmentsCard({ summary, onOpenCourse }) {
+  const { regions, total_logged, total_lessons, latest_overall_at } = summary;
+  const pct = total_lessons > 0 ? Math.round((total_logged / total_lessons) * 100) : 0;
+  const noneYet = total_logged === 0;
+  const allLogged = total_lessons > 0 && total_logged >= total_lessons;
+  const ctaLabel = noneYet
+    ? 'Start the assessment'
+    : allLogged
+      ? 'Re-take the assessment'
+      : 'Continue the assessment';
+
+  // For each region, render Y total dots so empty slots show too. A
+  // dot uses the letter colour if the lesson is logged; otherwise a
+  // neutral grey so progress is obvious at a glance.
+  const dotsFor = (region) => region.lessons.map(l => ({
+    color: l.latest_pick ? ASSESSMENT_COLORS[l.latest_pick] : 'var(--divider)',
+    title: l.latest_pick ? `${l.lesson_title}: ${l.latest_pick}` : `${l.lesson_title}: not logged yet`,
+  }));
+
+  return (
+    <>
+      <div className="section-header" style={{ marginTop: 0 }}>
+        <h2 onClick={onOpenCourse} style={{ cursor: 'pointer' }}>Movement Assessments &gt;</h2>
+      </div>
+
+      <div className="card" style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
+            <svg width="48" height="48" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+              <circle
+                cx="24" cy="24" r="19" fill="none"
+                stroke="var(--accent-mint)"
+                strokeWidth="4"
+                strokeDasharray={`${2 * Math.PI * 19}`}
+                strokeDashoffset={`${2 * Math.PI * 19 * (1 - pct / 100)}`}
+                strokeLinecap="round" transform="rotate(-90 24 24)"
+              />
+            </svg>
+            <span style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700,
+            }}>{pct}%</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
+              {total_logged} of {total_lessons} logged
+            </h4>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              {latest_overall_at
+                ? `Last update ${new Date(latest_overall_at + 'Z').toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                : 'No attempts yet'}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+          {regions.map(r => (
+            <div key={r.module_id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ minWidth: 80 }}>
+                <p style={{ fontSize: 13, fontWeight: 700 }}>{r.module_title}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{r.logged}/{r.total} logged</p>
+              </div>
+              <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                {dotsFor(r).map((d, i) => (
+                  <div
+                    key={i}
+                    title={d.title}
+                    style={{
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: d.color,
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onOpenCourse}
+          style={{
+            width: '100%', padding: '12px 16px', borderRadius: 12,
+            border: 'none', background: 'var(--accent)', color: '#fff',
+            fontSize: 14, fontWeight: 800, cursor: 'pointer',
+          }}
+        >{ctaLabel}</button>
+      </div>
+    </>
+  );
+}
+
 function PhotoCompareView({ view, onBack }) {
   const angles = [
     { key: 'photo_front_url', label: 'Front' },

@@ -601,11 +601,11 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               lessonId={lesson.id}
               nav={navProps}
             />
-          ) : lesson.is_movement_assessment ? (
-            // Coach-profile-style layout for the 13 movement-assessment
-            // lessons — hero band + UPPERCASE title + accent CTAs +
-            // photo-reminder callout + Confirm-next-to-history. Video
-            // lessons + STEP 1 + quizzes still use the legacy layout.
+          ) : !lesson.quiz ? (
+            // Coach-profile-style layout for every non-quiz lesson:
+            // movement assessments (interactive tap-to-pick), video
+            // lessons, and reading lessons. Quiz lessons keep the
+            // dedicated QuizPlayer / QuizLockGate above.
             <StyledLessonBody
               lesson={lesson}
               prev={prev}
@@ -614,132 +614,7 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               onToggleComplete={onToggleComplete}
               toggling={toggling}
             />
-          ) : (
-            <>
-          {/* Video — Vimeo embed if a URL is set. Text-only lessons skip
-              the player entirely so the description leads. */}
-          {lesson.video_url && (
-            <div style={{
-              position: 'relative', aspectRatio: '16 / 9',
-              borderRadius: 12, overflow: 'hidden', marginBottom: 14, background: '#000',
-              border: '1.5px solid rgba(255, 255, 255, 0.18)',
-              boxShadow: '0 10px 32px rgba(133, 255, 186, 0.22)',
-            }}>
-              <VimeoEmbed
-                url={lesson.video_url}
-                width="100%"
-                height="100%"
-                style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
-              />
-            </div>
-          )}
-
-          {/* Description — rich HTML from the admin TipTap editor.
-              Typography rules live in components/rich-text.css so the
-              authoring view and the rendered view stay identical.
-              Special token {{coaches}} expands inline into the public
-              coach roster (Team admin → Coach profiles), so support /
-              meet-the-team lessons stay in sync with that one source. */}
-          {lesson.description && (
-            <LessonDescription
-              html={lesson.description}
-              lessonId={lesson.id}
-              interactive={!!lesson.is_movement_assessment}
-            />
-          )}
-
-          {/* Attachments */}
-          {lesson.resources?.length > 0 && (
-            <div style={{ marginBottom: 18 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                Attached files
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {lesson.resources.map(r => (
-                  <a
-                    key={r.id}
-                    href={r.url}
-                    download={r.original_name}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 10,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid var(--divider)',
-                      color: 'var(--text-primary)', textDecoration: 'none',
-                      fontSize: 13,
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.original_name || 'Download'}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sticky footer — Next / Mark Complete */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '14px 0', borderTop: '1px solid var(--divider)', marginTop: 8,
-          }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {prev && (
-                <button
-                  onClick={() => onPickLesson(prev.id)}
-                  style={{
-                    padding: '10px 16px', borderRadius: 10, border: '1px solid var(--divider)',
-                    background: 'transparent', color: 'var(--text-primary)',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  ← Prev
-                </button>
-              )}
-              {next && (
-                <button
-                  onClick={() => onPickLesson(next.id)}
-                  style={{
-                    padding: '10px 16px', borderRadius: 10, border: '1px solid var(--divider)',
-                    background: 'transparent', color: 'var(--text-primary)',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  Next Lesson →
-                </button>
-              )}
-            </div>
-
-            <button
-              onClick={() => onToggleComplete(lesson)}
-              disabled={toggling === lesson.id}
-              style={{
-                padding: '10px 18px', borderRadius: 10, border: 'none',
-                background: lesson.completed ? 'rgba(133,255,186,0.18)' : 'var(--accent)',
-                color: lesson.completed ? 'var(--accent-mint)' : '#fff',
-                fontSize: 13, fontWeight: 800, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6,
-                opacity: toggling === lesson.id ? 0.6 : 1,
-              }}
-            >
-              {lesson.completed ? (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                  Completed
-                </>
-              ) : 'Mark As Complete'}
-            </button>
-          </div>
-            </>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -827,6 +702,44 @@ function StyledLessonBody({ lesson, prev, next, onPickLesson, onToggleComplete, 
           interactive={!!lesson.is_movement_assessment}
           onLogged={() => setLoggedNow(true)}
         />
+      )}
+
+      {lesson.resources?.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <p style={{
+            fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+            color: 'var(--text-secondary)', marginBottom: 8,
+          }}>Attached files</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {lesson.resources.map(r => (
+              <a
+                key={r.id}
+                href={r.url}
+                download={r.original_name}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 10,
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--divider)',
+                  color: 'var(--text-primary)', textDecoration: 'none',
+                  fontSize: 13,
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r.original_name || 'Download'}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </a>
+            ))}
+          </div>
+        </div>
       )}
 
       <button

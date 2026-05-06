@@ -16,8 +16,6 @@ const ASSESSMENT_COLORS = {
   D: '#FF6B6B',
 };
 
-const tabs = ['Progress', 'Trends'];
-
 // Short label shown on the goal card for auto-tracked goals.
 function autoBadgeLabel(goal) {
   switch (goal.metric_type) {
@@ -61,7 +59,7 @@ export default function Progress() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [assessmentSummary, setAssessmentSummary] = useState(null);
-  const [activeTab, setActiveTab] = useState('Progress');
+  const [statsSummary, setStatsSummary] = useState(null);
   const [showAchieved, setShowAchieved] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showROM, setShowROM] = useState(false);
@@ -110,6 +108,18 @@ export default function Progress() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => setAssessmentSummary(d))
+      .catch(() => { /* non-blocking */ });
+  }, [token]);
+
+  // Body comp + activity averages for the Stats section. Weekly
+  // averages are computed server-side from raw daily logs.
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/athlete/stats-summary', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setStatsSummary(d))
       .catch(() => { /* non-blocking */ });
   }, [token]);
 
@@ -218,8 +228,7 @@ export default function Progress() {
         <h1>Progress</h1>
       </div>
 
-      {activeTab === 'Progress' && (
-        <>
+      <>
           {/* Photos - hoisted to the top so the before/after surface is
               the first thing the client sees on Progress. The photo
               strip itself is the visual progress; the standalone
@@ -304,27 +313,23 @@ export default function Progress() {
             </div>
           </CollapsibleSection>
 
-          {/* Measurements */}
+          {/* Stats — body comp from latest check-in + 7-day averages
+              for water / steps / calories / workouts. Replaces the old
+              Measurements stub with real data plumbing. Only the cards
+              with data render so empties don't pad the strip. */}
           <CollapsibleSection
-            title="Measurements"
-            subtitle="Body fat · recovery · weight"
+            title="Stats"
+            subtitle={statsSummary?.latest_checkin?.date
+              ? `Last check-in ${new Date(statsSummary.latest_checkin.date).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}`
+              : 'Body comp + this week\'s averages'}
             accent="#FF6B9D"
             defaultOpen={false}
           >
-          <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
-            {['Body Fat', 'Recovery', 'Weight'].map((m) => (
-              <div key={m} className="card" style={{ minWidth: 160 }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{m}</p>
-                <p style={{ fontSize: 24, fontWeight: 700 }}>--</p>
-                <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No data yet</p>
-              </div>
-            ))}
-          </div>
+          <StatsRow stats={statsSummary} />
 
-          {/* Set Goals & Add New */}
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
-            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
+            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add Check-in</button>
           </div>
           </CollapsibleSection>
 
@@ -581,54 +586,7 @@ export default function Progress() {
               />
             </CollapsibleSection>
           )}
-        </>
-      )}
-
-      {activeTab === 'Trends' && (
-        <>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>
-            Weekly · {new Date().toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })} - {new Date(Date.now() + 6*86400000).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </p>
-
-          {[
-            { title: 'Workout', value: '- / 4', label: 'Completed' },
-            { title: 'Nutrition', value: '- / 2,113', label: 'cals Daily Avg' },
-            { title: 'Water', value: '- / 2,500', label: 'ml Daily Avg' },
-            { title: 'Steps', value: '- / 6,000', label: 'Daily Avg' },
-          ].map((trend) => (
-            <div key={trend.title} className="card" style={{ marginBottom: 12 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{trend.title}</h3>
-              <p style={{ fontSize: 20, fontWeight: 700 }}>{trend.value} <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 400 }}>{trend.label}</span></p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Success Days: -</p>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Max. Streak: -</p>
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* Sub-tabs */}
-      <div style={{
-        position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
-        padding: 4, maxWidth: 240, width: 'calc(100% - 32px)',
-      }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
-              background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
-              color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
-              border: 'none',
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      </>
 
       {/* Add Goal bottom sheet */}
       {showAddGoal && (
@@ -857,6 +815,56 @@ function CollapsibleSection({ title, subtitle, action, accent, defaultOpen = tru
         )}
       </div>
       {open && children}
+    </div>
+  );
+}
+
+// Stats row - horizontal scroll of metric cards. Pulls body comp
+// from the latest check-in plus 7-day activity averages from the
+// stats-summary endpoint. Only renders cards with data so an empty
+// account doesn't show a row of dashes.
+function StatsRow({ stats }) {
+  if (!stats) return (
+    <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+      <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Loading your stats...</p>
+    </div>
+  );
+  const c = stats.latest_checkin;
+  const w = stats.week || {};
+  const t = stats.targets || {};
+  const cards = [];
+  if (c?.weight != null)         cards.push({ label: 'Weight',     value: `${c.weight}`, suffix: ' kg', sub: 'Latest check-in' });
+  if (c?.body_fat != null)       cards.push({ label: 'Body Fat',   value: `${c.body_fat}`, suffix: ' %', sub: 'Latest check-in' });
+  if (c?.recovery_score != null) cards.push({ label: 'Recovery',   value: `${c.recovery_score}`, suffix: ' / 10', sub: 'Latest check-in' });
+  if (c?.sleep_hours != null)    cards.push({ label: 'Sleep',      value: `${c.sleep_hours}`, suffix: ' h', sub: 'Latest check-in' });
+  if (w.water_ml_avg != null)    cards.push({ label: 'Water',      value: `${(w.water_ml_avg / 1000).toFixed(1)}`, suffix: ` / ${(t.water_ml || 0) / 1000}L`, sub: '7-day avg' });
+  if (w.steps_avg != null)       cards.push({ label: 'Steps',      value: `${w.steps_avg.toLocaleString()}`, suffix: t.steps ? ` / ${t.steps.toLocaleString()}` : '', sub: '7-day avg' });
+  if (w.calories_avg != null)    cards.push({ label: 'Calories',   value: `${w.calories_avg.toLocaleString()}`, suffix: t.calories ? ` / ${t.calories.toLocaleString()}` : '', sub: '7-day avg' });
+  cards.push({ label: 'Workouts', value: `${w.workouts_completed || 0}`, suffix: '', sub: 'This week' });
+
+  if (cards.length === 1 && cards[0].label === 'Workouts' && (w.workouts_completed || 0) === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No data yet</p>
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
+          Log a check-in, water, or a workout to see your stats land here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+      {cards.map(card => (
+        <div key={card.label} className="card" style={{ minWidth: 150, flexShrink: 0 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>{card.label}</p>
+          <p style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1 }}>
+            {card.value}
+            {card.suffix && <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{card.suffix}</span>}
+          </p>
+          <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 }}>{card.sub}</p>
+        </div>
+      ))}
     </div>
   );
 }

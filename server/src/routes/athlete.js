@@ -636,6 +636,89 @@ router.get('/block', authenticateToken, (req, res) => {
   }
 });
 
+// GET /api/athlete/stats-summary
+// Powers the Stats section on the Progress tab. Returns the latest
+// check-in body comp values + 7-day averages for water / steps /
+// calories / workouts, plus the per-client targets so the card can
+// render "X of Y daily avg" with a percent ring later. All averages
+// are computed off raw daily logs - no denormalisation, fast enough
+// at SQLite scale for hundreds of clients.
+router.get('/stats-summary', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const profile = pool.query(
+      'SELECT water_target, step_target, calorie_target FROM client_profiles WHERE user_id = ?',
+      [userId],
+    ).rows[0] || {};
+    const latestCheckin = pool.query(
+      `SELECT date, weight, body_fat, recovery_score, sleep_hours
+         FROM checkins
+        WHERE user_id = ?
+        ORDER BY date DESC, id DESC
+        LIMIT 1`,
+      [userId],
+    ).rows[0] || null;
+    // Daily totals first, then average across the 7 days that actually
+    // had data so a missed day doesn't drag the average to zero.
+    const waterAvg = pool.query(
+      `SELECT AVG(daily_total) AS avg_ml, COUNT(*) AS days
+         FROM (
+           SELECT date, SUM(amount_ml) AS daily_total
+             FROM water_logs
+            WHERE user_id = ? AND date >= date('now', '-7 days')
+            GROUP BY date
+         )`,
+      [userId],
+    ).rows[0] || {};
+    const stepsAvg = pool.query(
+      `SELECT AVG(daily_total) AS avg_steps, COUNT(*) AS days
+         FROM (
+           SELECT date, SUM(steps) AS daily_total
+             FROM step_logs
+            WHERE user_id = ? AND date >= date('now', '-7 days')
+            GROUP BY date
+         )`,
+      [userId],
+    ).rows[0] || {};
+    const calsAvg = pool.query(
+      `SELECT AVG(daily_total) AS avg_cals, COUNT(*) AS days
+         FROM (
+           SELECT date, SUM(calories) AS daily_total
+             FROM nutrition_logs
+            WHERE user_id = ? AND date >= date('now', '-7 days')
+            GROUP BY date
+         )`,
+      [userId],
+    ).rows[0] || {};
+    const workouts = pool.query(
+      `SELECT COUNT(*) AS c
+         FROM workout_logs
+        WHERE user_id = ? AND completed = 1 AND date >= date('now', '-7 days')`,
+      [userId],
+    ).rows[0] || {};
+    res.json({
+      latest_checkin: latestCheckin,
+      week: {
+        water_ml_avg: waterAvg.avg_ml ? Math.round(waterAvg.avg_ml) : null,
+        water_days: waterAvg.days || 0,
+        steps_avg: stepsAvg.avg_steps ? Math.round(stepsAvg.avg_steps) : null,
+        steps_days: stepsAvg.days || 0,
+        calories_avg: calsAvg.avg_cals ? Math.round(calsAvg.avg_cals) : null,
+        calories_days: calsAvg.days || 0,
+        workouts_completed: workouts.c || 0,
+      },
+      targets: {
+        water_ml: profile.water_target || null,
+        steps: profile.step_target || null,
+        calories: profile.calorie_target || null,
+      },
+    });
+  } catch (err) {
+    console.error('Stats summary error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/athlete/preferences
 router.get('/preferences', authenticateToken, (req, res) => {
   try {

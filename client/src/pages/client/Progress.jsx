@@ -326,11 +326,6 @@ export default function Progress() {
             defaultOpen={false}
           >
           <StatsRow stats={statsSummary} />
-
-          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
-            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add Check-in</button>
-          </div>
           </CollapsibleSection>
 
           {/* Goals Section */}

@@ -49,6 +49,19 @@ export default function CourseDetail({ course, onBack }) {
       .catch(() => setError('Failed to load course.'));
   }, [courseId, token]);
 
+  // Reset scroll on every navigation event so the user doesn't land
+  // half-way down a fresh page (was happening when jumping from the
+  // course overview into a lesson, or between lessons via Prev/Next).
+  // The actual scroll container varies by layout - on this app body
+  // is what scrolls, but we hit window + documentElement + .page-content
+  // too so this stays robust if the shell ever changes.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTo?.(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.querySelector('.page-content')?.scrollTo?.(0, 0);
+  }, [courseId, activeLessonId]);
+
   const toggleLesson = async (lesson) => {
     if (toggling != null) return;
     setToggling(lesson.id);

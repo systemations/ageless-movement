@@ -1688,6 +1688,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS login_events_user_idx ON login_events(user_id);
 `);
 
+// Reminder fire log. One row per (user, kind, local_date) so the
+// scheduler can guarantee at-most-once delivery per day even when the
+// minute-tick window straddles a server restart. Forward-compatible
+// with native push: a row written here is the canonical "this fired"
+// record regardless of which transport delivered it.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reminder_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reminder_kind TEXT NOT NULL,
+    fired_local_date TEXT NOT NULL,
+    fired_at_utc TEXT NOT NULL DEFAULT (datetime('now')),
+    payload_json TEXT,
+    UNIQUE(user_id, reminder_kind, fired_local_date)
+  );
+  CREATE INDEX IF NOT EXISTS reminder_log_user_idx ON reminder_log(user_id, fired_at_utc DESC);
+`);
+
 // Seed default feature requirements if empty
 const ftrCount = db.prepare('SELECT COUNT(*) as c FROM feature_tier_requirements').get();
 if (ftrCount.c === 0) {

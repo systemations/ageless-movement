@@ -25,6 +25,7 @@ import goalsRoutes from './routes/goals.js';
 import paymentPlansRoutes from './routes/payment-plans.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
+import { startReminderJobRunner } from './jobs/reminders.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
 import { seedPaymentPlans } from './db/seed-payment-plans.js';
 
@@ -122,6 +123,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startPostSignupJobRunner();
+  startReminderJobRunner();
   // Idempotent content seeders. Each one only writes when its target
   // rows are still empty, so this is safe to run on every start (local
   // dev + Render prod). Adds new content without touching coach edits.

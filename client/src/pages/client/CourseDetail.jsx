@@ -751,7 +751,7 @@ function StyledLessonBody({ lesson, prev, next, onPickLesson, onToggleComplete, 
           background: completed
             ? `linear-gradient(135deg, var(--accent-mint), ${mintRgba(0.6)})`
             : `linear-gradient(135deg, ${accent}, ${accentRgba(0.7)})`,
-          color: '#000', fontSize: 18, fontWeight: 900, letterSpacing: 0.4,
+          color: completed ? '#000' : '#fff', fontSize: 18, fontWeight: 900, letterSpacing: 0.4,
           textTransform: 'uppercase',
           boxShadow: completed
             ? `0 6px 20px ${mintRgba(0.28)}`
@@ -881,7 +881,7 @@ function QuizLockGate({ prerequisite, onPickLesson, onBack, nav }) {
           <button
             onClick={() => onPickLesson(prerequisite.id)}
             style={{
-              background: 'var(--accent)', color: '#000', border: 'none',
+              background: 'var(--accent)', color: '#fff', border: 'none',
               borderRadius: 12, padding: '12px 22px', fontSize: 15, fontWeight: 800,
               cursor: 'pointer',
             }}
@@ -1037,7 +1037,7 @@ function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, less
           style={{
             padding: '14px 32px', borderRadius: 12, border: 'none',
             background: allAnswered ? 'var(--accent)' : 'var(--divider)',
-            color: allAnswered ? '#000' : 'var(--text-secondary)', fontSize: 15, fontWeight: 800,
+            color: allAnswered ? '#fff' : 'var(--text-secondary)', fontSize: 15, fontWeight: 800,
             cursor: allAnswered ? 'pointer' : 'not-allowed',
             opacity: allAnswered ? 1 : 0.6,
           }}
@@ -1107,7 +1107,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
             onClick={() => onPickLesson(nextQuiz.id)}
             style={{
               padding: '14px 18px', borderRadius: 12, border: 'none',
-              background: 'var(--accent)', color: '#000', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+              background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
             }}
           >
             Try the {nextQuiz.title} quiz next →
@@ -1122,7 +1122,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
             onClick={() => doEnrol(false)}
             style={{
               padding: '14px 18px', borderRadius: 12, border: 'none',
-              background: 'var(--accent)', color: '#000', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+              background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
             }}
           >
             Add {quiz.level_label} to my schedule
@@ -1153,7 +1153,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
                 onClick={() => doEnrol(true)}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 10, border: 'none',
-                  background: 'var(--accent)', color: '#000', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                  background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
                 }}
               >Replace</button>
               <button

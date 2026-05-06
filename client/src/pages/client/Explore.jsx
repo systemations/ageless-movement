@@ -82,12 +82,16 @@ export default function Explore() {
       .catch(console.error);
   }, []);
 
-  // Open a specific program / workout when navigated with ?program=<id> or ?workout=<id>
+  // Open a specific program / workout / course when navigated with
+  // ?program=<id>, ?workout=<id> or ?course=<id>. CourseDetail refetches
+  // by id so passing a stub object is enough.
   useEffect(() => {
     const programId = searchParams.get('program');
     const workoutId = searchParams.get('workout');
+    const courseId = searchParams.get('course');
     if (programId) setSelectedProgram(Number(programId));
     if (workoutId) setSelectedWorkout(Number(workoutId));
+    if (courseId) setSelectedCourse({ id: Number(courseId) });
   }, [searchParams]);
 
   const closeProgram = () => {
@@ -125,7 +129,13 @@ export default function Explore() {
   }
 
   if (selectedCourse) {
-    return <CourseDetail course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+    return <CourseDetail course={selectedCourse} onBack={() => {
+      setSelectedCourse(null);
+      if (searchParams.get('course')) {
+        searchParams.delete('course');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }} />;
   }
 
   if (selectedChallenge) {

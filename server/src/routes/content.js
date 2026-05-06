@@ -865,7 +865,7 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
     const lessons = pool.query(
       `SELECT l.id, l.title, l.description, l.video_url,
               l.module_id, m.title AS module_title, m.sort_order AS module_sort,
-              l.sort_order AS lesson_sort
+              m.course_id, l.sort_order AS lesson_sort
          FROM course_lessons l
          JOIN course_modules m ON m.id = l.module_id
         WHERE m.parent_module_id = 22
@@ -878,8 +878,12 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
     });
     const eligibleIds = eligible.map(l => l.id);
     if (eligibleIds.length === 0) {
-      return res.json({ regions: [], total_logged: 0, total_lessons: 0, latest_overall_at: null });
+      return res.json({ regions: [], total_logged: 0, total_lessons: 0, latest_overall_at: null, course_id: null });
     }
+    // All eligible lessons live under one course (AMS Getting Started
+    // today). Include the id in the response so the Progress card can
+    // deep-link instead of dumping the user on /explore.
+    const courseId = eligible[0].course_id;
 
     // Latest assessment response per (user, lesson) — one query, then
     // map back into the lesson list. Plus a count of attempts so the
@@ -948,6 +952,7 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
       total_logged: totalLogged,
       total_lessons: eligible.length,
       latest_overall_at: latestOverall,
+      course_id: courseId,
     });
   } catch (err) {
     console.error('Assessment summary error:', err);

@@ -220,21 +220,125 @@ export default function Progress() {
 
       {activeTab === 'Progress' && (
         <>
+          {/* Photos - hoisted to the top so the before/after surface is
+              the first thing the client sees on Progress. */}
+          <CollapsibleSection
+            title="Photos"
+            action={
+              photoCheckins.length >= 2 && !compareMode ? (
+                <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Compare</button>
+              ) : compareMode ? (
+                <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600 }}>Cancel</button>
+              ) : null
+            }
+          >
+            {photoCheckins.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No progress photos yet</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete a check-in to add photos</p>
+              </div>
+            ) : (
+              <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px' }}>
+                {photoCheckins.map(c => {
+                  const thumb = c.photo_front_url || c.photo_side_url || c.photo_back_url;
+                  const selected = compareSelection.includes(c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => compareMode && toggleCompareSelection(c.id)}
+                      style={{
+                        minWidth: 110, cursor: compareMode ? 'pointer' : 'default',
+                        borderRadius: 12, overflow: 'hidden', position: 'relative',
+                        border: selected ? '2px solid var(--accent-mint)' : '2px solid transparent',
+                      }}
+                    >
+                      <img src={thumb} alt="" style={{ width: 110, height: 140, objectFit: 'cover', display: 'block' }} />
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        padding: '6px 8px',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+                        color: '#fff', fontSize: 11, fontWeight: 700,
+                      }}>{new Date(c.date).toLocaleDateString('en-IE', { day: '2-digit', month: 'short' })}</div>
+                      {selected && (
+                        <div style={{
+                          position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
+                          background: 'var(--accent-mint)', color: '#000',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 800,
+                        }}>{compareSelection.indexOf(c.id) + 1}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {compareMode && (
+              <button
+                className="btn-primary"
+                onClick={openComparison}
+                disabled={compareSelection.length !== 2}
+                style={{ fontSize: 14, opacity: compareSelection.length === 2 ? 1 : 0.5, marginTop: 12 }}
+              >
+                {compareSelection.length === 2 ? 'Show side-by-side' : `Pick ${2 - compareSelection.length} more photo${2 - compareSelection.length === 1 ? '' : 's'}`}
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+              <div
+                className="card"
+                onClick={() => {
+                  if (photoCheckins.length < 2) {
+                    alert('Add at least two check-ins with photos to see your before & after.');
+                    return;
+                  }
+                  openBeforeAfter();
+                }}
+                style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
+                  <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
+                </svg>
+                <p style={{ fontSize: 13, fontWeight: 600 }}>Before &amp; After</p>
+              </div>
+              <div className="card" onClick={() => { if (navigator.share) navigator.share({ title: 'My Ageless Movement Progress', text: 'Check out my progress!' }); else alert('Share your progress via screenshot or social media'); }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
+                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+                <p style={{ fontSize: 13, fontWeight: 600 }}>Share</p>
+              </div>
+            </div>
+            {photoCheckins.length >= 2 && !compareMode && (
+              <button
+                onClick={() => { setCompareMode(true); setCompareSelection([]); }}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--accent)',
+                  fontSize: 12, fontWeight: 600, padding: '10px 0 2px', cursor: 'pointer',
+                  width: '100%', textAlign: 'center',
+                }}
+              >
+                Compare any two photos
+              </button>
+            )}
+          </CollapsibleSection>
+
           {/* Movement Assessments — roll-up of the AMS Getting Started
               tap-to-pick lessons. Hidden until the client has seen at
               least one assessment lesson (i.e. the API returns rows). */}
           {assessmentSummary && assessmentSummary.total_lessons > 0 && (
             <MovementAssessmentsCard
               summary={assessmentSummary}
-              onOpenCourse={() => navigate('/explore')}
+              onOpenCourse={() => navigate(assessmentSummary.course_id ? `/explore?course=${assessmentSummary.course_id}` : '/explore')}
             />
           )}
 
           {/* Goals Section */}
-          <div className="section-header" style={{ marginTop: assessmentSummary?.total_lessons ? 24 : 0 }}>
-            <h2>Goals</h2>
-            <button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>
-          </div>
+          <CollapsibleSection
+            title="Goals"
+            action={<button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>}
+          >
 
           {/* Active Goals */}
           {goals.length === 0 && (
@@ -401,123 +505,18 @@ export default function Progress() {
             </div>
           )}
 
-          <div className="divider" />
+          </CollapsibleSection>
 
           {/* Check-in Prompt */}
-          <div className="section-header">
-            <h2>Check-ins &gt;</h2>
-          </div>
-          <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
-            <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
-          </div>
-
-          {/* Progress Photos */}
-          <div className="section-header">
-            <h2>Photos</h2>
-            {photoCheckins.length >= 2 && !compareMode && (
-              <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Compare</button>
-            )}
-            {compareMode && (
-              <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600 }}>Cancel</button>
-            )}
-          </div>
-          {photoCheckins.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No progress photos yet</p>
-              <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete a check-in to add photos</p>
+          <CollapsibleSection title="Check-ins">
+            <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
+              <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
             </div>
-          ) : (
-            <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px' }}>
-              {photoCheckins.map(c => {
-                const thumb = c.photo_front_url || c.photo_side_url || c.photo_back_url;
-                const selected = compareSelection.includes(c.id);
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => compareMode && toggleCompareSelection(c.id)}
-                    style={{
-                      minWidth: 110, cursor: compareMode ? 'pointer' : 'default',
-                      borderRadius: 12, overflow: 'hidden', position: 'relative',
-                      border: selected ? '2px solid var(--accent-mint)' : '2px solid transparent',
-                    }}
-                  >
-                    <img src={thumb} alt="" style={{ width: 110, height: 140, objectFit: 'cover', display: 'block' }} />
-                    <div style={{
-                      position: 'absolute', bottom: 0, left: 0, right: 0,
-                      padding: '6px 8px',
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
-                      color: '#fff', fontSize: 11, fontWeight: 700,
-                    }}>{new Date(c.date).toLocaleDateString('en-IE', { day: '2-digit', month: 'short' })}</div>
-                    {selected && (
-                      <div style={{
-                        position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
-                        background: 'var(--accent-mint)', color: '#000',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 12, fontWeight: 800,
-                      }}>{compareSelection.indexOf(c.id) + 1}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {compareMode && (
-            <button
-              className="btn-primary"
-              onClick={openComparison}
-              disabled={compareSelection.length !== 2}
-              style={{ fontSize: 14, opacity: compareSelection.length === 2 ? 1 : 0.5, marginTop: 12 }}
-            >
-              {compareSelection.length === 2 ? 'Show side-by-side' : `Pick ${2 - compareSelection.length} more photo${2 - compareSelection.length === 1 ? '' : 's'}`}
-            </button>
-          )}
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div
-              className="card"
-              onClick={() => {
-                if (photoCheckins.length < 2) {
-                  alert('Add at least two check-ins with photos to see your before & after.');
-                  return;
-                }
-                openBeforeAfter();
-              }}
-              style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
-                <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
-              </svg>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>Before &amp; After</p>
-            </div>
-            <div className="card" onClick={() => { if (navigator.share) navigator.share({ title: 'My Ageless Movement Progress', text: 'Check out my progress!' }); else alert('Share your progress via screenshot or social media'); }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>Share</p>
-            </div>
-          </div>
-          {photoCheckins.length >= 2 && !compareMode && (
-            <button
-              onClick={() => { setCompareMode(true); setCompareSelection([]); }}
-              style={{
-                background: 'none', border: 'none', color: 'var(--accent)',
-                fontSize: 12, fontWeight: 600, padding: '10px 0 2px', cursor: 'pointer',
-                width: '100%', textAlign: 'center',
-              }}
-            >
-              Compare any two photos
-            </button>
-          )}
+          </CollapsibleSection>
 
           {/* Measurements */}
-          <div className="section-header">
-            <h2>Measurements &gt;</h2>
-          </div>
+          <CollapsibleSection title="Measurements" defaultOpen={false}>
           <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
             {['Body Fat', 'Recovery', 'Weight'].map((m) => (
               <div key={m} className="card" style={{ minWidth: 160 }}>
@@ -533,12 +532,14 @@ export default function Progress() {
             <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
             <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
           </div>
+          </CollapsibleSection>
 
           {/* Exercises */}
-          <div className="section-header">
-            <h2>Exercises</h2>
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{exerciseList.length} tracked</span>
-          </div>
+          <CollapsibleSection
+            title="Exercises"
+            defaultOpen={false}
+            action={<span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{exerciseList.length} tracked</span>}
+          >
           {exerciseList.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 24 }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No exercise data yet</p>
@@ -570,6 +571,7 @@ export default function Progress() {
               </div>
             ))
           )}
+          </CollapsibleSection>
 
           {/* Pain Tracking */}
           {/* ROM tile hidden — phase 2 build (see VALD HumanTrak inspiration
@@ -778,6 +780,45 @@ export default function Progress() {
 // Side-by-side photo comparison. Older date on the left, newer on the right;
 // angle tabs let the user pivot through front/side/back if both check-ins
 // captured the same angle.
+// Collapsible section wrapper. Mirrors the lesson-module pattern from
+// CourseDetail so the Progress tab reads as a navigable index rather
+// than a long scroll. Each section keeps its open/closed state in
+// component-local state - good enough for one session, no need to
+// persist across reloads.
+function CollapsibleSection({ title, action, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: open ? 16 : 8 }}>
+      <div
+        className="section-header"
+        onClick={() => setOpen(o => !o)}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+      >
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>{title}</span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5"
+            style={{
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.18s ease',
+              opacity: 0.6,
+            }}
+          >
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </h2>
+        {action && (
+          <div onClick={(e) => e.stopPropagation()}>
+            {action}
+          </div>
+        )}
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
 // "Movement Assessments" card on the Progress tab. Renders a compact
 // per-region scoreboard of the AMS Getting Started tap-to-pick lessons
 // (Spine / Hips / Shoulders) so the client can see their last A/B/C

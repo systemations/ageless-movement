@@ -45,6 +45,60 @@ function autoExplainer(goal, courseOptions) {
   }
 }
 
+// Starter goals shown on the Goals section when the client has no
+// goals yet. Tap-to-add - each maps to a POST /api/goals payload so
+// the existing goal flow handles persistence + auto-tracking. Mix of
+// auto-tracked (workouts/streak/course) and manual targets so the
+// client sees both kinds of goal up front. Empty-state UX from Dan
+// 2026-05-06: clients struggle to author goals from scratch.
+const SUGGESTED_GOALS = [
+  {
+    icon: '💪',
+    title: 'Train 3x this week',
+    target: 'Three sessions in a 7 day window',
+    category: 'Consistency',
+    metric_type: 'workouts_per_week',
+    target_value: 3,
+  },
+  {
+    icon: '🧘',
+    title: 'Pain-free squat',
+    target: 'Full depth bodyweight squat with no discomfort',
+    category: 'Mobility',
+    metric_type: 'manual',
+  },
+  {
+    icon: '🤸',
+    title: 'Touch your toes',
+    target: 'Standing forward fold, palms flat on floor',
+    category: 'Flexibility',
+    metric_type: 'manual',
+  },
+  {
+    icon: '🔥',
+    title: '7-day training streak',
+    target: 'Move every day for a week',
+    category: 'Consistency',
+    metric_type: 'streak_days',
+    target_value: 7,
+  },
+  {
+    icon: '🎯',
+    title: 'Finish AMS Getting Started',
+    target: 'Complete every lesson in the assessment course',
+    category: 'Program',
+    metric_type: 'course_completion',
+    target_value: 5,
+  },
+  {
+    icon: '🪑',
+    title: 'Sit cross-legged for 10 mins',
+    target: 'Comfortably, no aching hips',
+    category: 'Mobility',
+    metric_type: 'manual',
+  },
+];
+
 const categoryColors = {
   Mobility: '#3DFFD2',
   Flexibility: '#64D2FF',
@@ -164,6 +218,27 @@ export default function Progress() {
     if (photoCheckins.length < 2) return;
     const sorted = [...photoCheckins].sort((a, b) => new Date(a.date) - new Date(b.date));
     setCompareView({ left: sorted[0], right: sorted[sorted.length - 1] });
+  };
+
+  // Tap-to-add starter goal. Posts the preset to the same /api/goals
+  // endpoint the manual + Add Goal flow uses, then refreshes the list
+  // so the new goal renders immediately and the suggestion grid
+  // disappears.
+  const addSuggestedGoal = async (s) => {
+    try {
+      await fetch('/api/goals', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: s.title,
+          target: s.target,
+          category: s.category,
+          metric_type: s.metric_type || 'manual',
+          target_value: s.target_value ?? null,
+        }),
+      });
+      fetchGoals();
+    } catch (err) { /* swallow - user can retry */ }
   };
 
   const handleAddGoal = async () => {
@@ -336,11 +411,47 @@ export default function Progress() {
             action={<button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>+ Add</button>}
           >
 
-          {/* Active Goals */}
+          {/* Active Goals - empty state shows tap-to-add starter
+              suggestions because cold-starting a goal from a blank
+              form is the friction point Dan flagged. */}
           {goals.length === 0 && (
-            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', padding: '12px 0' }}>
-              No goals yet. Tap "+ Add Goal" to set one.
-            </p>
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '4px 4px 12px', lineHeight: 1.5 }}>
+                Pick one to get going. Tap any of these to add it to your list, or use + Add for your own.
+              </p>
+              {SUGGESTED_GOALS.map(s => {
+                const color = categoryColors[s.category] || 'var(--accent-mint)';
+                return (
+                  <div
+                    key={s.title}
+                    className="card"
+                    onClick={() => addSuggestedGoal(s)}
+                    style={{
+                      marginBottom: 8, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      background: `${color}25`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 20,
+                    }}>{s.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700 }}>{s.title}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.4 }}>{s.target}</p>
+                    </div>
+                    <div style={{
+                      flexShrink: 0,
+                      background: 'var(--accent)', color: '#fff',
+                      borderRadius: 8, padding: '6px 12px',
+                      fontSize: 12, fontWeight: 800,
+                      letterSpacing: 0.3,
+                    }}>+ Add</div>
+                  </div>
+                );
+              })}
+            </div>
           )}
           {goals.map((goal) => {
             const expanded = expandedGoalId === goal.id;

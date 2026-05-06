@@ -221,14 +221,19 @@ export default function Progress() {
       {activeTab === 'Progress' && (
         <>
           {/* Photos - hoisted to the top so the before/after surface is
-              the first thing the client sees on Progress. */}
+              the first thing the client sees on Progress. The photo
+              strip itself is the visual progress; the standalone
+              Before-and-After / Share cards used to live here but
+              are gone now per Dan 2026-05-06 (the strip says it). */}
           <CollapsibleSection
             title="Photos"
+            subtitle={photoCheckins.length === 0 ? 'No progress photos yet' : `${photoCheckins.length} on file - swipe to compare`}
+            accent="#2BB5A3"
             action={
               photoCheckins.length >= 2 && !compareMode ? (
-                <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Compare</button>
+                <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>Compare</button>
               ) : compareMode ? (
-                <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600 }}>Cancel</button>
+                <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>Cancel</button>
               ) : null
             }
           >
@@ -285,59 +290,33 @@ export default function Progress() {
                 {compareSelection.length === 2 ? 'Show side-by-side' : `Pick ${2 - compareSelection.length} more photo${2 - compareSelection.length === 1 ? '' : 's'}`}
               </button>
             )}
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-              <div
-                className="card"
-                onClick={() => {
-                  if (photoCheckins.length < 2) {
-                    alert('Add at least two check-ins with photos to see your before & after.');
-                    return;
-                  }
-                  openBeforeAfter();
-                }}
-                style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
-                  <rect x="1" y="3" width="9" height="18" rx="1"/><rect x="14" y="3" width="9" height="18" rx="1"/>
-                </svg>
-                <p style={{ fontSize: 13, fontWeight: 600 }}>Before &amp; After</p>
-              </div>
-              <div className="card" onClick={() => { if (navigator.share) navigator.share({ title: 'My Ageless Movement Progress', text: 'Check out my progress!' }); else alert('Share your progress via screenshot or social media'); }} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" strokeWidth="2" style={{ margin: '0 auto 8px' }}>
-                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-                </svg>
-                <p style={{ fontSize: 13, fontWeight: 600 }}>Share</p>
-              </div>
-            </div>
-            {photoCheckins.length >= 2 && !compareMode && (
-              <button
-                onClick={() => { setCompareMode(true); setCompareSelection([]); }}
-                style={{
-                  background: 'none', border: 'none', color: 'var(--accent)',
-                  fontSize: 12, fontWeight: 600, padding: '10px 0 2px', cursor: 'pointer',
-                  width: '100%', textAlign: 'center',
-                }}
-              >
-                Compare any two photos
-              </button>
-            )}
           </CollapsibleSection>
 
           {/* Movement Assessments — roll-up of the AMS Getting Started
-              tap-to-pick lessons. Hidden until the client has seen at
-              least one assessment lesson (i.e. the API returns rows). */}
+              tap-to-pick lessons. Wrapped in CollapsibleSection so the
+              title is a drop-down (not a navigation), with the orange
+              CTA inside the card carrying the deep-link to the course. */}
           {assessmentSummary && assessmentSummary.total_lessons > 0 && (
-            <MovementAssessmentsCard
-              summary={assessmentSummary}
-              onOpenCourse={() => navigate(assessmentSummary.course_id ? `/explore?course=${assessmentSummary.course_id}` : '/explore')}
-            />
+            <CollapsibleSection
+              title="Movement Assessments"
+              subtitle={assessmentSummary.total_logged === 0
+                ? 'Start your first assessment'
+                : `${assessmentSummary.total_logged} of ${assessmentSummary.total_lessons} logged`}
+              accent="#FF8C00"
+            >
+              <MovementAssessmentsCard
+                summary={assessmentSummary}
+                onOpenCourse={() => navigate(assessmentSummary.course_id ? `/explore?course=${assessmentSummary.course_id}` : '/explore')}
+              />
+            </CollapsibleSection>
           )}
 
           {/* Goals Section */}
           <CollapsibleSection
             title="Goals"
-            action={<button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>+ Add Goal</button>}
+            subtitle={goals.length === 0 ? 'No goals yet' : `${goals.length} active${achievedGoals.length ? ` · ${achievedGoals.length} achieved` : ''}`}
+            accent="#7C5BCE"
+            action={<button onClick={() => setShowAddGoal(!showAddGoal)} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>+ Add</button>}
           >
 
           {/* Active Goals */}
@@ -508,7 +487,11 @@ export default function Progress() {
           </CollapsibleSection>
 
           {/* Check-in Prompt */}
-          <CollapsibleSection title="Check-ins">
+          <CollapsibleSection
+            title="Check-ins"
+            subtitle="Due in 2 days"
+            accent="#4A8AB8"
+          >
             <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
               <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
               <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
@@ -516,7 +499,12 @@ export default function Progress() {
           </CollapsibleSection>
 
           {/* Measurements */}
-          <CollapsibleSection title="Measurements" defaultOpen={false}>
+          <CollapsibleSection
+            title="Measurements"
+            subtitle="Body fat · recovery · weight"
+            accent="#FF6B9D"
+            defaultOpen={false}
+          >
           <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
             {['Body Fat', 'Recovery', 'Weight'].map((m) => (
               <div key={m} className="card" style={{ minWidth: 160 }}>
@@ -537,8 +525,9 @@ export default function Progress() {
           {/* Exercises */}
           <CollapsibleSection
             title="Exercises"
+            subtitle={`${exerciseList.length} tracked`}
+            accent="#3DA876"
             defaultOpen={false}
-            action={<span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{exerciseList.length} tracked</span>}
           >
           {exerciseList.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -780,38 +769,84 @@ export default function Progress() {
 // Side-by-side photo comparison. Older date on the left, newer on the right;
 // angle tabs let the user pivot through front/side/back if both check-ins
 // captured the same angle.
-// Collapsible section wrapper. Mirrors the lesson-module pattern from
-// CourseDetail so the Progress tab reads as a navigable index rather
-// than a long scroll. Each section keeps its open/closed state in
-// component-local state - good enough for one session, no need to
-// persist across reloads.
-function CollapsibleSection({ title, action, defaultOpen = true, children }) {
+// Convert a hex color to an rgba string. Handles 3-digit and 6-digit
+// hex values; falls back to a transparent value if the input is junk.
+function hexToRgba(hex, alpha = 1) {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+// Collapsible section wrapper. Optional `accent` prop renders the
+// header as a coloured gradient block (same visual language as the
+// Exercise Library / Challenges tiles on Explore); without it, falls
+// back to a plain text section header. State lives in the component.
+function CollapsibleSection({ title, subtitle, action, accent, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div style={{ marginBottom: open ? 16 : 8 }}>
-      <div
-        className="section-header"
-        onClick={() => setOpen(o => !o)}
-        style={{ cursor: 'pointer', userSelect: 'none' }}
+  const headerInner = (
+    <>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: 18, fontWeight: 800, color: '#fff',
+          letterSpacing: -0.3, lineHeight: 1.15,
+          textShadow: '0 1px 2px rgba(0,0,0,0.18)',
+        }}>{title}</p>
+        {subtitle && (
+          <p style={{
+            fontSize: 12, color: 'rgba(255,255,255,0.85)',
+            marginTop: 4, fontWeight: 500,
+          }}>{subtitle}</p>
+        )}
+      </div>
+      {action && (
+        <div onClick={(e) => e.stopPropagation()} style={{ marginRight: 8 }}>
+          {action}
+        </div>
+      )}
+      <svg
+        width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="#fff" strokeWidth="2.5"
+        style={{
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.18s ease',
+          flexShrink: 0,
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
+        }}
       >
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span>{title}</span>
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2.5"
-            style={{
-              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.18s ease',
-              opacity: 0.6,
-            }}
-          >
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </h2>
-        {action && (
-          <div onClick={(e) => e.stopPropagation()}>
-            {action}
-          </div>
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </>
+  );
+  return (
+    <div style={{ marginBottom: open ? 16 : 10 }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={accent ? {
+          cursor: 'pointer', userSelect: 'none',
+          background: `linear-gradient(135deg, ${accent}, ${hexToRgba(accent, 0.72)})`,
+          borderRadius: 14, padding: '16px 18px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: open ? 14 : 0,
+          boxShadow: `0 6px 18px ${hexToRgba(accent, 0.20)}`,
+        } : {
+          cursor: 'pointer', userSelect: 'none',
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: open ? 12 : 0, padding: '4px 0',
+        }}
+      >
+        {accent ? headerInner : (
+          <>
+            <h2 style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>{title}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.18s ease', opacity: 0.6 }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </h2>
+            {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
+          </>
         )}
       </div>
       {open && children}
@@ -845,10 +880,6 @@ function MovementAssessmentsCard({ summary, onOpenCourse }) {
 
   return (
     <>
-      <div className="section-header" style={{ marginTop: 0 }}>
-        <h2 onClick={onOpenCourse} style={{ cursor: 'pointer' }}>Movement Assessments &gt;</h2>
-      </div>
-
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>

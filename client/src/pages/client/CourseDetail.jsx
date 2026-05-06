@@ -790,12 +790,6 @@ function LessonNavFooter({ prev, next, onPickLesson, nextDisabled, nextDisabledR
   if (!prev && !next) return null;
   return (
     <div style={{ marginTop: 16 }}>
-      {nextDisabled && nextDisabledReason && (
-        <p style={{
-          fontSize: 12, color: 'var(--text-tertiary)',
-          padding: '0 4px 10px', textAlign: 'right',
-        }}>{nextDisabledReason}</p>
-      )}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 8, padding: '14px 0',
@@ -830,6 +824,12 @@ function LessonNavFooter({ prev, next, onPickLesson, nextDisabled, nextDisabledR
           )}
         </div>
       </div>
+      {nextDisabled && nextDisabledReason && (
+        <p style={{
+          fontSize: 12, color: 'var(--text-tertiary)',
+          textAlign: 'center', marginTop: 4,
+        }}>{nextDisabledReason}</p>
+      )}
     </div>
   );
 }

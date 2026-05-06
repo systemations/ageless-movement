@@ -226,7 +226,7 @@ export default function Progress() {
               Before-and-After / Share cards used to live here but
               are gone now per Dan 2026-05-06 (the strip says it). */}
           <CollapsibleSection
-            title="Photos"
+            title="Progress Photos"
             subtitle={photoCheckins.length === 0 ? 'No progress photos yet' : `${photoCheckins.length} on file - swipe to compare`}
             accent="#2BB5A3"
             action={
@@ -292,24 +292,41 @@ export default function Progress() {
             )}
           </CollapsibleSection>
 
-          {/* Movement Assessments — roll-up of the AMS Getting Started
-              tap-to-pick lessons. Wrapped in CollapsibleSection so the
-              title is a drop-down (not a navigation), with the orange
-              CTA inside the card carrying the deep-link to the course. */}
-          {assessmentSummary && assessmentSummary.total_lessons > 0 && (
-            <CollapsibleSection
-              title="Movement Assessments"
-              subtitle={assessmentSummary.total_logged === 0
-                ? 'Start your first assessment'
-                : `${assessmentSummary.total_logged} of ${assessmentSummary.total_lessons} logged`}
-              accent="#FF8C00"
-            >
-              <MovementAssessmentsCard
-                summary={assessmentSummary}
-                onOpenCourse={() => navigate(assessmentSummary.course_id ? `/explore?course=${assessmentSummary.course_id}` : '/explore')}
-              />
-            </CollapsibleSection>
-          )}
+          {/* Check-in Prompt */}
+          <CollapsibleSection
+            title="Check Ins"
+            subtitle="Due in 2 days"
+            accent="#4A8AB8"
+          >
+            <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
+              <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
+            </div>
+          </CollapsibleSection>
+
+          {/* Measurements */}
+          <CollapsibleSection
+            title="Measurements"
+            subtitle="Body fat · recovery · weight"
+            accent="#FF6B9D"
+            defaultOpen={false}
+          >
+          <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
+            {['Body Fat', 'Recovery', 'Weight'].map((m) => (
+              <div key={m} className="card" style={{ minWidth: 160 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{m}</p>
+                <p style={{ fontSize: 24, fontWeight: 700 }}>--</p>
+                <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No data yet</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Set Goals & Add New */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+            <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
+            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
+          </div>
+          </CollapsibleSection>
 
           {/* Goals Section */}
           <CollapsibleSection
@@ -486,42 +503,6 @@ export default function Progress() {
 
           </CollapsibleSection>
 
-          {/* Check-in Prompt */}
-          <CollapsibleSection
-            title="Check-ins"
-            subtitle="Due in 2 days"
-            accent="#4A8AB8"
-          >
-            <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
-              <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
-            </div>
-          </CollapsibleSection>
-
-          {/* Measurements */}
-          <CollapsibleSection
-            title="Measurements"
-            subtitle="Body fat · recovery · weight"
-            accent="#FF6B9D"
-            defaultOpen={false}
-          >
-          <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
-            {['Body Fat', 'Recovery', 'Weight'].map((m) => (
-              <div key={m} className="card" style={{ minWidth: 160 }}>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{m}</p>
-                <p style={{ fontSize: 24, fontWeight: 700 }}>--</p>
-                <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No data yet</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Set Goals & Add New */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <button className="btn-secondary" onClick={() => setShowAddGoal(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>Set Goals</button>
-            <button className="btn-secondary" onClick={() => setShowCheckin(true)} style={{ flex: 1, fontSize: 14, padding: 12 }}>+ Add New</button>
-          </div>
-          </CollapsibleSection>
-
           {/* Exercises */}
           <CollapsibleSection
             title="Exercises"
@@ -568,12 +549,38 @@ export default function Progress() {
               entry surface with norm bands + trend lines. The ROMTracking
               component is left in place so flipping ROM_ENABLED back on
               restores the row. */}
-          <div className="divider" />
-          <div onClick={() => setShowPain(true)} className="card" style={{ textAlign: 'center', cursor: 'pointer', padding: '20px 12px' }}>
-            <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🩹</span>
-            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Pain Log</p>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Track Discomfort</p>
-          </div>
+          <CollapsibleSection
+            title="Pain Log"
+            subtitle="Track discomfort"
+            accent="#DC4444"
+            defaultOpen={false}
+          >
+            <div onClick={() => setShowPain(true)} className="card" style={{ textAlign: 'center', cursor: 'pointer', padding: '20px 12px' }}>
+              <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>🩹</span>
+              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Open the pain log</p>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Note where + how much it's bothering you</p>
+            </div>
+          </CollapsibleSection>
+
+          {/* Movement Assessment — roll-up of the AMS Getting Started
+              tap-to-pick lessons. Wrapped in CollapsibleSection so the
+              title is a drop-down (not a navigation), with the orange
+              CTA inside the card carrying the deep-link to the course. */}
+          {assessmentSummary && assessmentSummary.total_lessons > 0 && (
+            <CollapsibleSection
+              title="Movement Assessment"
+              subtitle={assessmentSummary.total_logged === 0
+                ? 'Start your first assessment'
+                : `${assessmentSummary.total_logged} of ${assessmentSummary.total_lessons} logged`}
+              accent="#FF8C00"
+              defaultOpen={false}
+            >
+              <MovementAssessmentsCard
+                summary={assessmentSummary}
+                onOpenCourse={() => navigate(assessmentSummary.course_id ? `/explore?course=${assessmentSummary.course_id}` : '/explore')}
+              />
+            </CollapsibleSection>
+          )}
         </>
       )}
 

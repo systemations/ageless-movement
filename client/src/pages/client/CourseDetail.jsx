@@ -603,6 +603,7 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               onPickLesson={onPickLesson}
               onBack={onBack}
               nav={navProps}
+              lesson={lesson}
             />
           ) : lesson.quiz ? (
             <QuizPlayer
@@ -613,6 +614,7 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
               onBack={onBack}
               lessonId={lesson.id}
               nav={navProps}
+              lesson={lesson}
             />
           ) : !lesson.quiz ? (
             // Coach-profile-style layout for every non-quiz lesson:
@@ -634,11 +636,47 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
   );
 }
 
-// MOCK: coach-profile-style lesson body. Currently wired for one lesson
-// only (Standing Pike, id 16) so Dan can react before we apply it to
-// all 26. Mirrors CoachProfileView in Events.jsx — tinted hero band
-// with UPPERCASE title + accent tagline + pills, then the description
-// body, then a fat gradient Mark As Complete CTA above prev/next nav.
+// Tinted hero band with UPPERCASE title + accent tagline + pills.
+// Used by every lesson layout so quiz / locked / regular all share
+// the same visual top. Title text is whatever the caller passes -
+// uppercase styling is handled by CSS so the prop can stay sentence-case.
+function LessonHero({ tagline, title, pills }) {
+  const accent = '#FF8C00';
+  const accentRgba = (a) => `rgba(255, 140, 0, ${a})`;
+  return (
+    <div style={{
+      background: `linear-gradient(180deg, ${accentRgba(0.16)} 0%, transparent 100%)`,
+      borderRadius: 16, padding: '26px 22px 22px', marginBottom: 22,
+      border: `1px solid ${accentRgba(0.20)}`,
+    }}>
+      {tagline && (
+        <p style={{
+          fontSize: 11, fontWeight: 800, color: accent,
+          letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8,
+        }}>{tagline}</p>
+      )}
+      <h1 style={{
+        fontSize: 34, fontWeight: 900, lineHeight: 1.05, margin: '0 0 14px',
+        textTransform: 'uppercase', letterSpacing: -0.6,
+      }}>{title}</h1>
+      {pills && pills.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {pills.map(p => (
+            <span key={p} style={{
+              padding: '5px 12px', borderRadius: 14,
+              background: accentRgba(0.15), color: accent,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
+            }}>{p}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Coach-profile-style lesson body for non-quiz lessons. Reuses
+// LessonHero up top, then renders video / description / attachments
+// / Mark Complete / nav.
 function StyledLessonBody({ lesson, prev, next, onPickLesson, onToggleComplete, toggling }) {
   const accent = '#FF8C00';
   const accentRgba = (a) => `rgba(255, 140, 0, ${a})`;
@@ -668,31 +706,7 @@ function StyledLessonBody({ lesson, prev, next, onPickLesson, onToggleComplete, 
 
   return (
     <>
-      <div style={{
-        background: `linear-gradient(180deg, ${accentRgba(0.16)} 0%, transparent 100%)`,
-        borderRadius: 16, padding: '26px 22px 22px', marginBottom: 22,
-        border: `1px solid ${accentRgba(0.20)}`,
-      }}>
-        <p style={{
-          fontSize: 11, fontWeight: 800, color: accent,
-          letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8,
-        }}>{moduleTagline}</p>
-        <h1 style={{
-          fontSize: 34, fontWeight: 900, lineHeight: 1.05, margin: '0 0 14px',
-          textTransform: 'uppercase', letterSpacing: -0.6,
-        }}>{lesson.title}</h1>
-        {pills.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {pills.map(p => (
-              <span key={p} style={{
-                padding: '5px 12px', borderRadius: 14,
-                background: accentRgba(0.15), color: accent,
-                fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
-              }}>{p}</span>
-            ))}
-          </div>
-        )}
-      </div>
+      <LessonHero tagline={moduleTagline} title={lesson.title} pills={pills} />
 
       {lesson.video_url && (
         <div style={{
@@ -852,9 +866,16 @@ function LessonNavFooter({ prev, next, onPickLesson, nextDisabled, nextDisabledR
 // has not been passed yet. Stops users from starting (or even seeing)
 // the next quiz in the chain, e.g. ReBuild before Ground Zero.
 // ─────────────────────────────────────────────────────────────────────
-function QuizLockGate({ prerequisite, onPickLesson, onBack, nav }) {
+function QuizLockGate({ prerequisite, onPickLesson, onBack, nav, lesson }) {
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 4px' }}>
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      {lesson && (
+        <LessonHero
+          tagline={lesson._moduleTitle?.toUpperCase()}
+          title={lesson.title}
+          pills={['Quiz', 'Locked']}
+        />
+      )}
       <button
         onClick={onBack}
         style={{
@@ -915,7 +936,7 @@ function QuizLockGate({ prerequisite, onPickLesson, onBack, nav }) {
 // per-question Vimeo videos, collects A/B/C selections, computes score
 // (sum of option.score / question count), and shows a pass or fail
 // result screen with routing CTAs (next quiz / program enrolment).
-function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, lessonId, nav }) {
+function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, lessonId, nav, lesson }) {
   const { token } = useAuth();
   const [selections, setSelections] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -963,15 +984,13 @@ function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, less
 
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--accent)', marginBottom: 4 }}>
-          Assessment Quiz
-        </p>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{quiz.level_label}</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          {quiz.questions.length} questions
-        </p>
-      </div>
+      {lesson && (
+        <LessonHero
+          tagline={lesson._moduleTitle?.toUpperCase()}
+          title={lesson.title}
+          pills={['Quiz', `${quiz.questions.length} questions`]}
+        />
+      )}
 
       {description && (
         <div

@@ -421,7 +421,6 @@ function SubmitModal({ bm, token, onClose, onSaved }) {
                     <input
                       type="file"
                       accept="video/*,image/*"
-                      capture="environment"
                       onChange={(e) => handleFile(e.target.files?.[0])}
                       style={{ display: 'none' }}
                     />

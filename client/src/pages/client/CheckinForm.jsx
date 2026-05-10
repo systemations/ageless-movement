@@ -115,7 +115,7 @@ export default function CheckinForm({ onClose, onSuccess }) {
               </>
             )}
             <p style={{ fontSize: 11, color: 'var(--text-secondary)', position: 'absolute', bottom: 8, textTransform: 'capitalize' }}>{pos}</p>
-            <input type="file" accept="image/*" capture="environment" onChange={e => handlePhotoChange(pos, e)} style={{ display: 'none' }} />
+            <input type="file" accept="image/*" onChange={e => handlePhotoChange(pos, e)} style={{ display: 'none' }} />
           </label>
         ))}
       </div>

@@ -132,6 +132,10 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
   const [editing, setEditing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addingItems, setAddingItems] = useState(null); // section id
+  // Drag-and-drop state for reordering items within a section.
+  // dragging = { sectionId, itemId }; dragOver = itemId being hovered.
+  const [dragging, setDragging] = useState(null);
+  const [dragOverItemId, setDragOverItemId] = useState(null);
 
   const createSection = async (data) => {
     await fetch('/api/content/explore-sections', { method: 'POST', headers, body: JSON.stringify(data) });
@@ -223,9 +227,21 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
     }
   };
 
-  // Reorder a single item within its section by one step (up or down).
-  // Optimistic: swap in local state, then PATCH the reorder endpoint with
-  // the new ordered list for that section.
+  // Persist a reordered item array for a section. Optimistic: update local
+  // state immediately, then PUT the new order to the reorder endpoint.
+  const persistOrder = async (sectionId, reordered) => {
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: reordered } : s));
+    try {
+      await fetch(`/api/content/explore-sections/${sectionId}/items/reorder`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ items: reordered.map(i => ({ id: i.id, sort_order: i.sort_order })) }),
+      });
+    } catch (err) {
+      onRefresh();
+    }
+  };
+
+  // Reorder by one step via the ◀ ▶ buttons (kept as touch fallback).
   const moveItem = async (sectionId, itemId, direction) => {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
@@ -235,19 +251,34 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
     if (idx < 0 || target < 0 || target >= items.length) return;
     [items[idx], items[target]] = [items[target], items[idx]];
     const reordered = items.map((it, i) => ({ ...it, sort_order: i }));
+    await persistOrder(sectionId, reordered);
+  };
 
-    // Optimistic update
-    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: reordered } : s));
-
-    try {
-      await fetch(`/api/content/explore-sections/${sectionId}/items/reorder`, {
-        method: 'PUT', headers,
-        body: JSON.stringify({ items: reordered.map(i => ({ id: i.id, sort_order: i.sort_order })) }),
-      });
-    } catch (err) {
-      // On failure, refetch to get the canonical order
-      onRefresh();
+  // Drag-and-drop handler: place the dragged item before the drop target.
+  const handleDrop = async (sectionId, dropTargetId) => {
+    if (!dragging || dragging.sectionId !== sectionId) {
+      setDragging(null);
+      setDragOverItemId(null);
+      return;
     }
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+    const items = [...(section.items || [])];
+    const fromIdx = items.findIndex(i => i.id === dragging.itemId);
+    const toIdx = items.findIndex(i => i.id === dropTargetId);
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) {
+      setDragging(null);
+      setDragOverItemId(null);
+      return;
+    }
+    const [moved] = items.splice(fromIdx, 1);
+    // If dragging right past original slot, the target index shifts down by 1
+    const insertAt = fromIdx < toIdx ? toIdx - 1 : toIdx;
+    items.splice(insertAt, 0, moved);
+    const reordered = items.map((it, i) => ({ ...it, sort_order: i }));
+    setDragging(null);
+    setDragOverItemId(null);
+    await persistOrder(sectionId, reordered);
   };
 
   const moveSection = async (id, direction) => {
@@ -331,11 +362,46 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
                     {/* Items */}
                     {section.items?.length > 0 && (
                       <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingTop: 8, paddingBottom: 4 }}>
-                        {section.items.map((item, itemIdx) => (
-                          <div key={item.id} style={{
-                            minWidth: 140, maxWidth: 140, background: 'var(--bg-primary)', borderRadius: 10, padding: 10,
-                            position: 'relative', flexShrink: 0,
-                          }}>
+                        {section.items.map((item, itemIdx) => {
+                          const isDragging = dragging?.itemId === item.id;
+                          const isDragOver = dragOverItemId === item.id && dragging?.sectionId === section.id && dragging?.itemId !== item.id;
+                          return (
+                          <div
+                            key={item.id}
+                            draggable
+                            onDragStart={(e) => {
+                              setDragging({ sectionId: section.id, itemId: item.id });
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragOver={(e) => {
+                              if (dragging?.sectionId === section.id) {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                                if (dragOverItemId !== item.id) setDragOverItemId(item.id);
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverItemId === item.id) setDragOverItemId(null);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDrop(section.id, item.id);
+                            }}
+                            onDragEnd={() => {
+                              setDragging(null);
+                              setDragOverItemId(null);
+                            }}
+                            title="Drag to reorder"
+                            style={{
+                              minWidth: 140, maxWidth: 140, background: 'var(--bg-primary)', borderRadius: 10, padding: 10,
+                              position: 'relative', flexShrink: 0,
+                              cursor: 'grab',
+                              opacity: isDragging ? 0.4 : 1,
+                              outline: isDragOver ? '2px solid var(--accent)' : 'none',
+                              outlineOffset: isDragOver ? 2 : 0,
+                              transition: 'outline 80ms ease, opacity 80ms ease',
+                            }}
+                          >
                             {/* Shared WorkoutThumb: renders the image if one exists,
                                 otherwise shows the title on a light gradient. */}
                             <div style={{ marginBottom: 6 }}>
@@ -379,7 +445,8 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
                               background: 'rgba(255,59,48,0.8)', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer',
                             }}>x</button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 

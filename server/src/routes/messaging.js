@@ -443,6 +443,17 @@ router.delete('/conversations/:id/star', authenticateToken, (req, res) => {
 router.post('/conversations/direct', authenticateToken, async (req, res) => {
   try {
     const { user_id } = req.body;
+    const targetId = Number(user_id);
+    if (!Number.isFinite(targetId)) return res.status(400).json({ error: 'user_id required' });
+
+    // Clients can only DM their assigned coach (or any coach if unassigned).
+    // Without this check a client could open a 1:1 thread with another client.
+    if (req.user.role === 'client') {
+      const target = pool.query("SELECT id, role FROM users WHERE id = ? LIMIT 1", [targetId]).rows[0];
+      if (!target || target.role !== 'coach') {
+        return res.status(403).json({ error: 'Direct messages are restricted to your coach' });
+      }
+    }
 
     const existing = pool.query(`
       SELECT c.id FROM conversations c

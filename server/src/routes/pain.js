@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -209,7 +209,7 @@ router.post('/issues/:id/reopen', authenticateToken, (req, res) => {
 // Coach endpoints (any client they own)
 // ─────────────────────────────────────────────────────────────────────
 
-router.get('/clients/:userId/issues', authenticateToken, requireRole('coach'), (req, res) => {
+router.get('/clients/:userId/issues', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const status = req.query.status === 'all' ? null : (req.query.status || null);
     const sql = status
@@ -223,7 +223,7 @@ router.get('/clients/:userId/issues', authenticateToken, requireRole('coach'), (
   }
 });
 
-router.get('/clients/:userId/issues/:id', authenticateToken, requireRole('coach'), (req, res) => {
+router.get('/clients/:userId/issues/:id', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const issue = pool.query(
       'SELECT * FROM pain_issues WHERE id = ? AND user_id = ?',
@@ -243,7 +243,7 @@ router.get('/clients/:userId/issues/:id', authenticateToken, requireRole('coach'
 
 // Coach can mark an issue resolved on the client's behalf. Notes are
 // captured separately on the issue if the coach wants to add context.
-router.post('/clients/:userId/issues/:id/resolve', authenticateToken, requireRole('coach'), (req, res) => {
+router.post('/clients/:userId/issues/:id/resolve', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const issue = pool.query(
       'SELECT * FROM pain_issues WHERE id = ? AND user_id = ?',

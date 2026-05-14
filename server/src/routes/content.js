@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
 import { enforceTier } from '../middleware/tier.js';
 import { fetchVimeoThumbnail } from '../lib/vimeoOembed.js';
 
@@ -962,7 +962,7 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
 
 // Coach view: every quiz attempt + assessment response for a client.
 // Used by ClientProfile → Assessments tab.
-router.get('/clients/:userId/assessment-history', authenticateToken, requireRole('coach'), (req, res) => {
+router.get('/clients/:userId/assessment-history', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const quizzes = pool.query(
@@ -1194,7 +1194,7 @@ router.delete('/lesson-resources/:id', authenticateToken, requireRole('coach'), 
 });
 
 // ===== CLIENT TIER ASSIGNMENT =====
-router.put('/clients/:id/tier', authenticateToken, requireRole('coach'), (req, res) => {
+router.put('/clients/:id/tier', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   const { tier_id } = req.body;
   pool.query('UPDATE client_profiles SET tier_id = ? WHERE user_id = ?', [tier_id, req.params.id]);
   res.json({ success: true });

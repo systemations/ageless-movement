@@ -668,9 +668,12 @@ router.post('/events/:id/register', authenticateToken, (req, res) => {
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (event.status !== 'published') return res.status(400).json({ error: 'Event is not available' });
 
-    // Block paid events unless payment has been confirmed
-    const { payment_confirmed } = req.body || {};
-    if (event.price_cents > 0 && !payment_confirmed) {
+    // Paid events are blocked until Stripe is wired. The previous
+    // `payment_confirmed` body flag was client-controlled and could be
+    // used to self-grant paid seats — never trust it. When Stripe lands,
+    // verify against a server-side payment record (PaymentIntent succeeded
+    // + webhook-confirmed) before allowing registration.
+    if (event.price_cents > 0) {
       return res.status(402).json({
         requires_payment: true,
         price_cents: event.price_cents,

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClientBody } from '../middleware/auth.js';
 import { loadPlan, scalePlanForClient, getScheduleForClient } from '../lib/mealScaling.js';
 import { calculateTargets } from '../lib/nutritionTargets.js';
 import https from 'https';
@@ -490,7 +490,7 @@ router.get('/my-schedule', authenticateToken, (req, res) => {
 });
 
 // Assign a schedule to a client (coach only)
-router.post('/meal-schedules/:id/assign', authenticateToken, requireRole('coach'), (req, res) => {
+router.post('/meal-schedules/:id/assign', authenticateToken, requireRole('coach'), requireCoachOwnsClientBody('user_id'), (req, res) => {
   try {
     const { user_id, calorie_override } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });

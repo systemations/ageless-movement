@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole, requireCoachOwnsClient, requireCoachOwnsClientBody, parseUserAgent } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient, requireCoachOwnsClientBody, checkCoachOwnsClient, parseUserAgent } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -306,8 +306,9 @@ router.patch('/schedules/user-workout/:id', authenticateToken, requireRole('coac
   try {
     const { scheduled_date } = req.body;
     if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date required' });
-    const row = pool.query('SELECT id FROM user_scheduled_workouts WHERE id = ?', [req.params.id]).rows[0];
+    const row = pool.query('SELECT id, user_id FROM user_scheduled_workouts WHERE id = ?', [req.params.id]).rows[0];
     if (!row) return res.status(404).json({ error: 'Not found' });
+    if (!checkCoachOwnsClient(req, res, row.user_id)) return;
     pool.query('UPDATE user_scheduled_workouts SET scheduled_date = ? WHERE id = ?', [scheduled_date, req.params.id]);
     res.json({ success: true });
   } catch (err) {
@@ -325,8 +326,9 @@ router.patch('/schedules/:id/shift', authenticateToken, requireRole('coach'), (r
   try {
     const { days } = req.body;
     if (typeof days !== 'number') return res.status(400).json({ error: 'days (number) required' });
-    const row = pool.query('SELECT started_at FROM client_programs WHERE id = ?', [req.params.id]).rows[0];
+    const row = pool.query('SELECT started_at, user_id FROM client_programs WHERE id = ?', [req.params.id]).rows[0];
     if (!row) return res.status(404).json({ error: 'Enrollment not found' });
+    if (!checkCoachOwnsClient(req, res, row.user_id)) return;
     const current = new Date(row.started_at);
     current.setDate(current.getDate() + days);
     pool.query('UPDATE client_programs SET started_at = ? WHERE id = ?', [current.toISOString(), req.params.id]);
@@ -341,8 +343,9 @@ router.patch('/schedules/:id/shift', authenticateToken, requireRole('coach'), (r
 // Remove a client enrollment
 router.delete('/schedules/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
-    const row = pool.query('SELECT id FROM client_programs WHERE id = ?', [req.params.id]);
-    if (!row.rows.length) return res.status(404).json({ error: 'Enrollment not found' });
+    const row = pool.query('SELECT id, user_id FROM client_programs WHERE id = ?', [req.params.id]).rows[0];
+    if (!row) return res.status(404).json({ error: 'Enrollment not found' });
+    if (!checkCoachOwnsClient(req, res, row.user_id)) return;
     pool.query('DELETE FROM client_programs WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
@@ -864,6 +867,9 @@ router.post('/clients/:id/notes', authenticateToken, requireRole('coach'), requi
 
 router.patch('/notes/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    const note = pool.query('SELECT client_id FROM coach_notes WHERE id = ?', [req.params.id]).rows[0];
+    if (!note) return res.status(404).json({ error: 'Note not found' });
+    if (!checkCoachOwnsClient(req, res, note.client_id)) return;
     const { title, content, is_private, is_pinned } = req.body;
     const fields = [];
     const values = [];
@@ -884,6 +890,9 @@ router.patch('/notes/:id', authenticateToken, requireRole('coach'), (req, res) =
 
 router.delete('/notes/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    const note = pool.query('SELECT client_id FROM coach_notes WHERE id = ?', [req.params.id]).rows[0];
+    if (!note) return res.status(404).json({ error: 'Note not found' });
+    if (!checkCoachOwnsClient(req, res, note.client_id)) return;
     pool.query('DELETE FROM coach_notes WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
@@ -990,6 +999,9 @@ router.post('/clients/:id/tasks', authenticateToken, requireRole('coach'), requi
 
 router.patch('/tasks/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    const task = pool.query('SELECT client_id FROM tasks WHERE id = ?', [req.params.id]).rows[0];
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    if (!checkCoachOwnsClient(req, res, task.client_id)) return;
     const { label, recurring } = req.body;
     const fields = [];
     const values = [];
@@ -1007,6 +1019,9 @@ router.patch('/tasks/:id', authenticateToken, requireRole('coach'), (req, res) =
 
 router.delete('/tasks/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    const task = pool.query('SELECT client_id FROM tasks WHERE id = ?', [req.params.id]).rows[0];
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    if (!checkCoachOwnsClient(req, res, task.client_id)) return;
     pool.query('DELETE FROM tasks WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (err) {

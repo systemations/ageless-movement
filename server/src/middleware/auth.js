@@ -58,7 +58,7 @@ export const requireRole = (role) => (req, res, next) => {
 // access `clientId`, else returns true. Used by both the param + body
 // middleware variants, and inline by handlers that resolve the client id
 // via custom logic (e.g. from a workout's program assignment).
-function checkCoachOwnsClient(req, res, clientId) {
+export function checkCoachOwnsClient(req, res, clientId) {
   if (!Number.isFinite(clientId)) {
     res.status(400).json({ error: 'Invalid client id' });
     return false;

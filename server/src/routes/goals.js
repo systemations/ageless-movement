@@ -11,7 +11,7 @@
 
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -227,7 +227,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 });
 
 // Coach view — read-only across all of a client's goals.
-router.get('/clients/:userId', authenticateToken, requireRole('coach'), (req, res) => {
+router.get('/clients/:userId', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const rows = pool.query(
       'SELECT * FROM goals WHERE user_id = ? ORDER BY achieved, created_at DESC',

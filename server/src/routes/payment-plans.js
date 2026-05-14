@@ -20,7 +20,7 @@
 
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient, requireCoachOwnsClientBody } from '../middleware/auth.js';
 import { processPurchase } from '../lib/processPurchase.js';
 
 const router = Router();
@@ -366,7 +366,7 @@ router.put('/admin/:id/automations', ...requireCoach, (req, res) => {
 
 // Manual fulfilment — coach marks a client as having paid for a plan.
 // Runs the same processPurchase() that Stripe/IAP webhooks will hit later.
-router.post('/admin/:id/mark-paid', ...requireCoach, (req, res) => {
+router.post('/admin/:id/mark-paid', ...requireCoach, requireCoachOwnsClientBody('user_id'), (req, res) => {
   try {
     const planId = Number(req.params.id);
     const userId = Number(req.body?.user_id);

@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -561,7 +561,7 @@ router.get('/coach/review-queue', authenticateToken, requireRole('coach'), (req,
 // Per-client benchmark summary for coach view (on ClientProfile).
 // Returns: categories with benchmarks + that client's current level + best
 // value, plus their Ageless Mover points + rank, plus recent attempts.
-router.get('/coach/clients/:id/summary', authenticateToken, requireRole('coach'), (req, res) => {
+router.get('/coach/clients/:id/summary', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
     const clientId = parseInt(req.params.id);
     const user = pool.query("SELECT id FROM users WHERE id = ? AND role = 'client'", [clientId]).rows[0];

@@ -54,10 +54,12 @@ export const requireRole = (role) => (req, res, next) => {
 //
 // Usage: router.get('/clients/:id/x', authenticateToken, requireRole('coach'),
 //          requireCoachOwnsClient('id'), handler)
-// Shared ownership check. Throws a response status if the coach shouldn't
+// Shared ownership check. Sends a response status if the coach shouldn't
 // access `clientId`, else returns true. Used by both the param + body
 // middleware variants, and inline by handlers that resolve the client id
-// via custom logic (e.g. from a workout's program assignment).
+// via custom logic (e.g. from a row's user_id after looking up by row id).
+// Exported so route handlers that don't fit the middleware-factory shape
+// (mutation-by-row-id endpoints) can still reuse the same semantics.
 export function checkCoachOwnsClient(req, res, clientId) {
   if (!Number.isFinite(clientId)) {
     res.status(400).json({ error: 'Invalid client id' });

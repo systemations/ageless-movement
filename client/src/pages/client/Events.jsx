@@ -16,6 +16,28 @@ const formatDateLong = (iso) =>
 const formatTime = (iso) =>
   new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+async function downloadEventIcs(event, token) {
+  try {
+    const res = await fetch(`${API}/coaches/events/${event.id}/calendar.ics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Server ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = String(event.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'event';
+    a.download = `${safeName}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error('ics download failed', err);
+    alert('Could not download calendar invite. Please try again.');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main Events page - list of coaches + my upcoming/past bookings
 // ---------------------------------------------------------------------------
@@ -461,24 +483,40 @@ export default function Events() {
                     {evt.location && (
                       <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{evt.location}</p>
                     )}
-                    {evt.meeting_url && new Date(evt.scheduled_at) > new Date() && (
-                      <a
-                        href={evt.meeting_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          fontSize: 12, color: '#fff', fontWeight: 700, marginTop: 6,
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: 'var(--accent)', borderRadius: 8, padding: '6px 12px',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        {evt.meeting_url.includes('zoom') ? '🎥 Join Zoom'
-                          : evt.meeting_url.includes('riverside') ? '🎙 Join Riverside'
-                          : evt.meeting_url.includes('meet.google') ? '📹 Join Google Meet'
-                          : '🔗 Join Event'}
-                      </a>
-                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                      {evt.meeting_url && new Date(evt.scheduled_at) > new Date() && (
+                        <a
+                          href={evt.meeting_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            fontSize: 12, color: '#fff', fontWeight: 700,
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'var(--accent)', borderRadius: 8, padding: '6px 12px',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          {evt.meeting_url.includes('zoom') ? '🎥 Join Zoom'
+                            : evt.meeting_url.includes('riverside') ? '🎙 Join Riverside'
+                            : evt.meeting_url.includes('meet.google') ? '📹 Join Google Meet'
+                            : '🔗 Join Event'}
+                        </a>
+                      )}
+                      {new Date(evt.scheduled_at) > new Date() && (
+                        <button
+                          type="button"
+                          onClick={() => downloadEventIcs(evt, token)}
+                          style={{
+                            fontSize: 12, color: 'var(--text-primary)', fontWeight: 600,
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
+                          }}
+                        >
+                          📅 Add to calendar
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div style={{
                     padding: '4px 10px', borderRadius: 12,

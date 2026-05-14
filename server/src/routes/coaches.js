@@ -657,6 +657,94 @@ router.get('/events/mine', authenticateToken, (req, res) => {
   }
 });
 
+// iCalendar (.ics) download for a registered event. Returns a calendar
+// file the client can add to Apple Calendar / Google Calendar / Outlook.
+// Only the registered user can fetch their own .ics; otherwise 403.
+//
+// scheduled_at is stored as a wall-clock string (no TZ designator) from
+// the coach's <input type="datetime-local">. We emit it as "floating time"
+// in the .ics (no Z, no TZID) so calendar apps render the literal hour
+// the coach entered, matching what every client sees on the events page.
+function icsFloatingFromWallClock(value) {
+  if (!value) return null;
+  // Accept "YYYY-MM-DDTHH:MM", "YYYY-MM-DD HH:MM:SS", with or without seconds.
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return `${m[1]}${m[2]}${m[3]}T${m[4]}${m[5]}${m[6] || '00'}`;
+}
+function icsAddMinutesToWallClock(value, minutes) {
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  // Use UTC math to avoid local-tz drift, then format the result as wall clock.
+  const utc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
+  utc.setUTCMinutes(utc.getUTCMinutes() + minutes);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${utc.getUTCFullYear()}${pad(utc.getUTCMonth() + 1)}${pad(utc.getUTCDate())}T${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}${pad(utc.getUTCSeconds())}`;
+}
+function icsStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+function icsEscape(s) {
+  if (!s) return '';
+  return String(s).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+router.get('/events/:id/calendar.ics', authenticateToken, (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    if (!Number.isFinite(eventId)) return res.status(400).json({ error: 'Invalid event id' });
+    const reg = pool.query(
+      `SELECT cer.id FROM coach_event_registrations cer
+        WHERE cer.event_id = ? AND cer.user_id = ? AND cer.status = 'registered' LIMIT 1`,
+      [eventId, req.user.id],
+    ).rows[0];
+    if (!reg) return res.status(403).json({ error: 'Not registered for this event' });
+    const event = pool.query('SELECT * FROM coach_events WHERE id = ?', [eventId]).rows[0];
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const dtStart = icsFloatingFromWallClock(event.scheduled_at);
+    const dtEnd = event.end_at
+      ? icsFloatingFromWallClock(event.end_at)
+      : (Number.isFinite(event.duration_minutes)
+        ? icsAddMinutesToWallClock(event.scheduled_at, event.duration_minutes)
+        : null);
+    if (!dtStart || !dtEnd) return res.status(500).json({ error: 'Event missing scheduled time' });
+
+    const descParts = [];
+    if (event.description) descParts.push(event.description);
+    if (event.meeting_url) descParts.push(`Join: ${event.meeting_url}`);
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Ageless Movement//Events//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:event-${event.id}-user-${req.user.id}@agelessmovement.com`,
+      `DTSTAMP:${icsStamp()}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:${icsEscape(event.title)}`,
+      `DESCRIPTION:${icsEscape(descParts.join('\n\n'))}`,
+      event.location ? `LOCATION:${icsEscape(event.location)}` : null,
+      event.meeting_url ? `URL:${icsEscape(event.meeting_url)}` : null,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+
+    const safeName = String(event.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'event';
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.ics"`);
+    res.send(lines);
+  } catch (err) {
+    console.error('ics export error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Register for an event (client)
 // Free events: instant registration.
 // Paid events: returns { requires_payment: true } so the client can redirect

@@ -35,7 +35,10 @@ export default function CoachHome() {
     );
   }
 
-  const firstName = (user?.name || 'Coach').split(' ')[0];
+  // Users stored as "Coach Dan" should render as "Dan" - strip the
+  // leading "Coach " prefix (case-insensitive) before taking the first word.
+  const displayName = (user?.name || '').replace(/^coach\s+/i, '').trim();
+  const firstName = displayName.split(/\s+/)[0] || user?.name || 'Coach';
   const greeting = getGreeting();
 
   return (

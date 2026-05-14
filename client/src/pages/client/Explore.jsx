@@ -66,21 +66,27 @@ export default function Explore() {
   const [showChallengesList, setShowChallengesList] = useState(false);
 
   useEffect(() => {
+    if (!token) return;
+    // Skip empty/non-2xx bodies so an interrupted fetch (page navigated away
+    // mid-flight, auth rehydrating, etc.) doesn't spam the console with
+    // "Unexpected end of JSON input" — those errors aren't user-facing but
+    // they'll generate noise once Sentry is wired.
+    const safeJson = (r) => (r.ok ? r.json().catch(() => null) : null);
     fetch('/api/explore/content', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(setApiData)
+      .then(safeJson)
+      .then(d => { if (d) setApiData(d); })
       .catch(console.error);
 
     fetch('/api/challenges', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setChallenges(d.challenges || []))
+      .then(safeJson)
+      .then(d => { if (d) setChallenges(d.challenges || []); })
       .catch(console.error);
 
     fetch('/api/nutrition/meal-schedules', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setMealSchedules(d.schedules || []))
+      .then(safeJson)
+      .then(d => { if (d) setMealSchedules(d.schedules || []); })
       .catch(console.error);
-  }, []);
+  }, [token]);
 
   // Open a specific program / workout / course when navigated with
   // ?program=<id>, ?workout=<id> or ?course=<id>. CourseDetail refetches

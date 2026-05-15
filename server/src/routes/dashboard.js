@@ -25,7 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
     `, [userId]);
     const activeProgram = cpResult.rows[0] || null;
 
-    // Today's workout — fall back to the program's thumbnail if the workout has none
+    // Today's workout - fall back to the program's thumbnail if the workout has none
     let todayWorkout = null;
     if (activeProgram) {
       const wResult = pool.query(`

@@ -1,6 +1,6 @@
 // Coaches routes: public "Meet the Team" + coach admin profile/session/booking
 // endpoints. Payment is currently a stub with a single clear hook point marked
-// `STRIPE_HOOK` — swapping it for real Stripe Connect later is isolated to this
+// `STRIPE_HOOK` - swapping it for real Stripe Connect later is isolated to this
 // file and the webhook handler.
 import { Router } from 'express';
 import pool from '../db/pool.js';
@@ -84,7 +84,7 @@ const syncCoachSessionPricesToTier = (coachUserId, tierRow) => {
   );
 };
 
-// Weekday number helper — JS Date.getDay() is 0=Sun..6=Sat
+// Weekday number helper - JS Date.getDay() is 0=Sun..6=Sat
 const pad2 = (n) => String(n).padStart(2, '0');
 
 // Given availability rows (weekday/start/end) and existing bookings, generate
@@ -130,7 +130,7 @@ const generateSlots = (availability, existingBookings, daysAhead, durationMinute
 };
 
 // =====================================================================
-//  PUBLIC — any authenticated client
+//  PUBLIC - any authenticated client
 // =====================================================================
 
 // NOTE: all literal paths (/me/*, /admin/*) must be declared BEFORE /:id so
@@ -158,7 +158,7 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
-// Client's own bookings — must be BEFORE /:id so "me" isn't treated as an id
+// Client's own bookings - must be BEFORE /:id so "me" isn't treated as an id
 router.get('/me/bookings', authenticateToken, (req, res) => {
   try {
     const rows = pool.query(
@@ -196,7 +196,7 @@ router.patch('/me/bookings/:id/cancel', authenticateToken, (req, res) => {
 });
 
 // =====================================================================
-//  COACH ADMIN — coaches editing profiles + sessions
+//  COACH ADMIN - coaches editing profiles + sessions
 //  (declared before /:id so "admin" isn't captured as a coach id)
 //
 //  Any authenticated coach can manage any other coach. Pass ?coach_id=X
@@ -440,7 +440,7 @@ router.get('/admin/pricing-tiers', authenticateToken, requireRole('coach'), (req
   }
 });
 
-// Update a pricing tier's name/description. Tiers are classification only —
+// Update a pricing tier's name/description. Tiers are classification only - 
 // prices live on each session type and are not touched here.
 router.patch('/admin/pricing-tiers/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
@@ -758,7 +758,7 @@ router.post('/events/:id/register', authenticateToken, (req, res) => {
 
     // Paid events are blocked until Stripe is wired. The previous
     // `payment_confirmed` body flag was client-controlled and could be
-    // used to self-grant paid seats — never trust it. When Stripe lands,
+    // used to self-grant paid seats - never trust it. When Stripe lands,
     // verify against a server-side payment record (PaymentIntent succeeded
     // + webhook-confirmed) before allowing registration.
     if (event.price_cents > 0) {
@@ -852,7 +852,7 @@ router.get('/:id', authenticateToken, (req, res) => {
       [coachId, now],
     ).rows;
 
-    // Upcoming group events run by this coach — webinars, masterclasses,
+    // Upcoming group events run by this coach - webinars, masterclasses,
     // in-person sessions etc. These live in coach_events (a separate table
     // from session_types) and need to be surfaced on the coach's profile.
     const events = pool.query(
@@ -916,7 +916,7 @@ router.get('/:id/slots', authenticateToken, (req, res) => {
   }
 });
 
-// Create a booking. Payment is stubbed — see STRIPE_HOOK below.
+// Create a booking. Payment is stubbed - see STRIPE_HOOK below.
 router.post('/:id/bookings', authenticateToken, (req, res) => {
   try {
     const coachId = parseInt(req.params.id, 10);

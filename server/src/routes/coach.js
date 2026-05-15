@@ -320,7 +320,7 @@ router.patch('/schedules/user-workout/:id', authenticateToken, requireRole('coac
 // PATCH /api/coach/schedules/:id/shift
 // Shift a client's program enrollment forward or backward by N days by
 // adjusting started_at. Used when the coach drags a program-driven workout
-// to a new day in the Schedule tab — we interpret that as "nudge the whole
+// to a new day in the Schedule tab - we interpret that as "nudge the whole
 // program by the delta" rather than overriding a single day.
 router.patch('/schedules/:id/shift', authenticateToken, requireRole('coach'), (req, res) => {
   try {
@@ -469,7 +469,7 @@ router.get('/schedules/:clientId/week', authenticateToken, requireRole('coach'),
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Coach Home dashboard — aggregate KPIs, priority inbox, upcoming events
+// Coach Home dashboard - aggregate KPIs, priority inbox, upcoming events
 // ─────────────────────────────────────────────────────────────────────
 router.get('/home', authenticateToken, requireRole('coach'), (req, res) => {
   try {
@@ -488,7 +488,7 @@ router.get('/home', authenticateToken, requireRole('coach'), (req, res) => {
         (SELECT COUNT(*) FROM coach_bookings WHERE scheduled_at >= ? AND scheduled_at < ?) as sessions_today
     `, [sevenDaysAgo, sevenDaysAgo, sevenDaysAgo, sevenDaysAgo, today, today + 'T23:59:59']).rows[0];
 
-    // Tier distribution — fuels the active-clients donut
+    // Tier distribution - fuels the active-clients donut
     const tierDist = pool.query(`
       SELECT COALESCE(t.name, 'Free') as tier, COUNT(*) as count
       FROM users u
@@ -539,7 +539,7 @@ router.get('/home', authenticateToken, requireRole('coach'), (req, res) => {
       return { ...r, feel };
     });
 
-    // Upcoming — merge 1:1 bookings + scheduled events into one chronological
+    // Upcoming - merge 1:1 bookings + scheduled events into one chronological
     // timeline so the admin can see everything each coach has coming up.
     // Optional ?coach_id=X query narrows to one coach. Each row carries
     // coach_user_id + coach_name so the UI can render filter chips.
@@ -582,7 +582,7 @@ router.get('/home', authenticateToken, requireRole('coach'), (req, res) => {
       .sort((a, b) => String(a.start_at).localeCompare(String(b.start_at)))
       .slice(0, 10);
 
-    // Distinct coaches for the filter chips (no LIMIT above — we've capped after merge)
+    // Distinct coaches for the filter chips (no LIMIT above - we've capped after merge)
     const coaches = pool.query(
       "SELECT id, name FROM users WHERE role = 'coach' ORDER BY name"
     ).rows;
@@ -620,7 +620,7 @@ router.get('/home', authenticateToken, requireRole('coach'), (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Enriched client list — adds engagement/status signals used by the new
+// Enriched client list - adds engagement/status signals used by the new
 // FitBudd-style Clients table (last check-in, last workout, streak,
 // engagement %, at-risk flag). Coach-side only.
 // ─────────────────────────────────────────────────────────────────────
@@ -667,7 +667,7 @@ router.get('/clients-enriched', authenticateToken, requireRole('coach'), (req, r
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Full client profile aggregation — everything the ClientProfile tabs need
+// Full client profile aggregation - everything the ClientProfile tabs need
 // ─────────────────────────────────────────────────────────────────────
 router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
@@ -763,7 +763,7 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
       [id],
     ).rows;
 
-    // Measurement trends — compare latest vs earliest check-in so the
+    // Measurement trends - compare latest vs earliest check-in so the
     // Overview can render "↓9.9kg in 21 months" style deltas.
     const trends = {};
     ['weight', 'body_fat', 'waist', 'sleep_hours', 'stress_level', 'recovery_score'].forEach(k => {
@@ -789,14 +789,14 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
       [id],
     ).rows.map(r => ({ ...r, ...parseUserAgent(r.user_agent) }));
 
-    // Team inbox conversation id — lets the Check-ins tab reply directly
+    // Team inbox conversation id - lets the Check-ins tab reply directly
     // into the shared coach/client thread without needing another lookup.
     const teamConvo = pool.query(
       "SELECT id FROM conversations WHERE client_id = ? LIMIT 1",
       [id],
     ).rows[0];
 
-    // Client's daily tasks — these are client-editable items they tick off
+    // Client's daily tasks - these are client-editable items they tick off
     // each day. Coach sees today's list + today's completion state + a
     // simple 7-day completion rate per task.
     const today = new Date().toISOString().split('T')[0];
@@ -902,7 +902,7 @@ router.delete('/notes/:id', authenticateToken, requireRole('coach'), (req, res) 
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Client tags — freeform labels on a client (Boston, Performer, AMS…)
+// Client tags - freeform labels on a client (Boston, Performer, AMS…)
 // ─────────────────────────────────────────────────────────────────────
 router.post('/clients/:id/tags', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
@@ -931,7 +931,7 @@ router.delete('/clients/:clientId/tags/:tagId', authenticateToken, requireRole('
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Client calendar — scheduled workouts + bookings for a given month.
+// Client calendar - scheduled workouts + bookings for a given month.
 // Used by ClientProfile Calendar tab. Month is YYYY-MM.
 // ─────────────────────────────────────────────────────────────────────
 router.get('/clients/:id/calendar', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
@@ -977,7 +977,7 @@ router.get('/clients/:id/calendar', authenticateToken, requireRole('coach'), req
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Client daily tasks — bidirectional. Clients can self-manage via the
+// Client daily tasks - bidirectional. Clients can self-manage via the
 // dashboard endpoints; coaches can also add/edit/remove from here. The
 // tasks.coach_id column stamps who created it so the UI can show a
 // "Set by coach" badge on client-owned surfaces.
@@ -1031,7 +1031,7 @@ router.delete('/tasks/:id', authenticateToken, requireRole('coach'), (req, res) 
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Supplements — CRUD for a coach's client
+// Supplements - CRUD for a coach's client
 // ─────────────────────────────────────────────────────────────────────
 router.get('/clients/:id/supplements', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
@@ -1146,7 +1146,7 @@ router.delete('/supplements/:suppId', authenticateToken, requireRole('coach'), (
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Client membership — coach-set plan + next renewal
+// Client membership - coach-set plan + next renewal
 // ─────────────────────────────────────────────────────────────────────
 router.patch('/clients/:id/membership', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
@@ -1162,7 +1162,7 @@ router.patch('/clients/:id/membership', authenticateToken, requireRole('coach'),
     });
     if (!fields.length) return res.json({ ok: true });
 
-    // Ensure a client_profiles row exists — early-onboarding clients may
+    // Ensure a client_profiles row exists - early-onboarding clients may
     // not have one yet and the UPDATE would silently no-op.
     const existing = pool.query('SELECT id FROM client_profiles WHERE user_id = ?', [req.params.id]).rows[0];
     if (!existing) {
@@ -1179,7 +1179,7 @@ router.patch('/clients/:id/membership', authenticateToken, requireRole('coach'),
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Client lifecycle — status change (active / paused / archived) + password reset.
+// Client lifecycle - status change (active / paused / archived) + password reset.
 // See project_pre_launch_checklist.md for SMTP send deferral.
 // ─────────────────────────────────────────────────────────────────────
 router.patch('/clients/:id/status', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
@@ -1212,7 +1212,7 @@ router.patch('/clients/:id/status', authenticateToken, requireRole('coach'), req
 
 // Coach-controlled reminder prefs for a single client. Currently only the
 // workout-day reminder toggle. Defaults ON. The client's own opt-out toggle
-// in reminder_preferences.workout_reminder is independent — both must be true
+// in reminder_preferences.workout_reminder is independent - both must be true
 // for a notification to fire (when the scheduler lands in Phase 3).
 router.get('/clients/:id/coach-prefs', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
   try {
@@ -1284,7 +1284,7 @@ router.post('/clients/:id/reset-password', authenticateToken, requireRole('coach
       reset_url: url,
       expires_at: expiresAt,
       email_sent: false,
-      note: 'SMTP not configured yet — copy this URL and send it to the client manually.',
+      note: 'SMTP not configured yet - copy this URL and send it to the client manually.',
     });
   } catch (err) {
     console.error('Reset password error:', err);
@@ -1429,7 +1429,7 @@ router.get('/workouts/:workoutId/overrides', authenticateToken, requireRole('coa
   }
 });
 
-// Aggregated override counts across all workouts — powers the "N personalised"
+// Aggregated override counts across all workouts - powers the "N personalised"
 // badge on the admin Workouts library list. One round-trip instead of N.
 router.get('/workouts/overrides/counts', authenticateToken, requireRole('coach'), (req, res) => {
   try {
@@ -1447,7 +1447,7 @@ router.get('/workouts/overrides/counts', authenticateToken, requireRole('coach')
 
 // Drop overrides for the listed user_ids so those clients snap back to the
 // (just-edited) template. Used by the WorkoutBuilder drift prompt after a
-// coach saves template changes — the coach ticks which clients should receive
+// coach saves template changes - the coach ticks which clients should receive
 // the new version.
 // Body: { user_ids: number[] }
 router.post('/workouts/:workoutId/overrides/clear', authenticateToken, requireRole('coach'), (req, res) => {
@@ -1460,7 +1460,7 @@ router.post('/workouts/:workoutId/overrides/clear', authenticateToken, requireRo
     if (requested.length === 0) return res.status(400).json({ error: 'user_ids array required' });
 
     // Scope to clients this coach owns. Unassigned clients (coach_id IS NULL)
-    // are considered fair game — matches the team-inbox model. A coach silently
+    // are considered fair game - matches the team-inbox model. A coach silently
     // skips any id they don't own rather than 403-ing the whole batch.
     const qsR = requested.map(() => '?').join(',');
     const allowed = pool.query(

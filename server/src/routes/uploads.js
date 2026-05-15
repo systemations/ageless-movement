@@ -15,7 +15,7 @@ fs.mkdirSync(uploadDir, { recursive: true });
 
 // Whitelist by mime type, then map to a canonical extension server-side
 // so the stored filename is never derived from user input. A client
-// sending "payload.exe.jpg" never gets that name on disk — they get a
+// sending "payload.exe.jpg" never gets that name on disk - they get a
 // UUID + the extension we pick from the trusted mime type.
 const ALLOWED_MIMES = {
   'image/jpeg': '.jpg',

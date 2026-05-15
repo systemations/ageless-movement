@@ -660,10 +660,10 @@ const alterStatements = [
   "ALTER TABLE conversations ADD COLUMN reference_name TEXT",
   "ALTER TABLE conversations ADD COLUMN mute_new_members INTEGER DEFAULT 0",
   "ALTER TABLE conversations ADD COLUMN access_tier_ids TEXT",  // JSON array when visibility='specific_tiers'
-  // Tier features list — one bullet per line, shown on the TiersModal
+  // Tier features list - one bullet per line, shown on the TiersModal
   // comparison card when a client taps a locked Explore item.
   "ALTER TABLE tiers ADD COLUMN features TEXT",
-  // Tier upgrade CTA — 'message_coach' (default, routes to team inbox)
+  // Tier upgrade CTA - 'message_coach' (default, routes to team inbox)
   // or 'booking_link' (opens cta_url, e.g. external call-booking page for
   // the VIP tier where a call is required before onboarding).
   "ALTER TABLE tiers ADD COLUMN cta_type TEXT DEFAULT 'message_coach'",
@@ -747,7 +747,7 @@ const alterStatements = [
   // (user updates via a slider). metric_type='workouts_per_week' is
   // computed live from workout_logs.completed in the last 7 days vs
   // target_value. Existing goals table already has user_id/title/
-  // target/progress/achieved/achieved_date — we just add the two new
+  // target/progress/achieved/achieved_date - we just add the two new
   // columns to flag goal type + numeric target.
   "ALTER TABLE goals ADD COLUMN metric_type TEXT DEFAULT 'manual'",
   "ALTER TABLE goals ADD COLUMN target_value REAL",
@@ -768,7 +768,7 @@ const alterStatements = [
   "ALTER TABLE workout_exercise_meta ADD COLUMN tracking_type TEXT DEFAULT 'reps'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN setwise_variation TEXT DEFAULT 'fixed'",
   "ALTER TABLE workout_exercise_meta ADD COLUMN secondary_tracking INTEGER DEFAULT 0",
-  // coach_profiles — expanded for Meet the Team
+  // coach_profiles - expanded for Meet the Team
   "ALTER TABLE coach_profiles ADD COLUMN photo_url TEXT",
   "ALTER TABLE coach_profiles ADD COLUMN headline TEXT",
   "ALTER TABLE coach_profiles ADD COLUMN specialties TEXT",
@@ -823,7 +823,7 @@ const alterStatements = [
   "ALTER TABLE workout_exercise_alternates ADD COLUMN tracking_type TEXT",
   "ALTER TABLE workout_exercise_alternates ADD COLUMN notes TEXT",
   "ALTER TABLE workout_exercise_alternates ADD COLUMN interval_structure TEXT",
-  // What the coach prescribed vs what the client actually did — so coach
+  // What the coach prescribed vs what the client actually did - so coach
   // can see the delta ("prescribed 40 min, client did 25"). NULL means
   // client did not customize; treat actual = prescribed.
   "ALTER TABLE workout_logs ADD COLUMN prescribed_duration_mins INTEGER",
@@ -873,7 +873,7 @@ const alterStatements = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
-  // Rest days — user marks a day as an intentional rest day
+  // Rest days - user marks a day as an intentional rest day
   `CREATE TABLE IF NOT EXISTS user_rest_days (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -895,7 +895,7 @@ const alterStatements = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
-  // Course lesson completions — one row per (user, lesson) once a client
+  // Course lesson completions - one row per (user, lesson) once a client
   // marks a lesson complete. Module + course completion is derived from
   // counting rows. Unique constraint prevents double-counting.
   `CREATE TABLE IF NOT EXISTS user_lesson_completions (
@@ -909,7 +909,7 @@ const alterStatements = [
   // Per-client workout overrides (personalisations). When a coach edits a
   // workout for a specific client instead of the master template, a row is
   // created here. The `exercises_json` column stores the FULL effective
-  // exercise list for this client — a snapshot, not a diff. If present,
+  // exercise list for this client - a snapshot, not a diff. If present,
   // the client read path renders this instead of the template's exercises.
   //
   // Workout-level fields (title, duration, intensity, etc) can also be
@@ -929,7 +929,7 @@ const alterStatements = [
     UNIQUE(user_id, workout_id)
   )`,
 
-  // Payment plans — the master record for everything purchasable.
+  // Payment plans - the master record for everything purchasable.
   // platform restricts where the plan is shown (so the same product can have
   // a Stripe-priced 'web'/'android' version and an IAP-marked-up 'ios' twin).
   // hidden=1 means the plan is excluded from public listing but a direct
@@ -962,7 +962,7 @@ const alterStatements = [
   )`,
   "CREATE INDEX IF NOT EXISTS idx_payment_plans_listing ON payment_plans(active, hidden, platform, sort_order)",
 
-  // Plan automations — ordered chain of side-effects fired by processPurchase()
+  // Plan automations - ordered chain of side-effects fired by processPurchase()
   // when a plan is purchased. action_type is the dispatch key; action_config is
   // a JSON blob whose shape depends on the type:
   //   enroll_program  { program_id }
@@ -1003,7 +1003,7 @@ const alterStatements = [
   "CREATE INDEX IF NOT EXISTS idx_user_purchases_plan ON user_purchases(plan_id, purchased_at DESC)",
 ];
 
-// Onboarding answers — persists the questionnaire that used to live only in
+// Onboarding answers - persists the questionnaire that used to live only in
 // localStorage. One row per client (user_id unique). JSON blob for flexible
 // future fields, with a few first-class columns for easy querying.
 db.exec(`
@@ -1033,7 +1033,7 @@ for (const sql of alterStatements) {
 // stuck on the questionnaire forever otherwise. Any of these signals
 // means "this client has already used the app and shouldn't see the
 // questionnaire again": age set, weight set, has an enrolled program,
-// has logged a workout, or has any check-in row. Idempotent — the
+// has logged a workout, or has any check-in row. Idempotent - the
 // WHERE clause matches nothing on subsequent boots.
 try {
   db.exec(`
@@ -1130,7 +1130,7 @@ try {
     db.pragma('foreign_keys = OFF');
 
     const migrate = db.transaction(() => {
-      // 1. New meal_schedules table — the timeline wrapper (renamed from old meal_plans)
+      // 1. New meal_schedules table - the timeline wrapper (renamed from old meal_plans)
       db.exec(`
         CREATE TABLE meal_schedules (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1285,7 +1285,7 @@ try {
         console.log(`  migrated ${days.length} days + ${items.length} items`);
 
         // 7b. Roll up macros from the JOINED recipes. The legacy items table had
-        //     per-item calorie/protein/etc columns but they were mostly empty —
+        //     per-item calorie/protein/etc columns but they were mostly empty - 
         //     the real data lives on recipes. Summing via JOIN gives us accurate
         //     meal_plans.target_* values we can use for calorie scaling.
         const planIds = db.prepare('SELECT id FROM meal_plans_new').all();
@@ -1342,7 +1342,7 @@ try {
       // 10. client_profiles.active_meal_plan_id was a pointer to the OLD meal_plans
       //     (which is now meal_schedules). Rename the column so the semantics match.
       try { db.exec('ALTER TABLE client_profiles RENAME COLUMN active_meal_plan_id TO active_meal_schedule_id'); }
-      catch (e) { /* older sqlite — leave column, we'll add a new one */ }
+      catch (e) { /* older sqlite - leave column, we'll add a new one */ }
       try { db.exec('ALTER TABLE client_profiles ADD COLUMN active_meal_schedule_id INTEGER'); }
       catch (e) { /* already renamed above */ }
     });
@@ -1368,7 +1368,7 @@ try {
 
 // Coach-controlled toggle for whether to send workout-day reminder pushes
 // to this client. Defaults ON. The client's own reminder_preferences.workout_reminder
-// is an independent opt-out — both must be true for a reminder to fire.
+// is an independent opt-out - both must be true for a reminder to fire.
 try {
   db.exec('ALTER TABLE client_profiles ADD COLUMN coach_workout_reminders_enabled INTEGER DEFAULT 1');
 } catch (e) { /* already exists */ }
@@ -1388,7 +1388,7 @@ try {
   db.exec("ALTER TABLE workout_logs ADD COLUMN distance_unit TEXT DEFAULT 'km'");
 } catch (e) { /* already exists */ }
 
-// Suppressed workouts — records a one-off delete of a prescribed workout for
+// Suppressed workouts - records a one-off delete of a prescribed workout for
 // a specific date. Filtered out in getScheduledForDate. Distinct from rest
 // days (which hide everything) and one-off reschedules (which move).
 try {
@@ -1405,7 +1405,7 @@ try {
 } catch (e) { /* already exists */ }
 
 // Seed coach profile defaults + session types + availability for every coach
-// that doesn't yet have them. Idempotent — runs on every boot but only inserts
+// that doesn't yet have them. Idempotent - runs on every boot but only inserts
 // the first time.
 try {
   const coaches = db.prepare("SELECT id, name FROM users WHERE role = 'coach'").all();
@@ -1486,7 +1486,7 @@ if (tierCount.c === 0) {
 }
 
 // Feature tier requirements -- maps feature keys to minimum tier levels.
-// Meal time preferences — customisable per-day meal times
+// Meal time preferences - customisable per-day meal times
 db.exec(`
   CREATE TABLE IF NOT EXISTS meal_time_preferences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1569,7 +1569,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS conversation_stars_user_idx ON conversation_stars(user_id);
 `);
 
-// Freeform client tags — coach-applied labels like "Group Coaching", "AMS",
+// Freeform client tags - coach-applied labels like "Group Coaching", "AMS",
 // "Boston", "Performer". Used on the ClientProfile Overview to surface
 // context at a glance.
 db.exec(`
@@ -1584,7 +1584,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS client_tags_client_idx ON client_tags(client_id);
 `);
 
-// Membership fields on client_profiles — plan title, cycle, and next
+// Membership fields on client_profiles - plan title, cycle, and next
 // renewal timestamp. No Stripe integration yet, so these are coach-set
 // manually. The Overview tab renders an "Upcoming Renewal" / "Renews
 // today" pill computed from next_renewal_at.
@@ -1597,7 +1597,7 @@ try {
 } catch (e) { /* ignore */ }
 
 // ── Onboarding completion gate ────────────────────────────────────────
-// Slim signup creates an account with onboarding_complete = 0 — the user
+// Slim signup creates an account with onboarding_complete = 0 - the user
 // is logged in but the routing guard (App.jsx) bounces them to
 // /onboarding until they finish the questionnaire. Once the
 // /api/onboarding/complete endpoint fires (allocator + Mifflin run +
@@ -1627,12 +1627,12 @@ try {
 // targets. We store the raw inputs (height, weight, sex, activity, style)
 // so the calc can be re-run server-side any time the client edits any of
 // them. Targets in calorie_target / protein_target / fat_target /
-// carbs_target stay the source-of-truth for diary % rings — they're what
-// gets shown — but they're derived from these inputs unless the client
+// carbs_target stay the source-of-truth for diary % rings - they're what
+// gets shown - but they're derived from these inputs unless the client
 // manually overrides via the Profile "Custom" toggle.
 //   sex            : 'male' | 'female'  (Mifflin only has these two; intersex
 //                                         clients pick whichever matches their
-//                                         lean mass — same convention as
+//                                         lean mass - same convention as
 //                                         every other tracking app)
 //   height_cm      : stored cm always; UI toggles ft/in for display
 //   weight_kg      : stored kg always; UI toggles lbs for display
@@ -1731,7 +1731,7 @@ if (ftrCount.c === 0) {
 
 // Backfill: if a coach assigns a meal plan / supplements / smart targets
 // to a Free or low-tier client, the client should still see the full UI
-// for what was assigned. Original tier gates were too aggressive — they
+// for what was assigned. Original tier gates were too aggressive - they
 // hid the Next Meal preview and Log Supps button on Home for any client
 // below tier 2/3 even when they had data. Idempotent: subsequent boots
 // see the values already set and the UPDATE no-ops.
@@ -1740,13 +1740,13 @@ try {
 } catch {}
 
 // ---------------------------------------------------------------------
-// Mock client roster — 20 seeded clients across ages, genders, tiers,
+// Mock client roster - 20 seeded clients across ages, genders, tiers,
 // and full onboarding answers. Only runs on an empty client roster so
 // real sign-ups are never touched. Dan uses these to map what different
 // tier experiences look like in the coach client list.
 // ---------------------------------------------------------------------
 try {
-  // Use a sentinel email to detect whether the mock roster is already seeded —
+  // Use a sentinel email to detect whether the mock roster is already seeded - 
   // we don't want to block on *any* existing clients because Dan may have real
   // test accounts. If "emma.thompson@example.com" is present, assume the whole
   // roster is already in place.
@@ -1763,21 +1763,21 @@ try {
         injuries: 'Lower back stiffness, right hip bursitis (managed)', schedule: '4-5 days',
         equipment: ['Yoga mat & foam roller', 'Resistance bands', 'Home gym (dumbbells, bands)'],
         dietary: 'No dairy, otherwise flexible', sleep: 'OK (6-7 hours, sometimes restless)',
-        anything_else: 'Desk job — want to feel less stiff by 4pm every day.' },
+        anything_else: 'Desk job - want to feel less stiff by 4pm every day.' },
 
       { name: 'James O\'Connor',   email: 'james.oconnor@example.com',   age: 64, gender: 'male',   location: 'Cork, IE',
         tier_id: 4, goal: 'General fitness & longevity', experience: 'Former athlete returning to training',
         injuries: 'Right knee replacement 2019, cleared for full activity', schedule: '4-5 days',
         equipment: ['Full gym'],
         dietary: 'Mediterranean style, 16:8 most days', sleep: 'Great (7-9 hours, restful)',
-        anything_else: 'Played rugby until 45 — want to train like an athlete again without the wear and tear.' },
+        anything_else: 'Played rugby until 45 - want to train like an athlete again without the wear and tear.' },
 
       { name: 'Sophia Nguyen',    email: 'sophia.nguyen@example.com',   age: 34, gender: 'female', location: 'London, UK',
         tier_id: 2, goal: 'Reduce pain & discomfort', experience: 'Complete beginner',
         injuries: 'Chronic neck and upper trap tension from laptop work', schedule: '2-3 days',
         equipment: ['Minimal (bodyweight only)', 'Yoga mat & foam roller'],
         dietary: 'Vegetarian, tracks protein loosely', sleep: 'Poor (< 6 hours or very broken)',
-        anything_else: 'Just had my second child — very time-poor, need short sessions I can do at home.' },
+        anything_else: 'Just had my second child - very time-poor, need short sessions I can do at home.' },
 
       { name: 'Marcus Williams',  email: 'marcus.williams@example.com', age: 41, gender: 'male',   location: 'Austin, TX',
         tier_id: 4, goal: 'Build strength', experience: 'Intermediate (1-3 years)',
@@ -1791,7 +1791,7 @@ try {
         injuries: 'None currently', schedule: '4-5 days',
         equipment: ['Full gym', 'Kettlebells', 'TRX / Suspension trainer'],
         dietary: 'Pescatarian, 2400 kcal', sleep: 'OK (6-7 hours, sometimes restless)',
-        anything_else: 'Training for an OCR race in 6 months — grip strength and conditioning focus.' },
+        anything_else: 'Training for an OCR race in 6 months - grip strength and conditioning focus.' },
 
       { name: 'Robert Fitzgerald', email: 'robert.fitz@example.com',    age: 58, gender: 'male',   location: 'Galway, IE',
         tier_id: 3, goal: 'Reduce pain & discomfort', experience: 'Some experience (< 1 year)',
@@ -1805,7 +1805,7 @@ try {
         injuries: 'Plantar fasciitis flare-ups', schedule: '2-3 days',
         equipment: ['Minimal (bodyweight only)'],
         dietary: 'Halal, exploring intermittent fasting', sleep: 'Variable (shift work or inconsistent)',
-        anything_else: 'Night shift nurse — energy is all over the place.' },
+        anything_else: 'Night shift nurse - energy is all over the place.' },
 
       { name: 'Liam Murphy',      email: 'liam.murphy@example.com',     age: 23, gender: 'male',   location: 'Dublin, IE',
         tier_id: 2, goal: 'Build strength', experience: 'Intermediate (1-3 years)',
@@ -1819,14 +1819,14 @@ try {
         injuries: 'Mild osteoarthritis in both knees, left hip replacement 2021', schedule: '4-5 days',
         equipment: ['Home gym (dumbbells, bands)', 'Resistance bands'],
         dietary: 'Balanced, no restrictions', sleep: 'Great (7-9 hours, restful)',
-        anything_else: 'Grandmother of 6 — want to keep up with them and travel pain-free.' },
+        anything_else: 'Grandmother of 6 - want to keep up with them and travel pain-free.' },
 
       { name: 'Daniel Kim',       email: 'daniel.kim@example.com',      age: 37, gender: 'male',   location: 'Seattle, WA',
         tier_id: 3, goal: 'Improve mobility & flexibility', experience: 'Intermediate (1-3 years)',
         injuries: 'Tight hip flexors, old ACL repair (right)', schedule: '4-5 days',
         equipment: ['Home gym (dumbbells, bands)', 'Yoga mat & foam roller', 'Kettlebells'],
         dietary: 'Korean/whole food, 2800 kcal', sleep: 'OK (6-7 hours, sometimes restless)',
-        anything_else: 'Software engineer — want to be able to sit cross-legged again without pain.' },
+        anything_else: 'Software engineer - want to be able to sit cross-legged again without pain.' },
 
       { name: 'Olivia Harris',    email: 'olivia.harris@example.com',   age: 48, gender: 'female', location: 'Sydney, AU',
         tier_id: 4, goal: 'Recover from injury', experience: 'Advanced (3+ years)',
@@ -1847,7 +1847,7 @@ try {
         injuries: 'Mild ankle instability', schedule: '6-7 days',
         equipment: ['Full gym', 'TRX / Suspension trainer'],
         dietary: 'Flexitarian, tracks macros', sleep: 'Great (7-9 hours, restful)',
-        anything_else: 'Marathoner crossing over to hybrid training — need smart volume management.' },
+        anything_else: 'Marathoner crossing over to hybrid training - need smart volume management.' },
 
       { name: 'Benjamin Carter',  email: 'ben.carter@example.com',      age: 44, gender: 'male',   location: 'Denver, CO',
         tier_id: 1, goal: 'Improve mobility & flexibility', experience: 'Complete beginner',
@@ -1861,7 +1861,7 @@ try {
         injuries: 'None', schedule: '4-5 days',
         equipment: ['Full gym'],
         dietary: 'Mediterranean, 2100 kcal', sleep: 'Great (7-9 hours, restful)',
-        anything_else: 'First time lifting seriously — want to feel confident in a commercial gym.' },
+        anything_else: 'First time lifting seriously - want to feel confident in a commercial gym.' },
 
       { name: 'Michael O\'Brien', email: 'michael.obrien@example.com',  age: 62, gender: 'male',   location: 'Belfast, UK',
         tier_id: 3, goal: 'General fitness & longevity', experience: 'Former athlete returning to training',
@@ -1881,7 +1881,7 @@ try {
         tier_id: 1, goal: 'Build strength', experience: 'Complete beginner',
         injuries: 'None', schedule: '4-5 days',
         equipment: ['Minimal (bodyweight only)'],
-        dietary: 'Student diet — working on it', sleep: 'Variable (shift work or inconsistent)',
+        dietary: 'Student diet - working on it', sleep: 'Variable (shift work or inconsistent)',
         anything_else: 'Uni student, small budget, no gym access. What can I do?' },
 
       { name: 'Rachel Goldberg',  email: 'rachel.goldberg@example.com', age: 50, gender: 'female', location: 'New York, NY',
@@ -1889,14 +1889,14 @@ try {
         injuries: 'Peri-menopause symptoms, mild SI joint pain', schedule: '4-5 days',
         equipment: ['Home gym (dumbbells, bands)', 'Yoga mat & foam roller'],
         dietary: 'Pescatarian, 2000 kcal', sleep: 'Poor (< 6 hours or very broken)',
-        anything_else: 'Hormonal shifts have changed everything — want a coach who understands female physiology 40+.' },
+        anything_else: 'Hormonal shifts have changed everything - want a coach who understands female physiology 40+.' },
 
       { name: 'Kenji Tanaka',     email: 'kenji.tanaka@example.com',    age: 33, gender: 'male',   location: 'Tokyo, JP',
         tier_id: 2, goal: 'Reduce pain & discomfort', experience: 'Some experience (< 1 year)',
         injuries: 'Chronic wrist pain (climbing), mild forward head posture', schedule: '4-5 days',
         equipment: ['Home gym (dumbbells, bands)', 'Resistance bands'],
         dietary: 'Japanese whole food', sleep: 'OK (6-7 hours, sometimes restless)',
-        anything_else: 'Climber — want to address overuse and build a more balanced body.' },
+        anything_else: 'Climber - want to address overuse and build a more balanced body.' },
     ];
 
     const insertUser = db.prepare(`

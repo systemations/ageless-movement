@@ -108,7 +108,7 @@ export default function CourseDetail({ course, onBack }) {
   const isFree = full.tier_name === 'Free';
   const durationParts = (full.duration || '').split(' ');
 
-  // Lesson player mode — overrides the rest of the render.
+  // Lesson player mode - overrides the rest of the render.
   if (activeLessonId) {
     return (
       <LessonPlayer
@@ -255,7 +255,7 @@ export default function CourseDetail({ course, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Module row — recursive
+// Module row - recursive
 // ─────────────────────────────────────────────────────────────────────
 // Renders a single module's collapsible card. When expanded, renders
 // its lessons followed by any nested sub-modules (which recurse using
@@ -436,7 +436,7 @@ function LessonRow({ lesson, isLast, onPick, onToggle, toggling }) {
   );
 }
 
-// Lesson player sidebar — flat list grouped by module/sub-module
+// Lesson player sidebar - flat list grouped by module/sub-module
 // header. Recurses on subModuleList so the hierarchy is preserved.
 function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
   const lessons = (mod.lessonList || []).filter(l => l.status !== 'draft');
@@ -451,7 +451,7 @@ function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
         const active = l.id === activeLessonId;
         // Locked quiz lessons stay clickable so the user can land on
         // the gate (which explains the prereq) instead of silently
-        // doing nothing — the body view shows the lock state.
+        // doing nothing - the body view shows the lock state.
         const locked = l.quiz_locked;
         return (
           <button
@@ -514,7 +514,7 @@ function SidebarModule({ mod, depth, activeLessonId, onPickLesson }) {
 // Description is stored as HTML (rich-text editor in admin) so we render
 // via dangerouslySetInnerHTML. Trust comes from the fact that only
 // authenticated coaches can write it via the /api/content/lessons PUT
-// route — same trust model as workout descriptions and exercise notes.
+// route - same trust model as workout descriptions and exercise notes.
 function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete, toggling }) {
   // Flatten the moduleList (recursing into sub-modules) into an ordered
   // lesson array so Next/Prev can walk across module + sub-module
@@ -579,7 +579,7 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
       </div>
 
       <div className="lesson-grid">
-        {/* Sidebar — only visible at >= 900px wide. On mobile the user
+        {/* Sidebar - only visible at >= 900px wide. On mobile the user
             scrolls back via the header button. */}
         <aside className="lesson-sidebar" style={{
           background: 'var(--bg-card)', borderRadius: 12, padding: '8px 10px',
@@ -810,7 +810,7 @@ function StyledLessonBody({ lesson, prev, next, onPickLesson, onToggleComplete, 
 
 // Shared Prev/Next footer for lesson views (regular, quiz, locked).
 // Without this, quiz/locked lessons trapped users with no walk-through
-// nav — they could only use the back-arrow to return to the overview.
+// nav - they could only use the back-arrow to return to the overview.
 // `nextDisabled` blocks forward nav (e.g. on assessment lessons until
 // the client has logged a pick); the disabled reason renders inline.
 function LessonNavFooter({ prev, next, onPickLesson, nextDisabled, nextDisabledReason }) {
@@ -862,7 +862,7 @@ function LessonNavFooter({ prev, next, onPickLesson, nextDisabled, nextDisabledR
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Quiz lock gate — replaces the QuizPlayer when a prerequisite quiz
+// Quiz lock gate - replaces the QuizPlayer when a prerequisite quiz
 // has not been passed yet. Stops users from starting (or even seeing)
 // the next quiz in the chain, e.g. ReBuild before Ground Zero.
 // ─────────────────────────────────────────────────────────────────────
@@ -929,7 +929,7 @@ function QuizLockGate({ prerequisite, onPickLesson, onBack, nav, lesson }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Quiz player — assessment with A/B/C answers + scoring + routing
+// Quiz player - assessment with A/B/C answers + scoring + routing
 // ─────────────────────────────────────────────────────────────────────
 // Lesson.quiz schema (defined in server/src/db/pool.js comment, seeded
 // directly via SQL for now). Renders the question list with optional
@@ -942,7 +942,7 @@ function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, less
   const [submitted, setSubmitted] = useState(false);
 
   // Persist the attempt server-side on submit so the coach + client
-  // both have a history record. Fire-and-forget — UX moves on
+  // both have a history record. Fire-and-forget - UX moves on
   // immediately; the server recomputes the score from canonical
   // quiz_data so a network hiccup doesn't block the result screen.
   const persistAttempt = (sel) => {
@@ -1092,7 +1092,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
   const programId = !passed ? quiz.fail_program_id : null;
   // Enrolment state: idle / enrolling / replace_prompt / done / error.
   // Replace prompt covers the 409 case where the user is already on a
-  // different program — they confirm to overwrite.
+  // different program - they confirm to overwrite.
   const [enrol, setEnrol] = useState({ status: 'idle' });
 
   const doEnrol = async (force = false) => {
@@ -1147,7 +1147,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
         )}
 
         {/* Fail: one-tap enrolment in the recommended program. The
-            5-step "find this program in Explore" explainer is gone —
+            5-step "find this program in Explore" explainer is gone - 
             this button does it for them so they don't get lost. */}
         {!passed && programId && enrol.status === 'idle' && (
           <button
@@ -1246,7 +1246,7 @@ function QuizResult({ quiz, passed, pct, flatLessons, onPickLesson, onRetry, onB
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Lesson description — HTML with optional {{coaches}} token expansion
+// Lesson description - HTML with optional {{coaches}} token expansion
 // ─────────────────────────────────────────────────────────────────────
 // Most lessons are pure HTML from the TipTap editor. The "meet the
 // support coaches" lesson uses a {{coaches}} token that's replaced
@@ -1281,7 +1281,7 @@ function LessonDescription({ html, lessonId, interactive, onLogged }) {
 // Interactive assessment description
 // ─────────────────────────────────────────────────────────────────────
 // For the 13 movement-based assessment lessons. The reference photos
-// embedded in the description become tappable inputs — the client
+// embedded in the description become tappable inputs - the client
 // picks the photo that best matches their body in the position. The
 // selection POSTs to /api/content/lessons/:id/assessment-response and
 // is visible to the coach on ClientProfile (and to the client across
@@ -1394,7 +1394,7 @@ function InteractiveAssessmentDescription({ html, lessonId, onLogged }) {
       setSavedIndex(idx);
       setPendingIndex(null);
       onLogged?.();
-    } catch (e) { /* swallow — user can retry */ }
+    } catch (e) { /* swallow - user can retry */ }
     setSaving(false);
   };
 
@@ -1404,7 +1404,7 @@ function InteractiveAssessmentDescription({ html, lessonId, onLogged }) {
 
   return (
     <div style={{ marginBottom: 18 }}>
-      {/* Status hint at the top — display only. The actual Confirm /
+      {/* Status hint at the top - display only. The actual Confirm /
           Clear buttons live next to the History block below so the
           client commits to a pick after they've scrolled through all
           the photos. */}
@@ -1424,7 +1424,7 @@ function InteractiveAssessmentDescription({ html, lessonId, onLogged }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
             {isPending
-              ? (dirtyVsSaved ? `Selected: ${letter(pendingIndex)} — confirm below` : `Same as your last answer: ${letter(pendingIndex)}`)
+              ? (dirtyVsSaved ? `Selected: ${letter(pendingIndex)} - confirm below` : `Same as your last answer: ${letter(pendingIndex)}`)
               : savedIndex
                 ? `Your last answer: ${letter(savedIndex)}`
                 : 'Tap the photo that best matches your position'}
@@ -1445,7 +1445,7 @@ function InteractiveAssessmentDescription({ html, lessonId, onLogged }) {
 
       {/* Confirm + history block. Confirm/Clear buttons sit on top of
           the history list because the user lands here after scrolling
-          past the photos — close to the Mark As Complete CTA. */}
+          past the photos - close to the Mark As Complete CTA. */}
       {(isPending || previousAttempts.length > 0) && (
         <div style={{
           marginTop: 14, padding: '14px 16px',
@@ -1522,7 +1522,7 @@ function CoachesRoster() {
   }, [token]);
 
   if (coaches === null) return null;
-  // Only render coaches who have both a bio and a photo — anyone half-
+  // Only render coaches who have both a bio and a photo - anyone half-
   // configured in the admin shouldn't show up on a public roster.
   const visible = coaches.filter(c => c.bio && (c.photo_url || c.avatar_url));
   if (visible.length === 0) return null;

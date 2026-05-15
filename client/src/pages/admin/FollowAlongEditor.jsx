@@ -5,13 +5,13 @@ import ImageUpload from '../../components/ImageUpload';
 // Admin editor for follow-along video workouts.
 // Simpler than WorkoutBuilder (which edits structured blocks + exercises).
 // Follow-along workouts are just metadata + a single video URL:
-//   - title, description
-//   - video_url (Vimeo / YouTube)
-//   - image_url (thumbnail poster shown on the client overview page)
-//   - equipment (comma-separated list)
-//   - body_parts (target areas)
-//   - duration_mins, intensity
-//   - optional program placement: program_id, week_number, day_number
+//  - title, description
+//  - video_url (Vimeo / YouTube)
+//  - image_url (thumbnail poster shown on the client overview page)
+//  - equipment (comma-separated list)
+//  - body_parts (target areas)
+//  - duration_mins, intensity
+//  - optional program placement: program_id, week_number, day_number
 export default function FollowAlongEditor({ workoutId, onBack, onSaved }) {
   const { token } = useAuth();
   const [programs, setPrograms] = useState([]);

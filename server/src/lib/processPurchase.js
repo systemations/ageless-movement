@@ -15,7 +15,7 @@
 
 import pool from '../db/pool.js';
 
-// Action handlers — keyed by action_type. Each receives (userId, config)
+// Action handlers - keyed by action_type. Each receives (userId, config)
 // where config is the parsed action_config JSON. Throws on failure.
 const actionHandlers = {
   set_tier(userId, config) {
@@ -33,7 +33,7 @@ const actionHandlers = {
       [userId, config.program_id],
     );
     if (existing.rows.length > 0) {
-      // Already enrolled — no-op rather than duplicate row
+      // Already enrolled - no-op rather than duplicate row
       return;
     }
     const workoutCount = pool.query(

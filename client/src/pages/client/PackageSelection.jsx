@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 // Onboarding step that lands between the questionnaire and Home. Shows
-// the live payment_plans list (filtered to the current platform — iOS
+// the live payment_plans list (filtered to the current platform - iOS
 // users see IAP-marked-up twins, web users see Stripe pricing). Free
 // plans are processed instantly via /api/plans/me/choose; paid plans
 // stamp tier_requested_id and route the client into chat with their

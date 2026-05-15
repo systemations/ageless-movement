@@ -44,7 +44,7 @@
   --accent-active: #D47A10;
   --accent-mint: #85FFBA;
   --mint-read: #6FA88B;
-  /* Darker variant of the brand orange — #FF9C33 fails WCAG against
+  /* Darker variant of the brand orange - #FF9C33 fails WCAG against
      white cards (contrast ~2.6). Deeper shade keeps the identity while
      making text readable, e.g. the calorie target on Home. */
   --accent-orange: #C75D00;
@@ -111,7 +111,7 @@ input, textarea, select {
   overflow-y: auto;
 }
 
-/* Bottom Navigation — floating pill, glassy, Instagram-style.
+/* Bottom Navigation - floating pill, glassy, Instagram-style.
    Hovers above content with side margin + bottom inset. Backdrop
    blur gives the translucent frosted look; the white border softens
    the pill edge against the navy. */

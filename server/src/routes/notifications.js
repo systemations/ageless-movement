@@ -81,7 +81,7 @@ router.get('/active', authenticateToken, (req, res) => {
   }
 });
 
-// Hard-coded whitelist — `field` is interpolated into SQL so we must
+// Hard-coded whitelist - `field` is interpolated into SQL so we must
 // refuse anything outside this set even though all current callers pass
 // literals. Protects future refactors from turning a bug into a SQLi.
 const READ_FIELDS = new Set(['seen_at', 'dismissed_at', 'completed_at']);
@@ -154,7 +154,7 @@ router.post('/:id/complete-checkin', authenticateToken, (req, res) => {
   }
 });
 
-// Last 30 days of the caller's own habit entries — powers a client-side
+// Last 30 days of the caller's own habit entries - powers a client-side
 // trend card and the coach's client habit history.
 router.get('/my-habits', authenticateToken, (req, res) => {
   try {
@@ -254,7 +254,7 @@ router.delete('/:id', authenticateToken, requireRole('coach'), (req, res) => {
   }
 });
 
-// Client's habit history — coach view of a specific client's check-in answers.
+// Client's habit history - coach view of a specific client's check-in answers.
 router.get('/habits/:userId', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const rows = pool.query(

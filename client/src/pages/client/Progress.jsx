@@ -213,7 +213,7 @@ export default function Progress() {
   };
 
   // Auto-compare the very first check-in photo (baseline) against the latest.
-  // This is the primary "Before & After" flow — no manual picking needed.
+  // This is the primary "Before & After" flow - no manual picking needed.
   const openBeforeAfter = () => {
     if (photoCheckins.length < 2) return;
     const sorted = [...photoCheckins].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -388,7 +388,7 @@ export default function Progress() {
             </div>
           </CollapsibleSection>
 
-          {/* Stats — body comp from latest check-in + 7-day averages
+          {/* Stats - body comp from latest check-in + 7-day averages
               for water / steps / calories / workouts. Replaces the old
               Measurements stub with real data plumbing. Only the cards
               with data render so empties don't pad the strip. */}
@@ -655,7 +655,7 @@ export default function Progress() {
           </CollapsibleSection>
 
           {/* Pain Tracking */}
-          {/* ROM tile hidden — phase 2 build (see VALD HumanTrak inspiration
+          {/* ROM tile hidden - phase 2 build (see VALD HumanTrak inspiration
               in /movement screening/). Will return as a numeric L/R degree
               entry surface with norm bands + trend lines. The ROMTracking
               component is left in place so flipping ROM_ENABLED back on
@@ -673,7 +673,7 @@ export default function Progress() {
             </div>
           </CollapsibleSection>
 
-          {/* Movement Assessment — roll-up of the AMS Getting Started
+          {/* Movement Assessment - roll-up of the AMS Getting Started
               tap-to-pick lessons. Wrapped in CollapsibleSection so the
               title is a drop-down (not a navigation), with the orange
               CTA inside the card carrying the deep-link to the course. */}
@@ -714,7 +714,7 @@ export default function Progress() {
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 16px' }} />
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Set a Goal</h3>
 
-            {/* Goal type picker — drives whether the user updates progress
+            {/* Goal type picker - drives whether the user updates progress
                 manually or it's auto-tracked from data we already capture. */}
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
               How do you want this tracked?
@@ -725,7 +725,7 @@ export default function Progress() {
               className="input-field"
               style={{ marginBottom: 4, fontSize: 14 }}
             >
-              <option value="manual">Manual — I update the % myself</option>
+              <option value="manual">Manual - I update the % myself</option>
               <option value="workouts_per_week">Workouts / week (auto)</option>
               <option value="streak_days">Workout streak (auto)</option>
               <option value="workouts_total">Total workouts (auto)</option>

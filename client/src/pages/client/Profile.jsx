@@ -609,14 +609,14 @@ function renewalStatus(dateStr) {
   return { text: `Renews ${new Date(dateStr).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}`, color: 'var(--text-secondary)' };
 }
 
-// ── Nutrition Targets — merged into MyProfile bottom 2026-04-28 ────
+// ── Nutrition Targets - merged into MyProfile bottom 2026-04-28 ────
 // Used to be its own sub-page that re-collected sex/age/height/weight/
 // activity/eating_style. Those fields now live in MyProfile's question
 // rows and PATCH /api/onboarding/answers auto-recomputes the targets
 // server-side. This section just shows the live preview + lets the
 // user toggle to manual override values.
 // ─────────────────────────────────────────────────────────────────────
-// My Profile — view + edit onboarding answers
+// My Profile - view + edit onboarding answers
 // ─────────────────────────────────────────────────────────────────────
 // Header: avatar, name, age (M/F), height, weight, BMI badge.
 // Body:   12 onboarding questions, each tappable to edit. BMR-relevant
@@ -624,7 +624,7 @@ function renewalStatus(dateStr) {
 //         a server-side target recompute so the Daily Targets card
 //         on Home updates next mount.
 
-// Vitals — edited inline from the top header card via tap-to-edit.
+// Vitals - edited inline from the top header card via tap-to-edit.
 // Kept off PROFILE_QUESTIONS so they don't render twice on the page.
 const VITAL_QUESTIONS = [
   { key: 'sex',       label: 'Biological sex', type: 'single', options: [
@@ -695,7 +695,7 @@ const PROFILE_QUESTIONS = [
   ]},
 ];
 
-// BMI number is shown but no judgement label — "Overweight" / "Obese"
+// BMI number is shown but no judgement label - "Overweight" / "Obese"
 // pills triggered clients. Coach can still read the number; client
 // gets factual data without the chip telling them how to feel.
 
@@ -768,7 +768,7 @@ function MyProfilePage({ onBack, token, user, initialProfile, scrollTarget, onSc
       {/* Header card. Each vital metric (age + sex pill, height, weight)
           is a tap target that opens the same ProfileFieldEditor used by
           the lifestyle rows below. Sex toggles between M/F via the (M)/(F)
-          pill — tapping that opens the sex editor. The pencil icon in the
+          pill - tapping that opens the sex editor. The pencil icon in the
           top-right is decorative; the metrics themselves are the click
           surface. */}
       <div className="card" style={{ marginBottom: 16, textAlign: 'center', padding: '24px 20px', position: 'relative' }}>
@@ -865,7 +865,7 @@ function MyProfilePage({ onBack, token, user, initialProfile, scrollTarget, onSc
         })}
       </div>
 
-      {/* Nutrition Targets — merged in 2026-04-28. Inputs (sex/age/height/
+      {/* Nutrition Targets - merged in 2026-04-28. Inputs (sex/age/height/
           weight in the top card; activity/eating in the question rows)
           drive PATCH /api/onboarding/answers which auto-recomputes the
           targets server-side. This section just shows the live result
@@ -1128,7 +1128,7 @@ function NutritionTargetsSection({ profile, token, onSaved }) {
             )}
             {Boolean(targetsCustom) && (
               <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 12, fontWeight: 700 }}>
-                Custom override — auto-recompute is OFF
+                Custom override - auto-recompute is OFF
               </p>
             )}
           </>

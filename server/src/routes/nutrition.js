@@ -11,7 +11,7 @@ const router = Router();
 // FOOD DIARY
 // ===================================================================
 
-// Get food diary for a date — includes suggested items from today's meal plan
+// Get food diary for a date - includes suggested items from today's meal plan
 router.get('/diary', authenticateToken, async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
@@ -62,7 +62,7 @@ router.get('/diary', authenticateToken, async (req, res) => {
           // Schema column is duration_weeks (not total_weeks). Dashboard
           // and /api/athlete/today both use duration_weeks; this endpoint
           // had a stale name that silently broke the meal-plan suggested
-          // items list — the math returned NaN and no schedule entry
+          // items list - the math returned NaN and no schedule entry
           // matched, so the Food Diary surfaced nothing to log against
           // today's plan.
           const totalWeeks = sched.duration_weeks || 1;
@@ -197,7 +197,7 @@ router.put('/targets', authenticateToken, async (req, res) => {
         merged[f] = body[f];
       }
     }
-    // age lives on client_profiles too — allow updating it via this same
+    // age lives on client_profiles too - allow updating it via this same
     // endpoint so the Profile page doesn't need a second route.
     if (body.age !== undefined) {
       sets.push('age = ?'); vals.push(body.age); merged.age = body.age;
@@ -212,13 +212,13 @@ router.put('/targets', authenticateToken, async (req, res) => {
     }
 
     if (goingCustom) {
-      // Manual override path — accept the grams the client sent.
+      // Manual override path - accept the grams the client sent.
       if (body.calorie_target !== undefined) { sets.push('calorie_target = ?'); vals.push(body.calorie_target); }
       if (body.protein_target !== undefined) { sets.push('protein_target = ?'); vals.push(body.protein_target); }
       if (body.fat_target !== undefined)     { sets.push('fat_target = ?');     vals.push(body.fat_target); }
       if (body.carbs_target !== undefined)   { sets.push('carbs_target = ?');   vals.push(body.carbs_target); }
     } else if (!profile.targets_custom || goingAuto) {
-      // Auto path — recompute from the merged inputs (existing + body).
+      // Auto path - recompute from the merged inputs (existing + body).
       // Only fires if either we're explicitly switching to auto, or the
       // profile is already in auto mode.
       const t = calculateTargets({
@@ -296,7 +296,7 @@ router.delete('/diary/:id', authenticateToken, async (req, res) => {
 
 // -------- MEAL PLANS (reusable days) --------
 
-// List meal plans — coach sees all with usage counts, client sees their available pool
+// List meal plans - coach sees all with usage counts, client sees their available pool
 router.get('/meal-plans', authenticateToken, async (req, res) => {
   try {
     if (req.user.role === 'coach') {
@@ -308,7 +308,7 @@ router.get('/meal-plans', authenticateToken, async (req, res) => {
       `);
       return res.json({ plans: plans.rows });
     }
-    // Clients just see the list — detail/scaling happens via /meal-plans/:id
+    // Clients just see the list - detail/scaling happens via /meal-plans/:id
     const plans = pool.query('SELECT * FROM meal_plans ORDER BY title').rows;
     res.json({ plans });
   } catch (err) {
@@ -317,7 +317,7 @@ router.get('/meal-plans', authenticateToken, async (req, res) => {
   }
 });
 
-// Meal plan detail — scaled for the calling client's calorie target if they're a client
+// Meal plan detail - scaled for the calling client's calorie target if they're a client
 router.get('/meal-plans/:id', authenticateToken, async (req, res) => {
   try {
     const loaded = loadPlan(req.params.id);
@@ -415,7 +415,7 @@ router.delete('/meal-plans/items/:itemId', authenticateToken, requireRole('coach
 
 // -------- MEAL SCHEDULES (assignable timelines) --------
 
-// List schedules — coach sees all, client sees the pool they can browse
+// List schedules - coach sees all, client sees the pool they can browse
 router.get('/meal-schedules', authenticateToken, (req, res) => {
   try {
     if (req.user.role === 'coach') {
@@ -439,7 +439,7 @@ router.get('/meal-schedules', authenticateToken, (req, res) => {
   }
 });
 
-// Schedule detail — full week/day tree scaled for the calling client
+// Schedule detail - full week/day tree scaled for the calling client
 router.get('/meal-schedules/:id', authenticateToken, (req, res) => {
   try {
     let target = null;
@@ -465,7 +465,7 @@ router.get('/meal-schedules/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Current user's active schedule, fully scaled — what the client app renders
+// Current user's active schedule, fully scaled - what the client app renders
 router.get('/my-schedule', authenticateToken, (req, res) => {
   try {
     const cp = pool.query(
@@ -495,7 +495,7 @@ router.post('/meal-schedules/:id/assign', authenticateToken, requireRole('coach'
     const { user_id, calorie_override } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
 
-    // Clear any existing assignment for this user — one active schedule at a time
+    // Clear any existing assignment for this user - one active schedule at a time
     pool.query('DELETE FROM client_meal_schedules WHERE user_id = ?', [user_id]);
     pool.query(
       `INSERT INTO client_meal_schedules (user_id, meal_schedule_id, calorie_override)
@@ -1048,7 +1048,7 @@ router.patch('/supplements/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Client deletes — only allowed for supplements they added themselves.
+// Client deletes - only allowed for supplements they added themselves.
 router.delete('/supplements/:id', authenticateToken, (req, res) => {
   try {
     const supp = pool.query('SELECT is_client_added FROM supplements WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]).rows[0];
@@ -1062,7 +1062,7 @@ router.delete('/supplements/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Mark a supplement taken (idempotent — unique(user_id, supplement_id, date)).
+// Mark a supplement taken (idempotent - unique(user_id, supplement_id, date)).
 router.post('/supplements/log', authenticateToken, (req, res) => {
   try {
     const { supplement_id, date } = req.body;
@@ -1119,7 +1119,7 @@ function httpsGetJson(url) {
   });
 }
 
-// Food search — queries local foods table first, falls back to Open Food Facts for more results.
+// Food search - queries local foods table first, falls back to Open Food Facts for more results.
 router.get('/search', authenticateToken, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
@@ -1172,7 +1172,7 @@ router.get('/search', authenticateToken, async (req, res) => {
   }
 });
 
-// Barcode lookup — check local cache, fall back to Open Food Facts, cache result.
+// Barcode lookup - check local cache, fall back to Open Food Facts, cache result.
 router.get('/barcode/:code', authenticateToken, async (req, res) => {
   try {
     const code = req.params.code;

@@ -471,7 +471,7 @@ function PlanRow({ plan, selected, onClick, onToggleActive }) {
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{price}</div>
       <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
-        {plan.free_trial_days > 0 ? `${plan.free_trial_days}d free` : '—'}
+        {plan.free_trial_days > 0 ? `${plan.free_trial_days}d free` : '-'}
       </div>
       <button onClick={onToggleActive} style={{
         background: plan.active ? 'rgba(48,209,88,0.15)' : 'rgba(148,163,184,0.15)',

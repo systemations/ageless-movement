@@ -69,7 +69,7 @@ export default function Explore() {
     if (!token) return;
     // Skip empty/non-2xx bodies so an interrupted fetch (page navigated away
     // mid-flight, auth rehydrating, etc.) doesn't spam the console with
-    // "Unexpected end of JSON input" — those errors aren't user-facing but
+    // "Unexpected end of JSON input" - those errors aren't user-facing but
     // they'll generate noise once Sentry is wired.
     const safeJson = (r) => (r.ok ? r.json().catch(() => null) : null);
     fetch('/api/explore/content', { headers: { Authorization: `Bearer ${token}` } })

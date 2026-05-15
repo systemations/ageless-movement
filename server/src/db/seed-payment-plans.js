@@ -2,7 +2,7 @@
 // chains. Modeled on Dan's existing FitBudd offer ladder (free lead →
 // $49 entry → weekly/monthly memberships → hidden high-ticket coaching).
 //
-// Idempotent on the unique `slug` column — re-running on every server
+// Idempotent on the unique `slug` column - re-running on every server
 // start only INSERTs rows whose slug isn't already present, so a coach
 // editing a plan in the admin won't get overwritten.
 //

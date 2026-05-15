@@ -128,7 +128,7 @@ function ProtectedRoute({ children }) {
   // finalised gets bounced to /onboarding regardless of which URL they
   // typed. The questionnaire's finalize endpoint flips this flag and
   // refreshProfile() lets them through. Coaches don't onboard.
-  // /onboarding/* sub-routes (Packages step) are exempt — they're part
+  // /onboarding/* sub-routes (Packages step) are exempt - they're part
   // of the same flow, redirecting them would be a loop.
   if (
     user.role === 'client'
@@ -147,10 +147,10 @@ function ProtectedRoute({ children }) {
 }
 
 // Decides what /onboarding renders depending on auth state:
-//   - Coach → bounce to admin/coach default
-//   - Client with onboarding_complete = 1 → bounce to /home (already done)
-//   - Client with onboarding_complete = 0 → run the questionnaire
-//   - Logged-out → run the anonymous fallback (legacy / deep-link)
+//  - Coach → bounce to admin/coach default
+//  - Client with onboarding_complete = 1 → bounce to /home (already done)
+//  - Client with onboarding_complete = 0 → run the questionnaire
+//  - Logged-out → run the anonymous fallback (legacy / deep-link)
 // Centralising this here means the questionnaire itself doesn't have
 // to second-guess whether it should be running.
 function OnboardingGate() {
@@ -196,7 +196,7 @@ function AppRoutes() {
   const location = useLocation();
 
   // Reset scroll on every route change. The actual scroll container is
-  // .page-content (overflow-y: auto in global.css), not the window —
+  // .page-content (overflow-y: auto in global.css), not the window - 
   // pages were keeping the previous page's scroll offset and landing
   // users mid-page after navigating. Window scroll is a belt-and-braces
   // fallback for routes that don't use .page-content.
@@ -237,7 +237,7 @@ function AppRoutes() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 
-        {/* Onboarding — runs AFTER slim signup. Logged-in clients with
+        {/* Onboarding - runs AFTER slim signup. Logged-in clients with
             onboarding_complete = 0 land here (forced by the routing
             guard in ProtectedRoute). Logged-out users still get the
             anonymous funnel as a fallback, but Welcome's "Get Started"
@@ -279,7 +279,7 @@ function AppRoutes() {
 
       {user
         && !location.pathname.startsWith('/admin')
-        // Onboarding is a guided funnel — the bottom nav distracts from
+        // Onboarding is a guided funnel - the bottom nav distracts from
         // the question flow and the tier-pick step. Hide it everywhere
         // under /onboarding and on the auth funnel pages too.
         && !location.pathname.startsWith('/onboarding')

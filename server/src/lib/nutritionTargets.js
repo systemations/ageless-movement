@@ -1,19 +1,19 @@
 // Nutrition target calculator. Mifflin-St Jeor BMR → activity factor →
 // eating-style macro split. Mirrored on the client at
-// client/src/lib/nutritionTargets.js — KEEP IN SYNC. Server runs the calc
+// client/src/lib/nutritionTargets.js - KEEP IN SYNC. Server runs the calc
 // at register time and on profile updates so the client can't tamper with
 // targets by patching its own state.
 //
 // Units convention:
-//   - heights stored as cm, weights stored as kg (always). UI toggles
+//  - heights stored as cm, weights stored as kg (always). UI toggles
 //     ft/in + lbs for display only.
-//   - calorie targets in kcal. Macro targets in grams.
+//  - calorie targets in kcal. Macro targets in grams.
 //
 // Returns null for any field that can't be calculated (missing input).
 // Caller decides whether to fall back to default targets or prompt the
 // client to fill in the gap.
 
-// Activity factors — standard multipliers used across MFP, Cronometer,
+// Activity factors - standard multipliers used across MFP, Cronometer,
 // Lifesum, etc. Names and copy chosen for clarity over jargon.
 export const ACTIVITY_LEVELS = [
   { value: 'sedentary', label: 'Sedentary',           hint: 'Desk job, little or no exercise',                       factor: 1.2   },
@@ -26,16 +26,16 @@ export const ACTIVITY_LEVELS = [
 // Eating style → macro split (protein / fat / carbs as % of total kcal).
 // Splits chosen from the most-cited ranges in clinical and sports-nutrition
 // references. Keto and carnivore deliberately push fat very high; their
-// 5% carb allowance lands at ~25–30 g/day for most adults — i.e. true
+// 5% carb allowance lands at ~25–30 g/day for most adults - i.e. true
 // nutritional ketosis.
 export const EATING_STYLES = [
-  { value: 'balanced',      label: 'Balanced',                hint: 'A bit of everything — no foods restricted',             p: 30, f: 30, c: 40 },
+  { value: 'balanced',      label: 'Balanced',                hint: 'A bit of everything - no foods restricted',             p: 30, f: 30, c: 40 },
   { value: 'high_protein',  label: 'High protein / cutting',  hint: 'Lean focus: more protein, less fat',                    p: 40, f: 25, c: 35 },
   { value: 'mediterranean', label: 'Mediterranean / endurance', hint: 'Higher carbs for runners, cyclists, court sports',    p: 25, f: 30, c: 45 },
-  { value: 'low_carb',      label: 'Low carb',                hint: 'Reduced grains and sugars — not full keto',             p: 35, f: 40, c: 25 },
+  { value: 'low_carb',      label: 'Low carb',                hint: 'Reduced grains and sugars - not full keto',             p: 35, f: 40, c: 25 },
   { value: 'keto',          label: 'Keto',                    hint: 'Very low carb (~25 g/day), high fat',                   p: 25, f: 70, c: 5  },
-  { value: 'carnivore',     label: 'Carnivore',               hint: 'Animal foods only — minimal carbs, high fat + protein', p: 35, f: 60, c: 5  },
-  { value: 'plant_based',   label: 'Plant-based',             hint: 'Vegetarian or vegan — higher carb, moderate fat',       p: 20, f: 30, c: 50 },
+  { value: 'carnivore',     label: 'Carnivore',               hint: 'Animal foods only - minimal carbs, high fat + protein', p: 35, f: 60, c: 5  },
+  { value: 'plant_based',   label: 'Plant-based',             hint: 'Vegetarian or vegan - higher carb, moderate fat',       p: 20, f: 30, c: 50 },
 ];
 
 export const SEX_OPTIONS = [
@@ -77,7 +77,7 @@ export function eatingStyle(value) {
 //   eating_style  : 'balanced' | 'high_protein' | etc.
 //
 // Returns { calorie_target, protein_target, fat_target, carbs_target,
-//          bmr, tdee, style } — all numbers, or null for `bmr` and the
+//          bmr, tdee, style } - all numbers, or null for `bmr` and the
 // downstream targets if BMR couldn't be calculated.
 export function calculateTargets({ sex, weight_kg, height_cm, age, activity_level, eating_style: styleKey }) {
   const bmr = calculateBMR({ sex, weight_kg, height_cm, age });

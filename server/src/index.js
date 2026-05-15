@@ -30,6 +30,7 @@ import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { startReminderJobRunner } from './jobs/reminders.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
 import { seedPaymentPlans } from './db/seed-payment-plans.js';
+import { sweepEmDashes } from './db/migrate-em-dash-sweep.js';
 
 dotenv.config();
 
@@ -38,7 +39,7 @@ const app = express();
 const PORT = config.PORT;
 
 // Trust the first proxy hop (Render's TLS terminator) so req.ip reflects
-// the real client — otherwise rate limiters would key every request to
+// the real client - otherwise rate limiters would key every request to
 // the proxy's IP and effectively do nothing.
 if (config.IS_PROD) app.set('trust proxy', 1);
 
@@ -57,7 +58,7 @@ app.use(helmet({
 // - Dev: allow every origin (Vite dev server runs on a different port and
 //   proxies through; tooling like Postman also needs to work locally).
 // - Prod: restrict to ALLOWED_ORIGINS env (comma-separated). If unset, only
-//   same-origin requests are accepted — the target state once the client is
+//   same-origin requests are accepted - the target state once the client is
 //   served from the same host as the API. Requests without an Origin header
 //   (curl, server-to-server health checks) are always allowed.
 if (config.IS_PROD) {
@@ -80,13 +81,13 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Serve uploaded files
 // Served from server/data/uploads so it sits on the Render persistent
-// disk. URL path stays /uploads/* — clients and stored URLs don't change.
+// disk. URL path stays /uploads/* - clients and stored URLs don't change.
 const uploadsPath = path.join(__dirname, '..', 'data', 'uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 // Global API rate limiter. Caps any single user (or anonymous IP) at
 // 100 requests/minute across the whole API surface. Real human use
-// is nowhere near this — opening Progress fires ~15 calls — so the
+// is nowhere near this - opening Progress fires ~15 calls - so the
 // cap only bites at attack speeds (token scraping, runaway client
 // loops, DoS). Auth routes have their own per-action buckets in
 // routes/auth.js (login 10/15m, register 5/1h, reset 10/15m), so
@@ -100,7 +101,7 @@ const apiLimiter = rateLimit({
   // Key by user.id when we can read one from the JWT, else IP. This
   // means clients behind a shared NAT (office/family/cafe) don't
   // collectively exhaust the bucket. Decode-without-verify is fine
-  // for keying — actual trust still runs in authenticateToken.
+  // for keying - actual trust still runs in authenticateToken.
   keyGenerator: (req, res) => {
     const auth = req.headers.authorization || '';
     if (auth.startsWith('Bearer ')) {
@@ -147,7 +148,7 @@ app.get('/api/health', (req, res) => {
 const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientBuildPath));
 
-// SPA fallback — serve index.html for any non-API route. API 404s get a
+// SPA fallback - serve index.html for any non-API route. API 404s get a
 // real JSON response so callers don't hang.
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
@@ -165,4 +166,5 @@ app.listen(PORT, () => {
   // dev + Render prod). Adds new content without touching coach edits.
   seedAssessmentLessons();
   seedPaymentPlans();
+  sweepEmDashes();
 });

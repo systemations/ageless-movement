@@ -5,7 +5,7 @@
 //   4. Client POSTs the full answer set here on the suggestion screen
 //   5. Server runs allocator + Mifflin, enrols in program, writes
 //      targets, flips onboarding_complete = 1
-//   6. Routing guard releases — they can land on Home / pick a tier
+//   6. Routing guard releases - they can land on Home / pick a tier
 //
 // Only available to authenticated clients (not coaches). The legacy
 // anonymous funnel still piggybacks on /api/auth/register; this route
@@ -20,7 +20,7 @@ import { calculateTargets } from '../lib/nutritionTargets.js';
 
 const router = Router();
 
-// Returns the user's current onboarding status — used by the routing
+// Returns the user's current onboarding status - used by the routing
 // guard so it can decide whether to lock them on /onboarding.
 router.get('/status', authenticateToken, async (req, res) => {
   try {
@@ -42,7 +42,7 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 });
 
-// Live preview — runs the calc without persisting. Used by the
+// Live preview - runs the calc without persisting. Used by the
 // suggestion screen so it can show the matched program + nutrition
 // targets before the client commits via /finalize. Lets us keep the
 // outcome cards always-fresh without bloating /finalize with a return
@@ -66,10 +66,10 @@ router.post('/preview', authenticateToken, async (req, res) => {
   }
 });
 
-// Finalises onboarding — writes everything and flips the gate. Idempotent
+// Finalises onboarding - writes everything and flips the gate. Idempotent
 // on user_id (safe to retry if the client double-taps).
 //
-// Body: { answers, tier_choice? } — tier_choice is one of 'free' |
+// Body: { answers, tier_choice? } - tier_choice is one of 'free' |
 // 'prime' | 'elite'. Free is the default and writes no tier intent.
 // Prime / Elite stamp `tier_requested_id` on the profile and log an
 // activity_log entry so the coach's priority inbox surfaces the upgrade
@@ -80,7 +80,7 @@ router.post('/finalize', authenticateToken, async (req, res) => {
     const answers = req.body?.answers || {};
     const tierChoice = req.body?.tier_choice || 'free';
     if (!answers || typeof answers !== 'object' || Object.keys(answers).length === 0) {
-      // Reject empty / missing answers — the routing gate flips
+      // Reject empty / missing answers - the routing gate flips
       // onboarding_complete=1 here, so accepting empty payloads would
       // strand a client on default 2200 kcal forever (Gillian-style).
       return res.status(400).json({ error: 'answers required' });
@@ -120,7 +120,7 @@ router.post('/finalize', authenticateToken, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Onboarding checklist — 5 first-action tasks shown on Home
+// Onboarding checklist - 5 first-action tasks shown on Home
 // ─────────────────────────────────────────────────────────────────────
 // Each task has an auto-detect rule so we only need a manual mark
 // when there's no derivable signal (community_welcome). The card on
@@ -258,7 +258,7 @@ router.post('/checklist/:key/uncomplete', authenticateToken, (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// My Profile — view + patch onboarding answers
+// My Profile - view + patch onboarding answers
 // ─────────────────────────────────────────────────────────────────────
 // Combines BMR-relevant fields (sex/height/weight/age/activity_level/
 // eating_style) from client_profiles with the rest (goal/sport/
@@ -333,7 +333,7 @@ router.patch('/answers', authenticateToken, async (req, res) => {
         );
       }
     } else {
-      // Lifestyle field — patch onboarding_answers.answers_json + the
+      // Lifestyle field - patch onboarding_answers.answers_json + the
       // first-class column when it exists.
       const ob = pool.query('SELECT * FROM onboarding_answers WHERE user_id = ?', [req.user.id]).rows[0];
       let json = {};

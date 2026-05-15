@@ -8,8 +8,8 @@ import WorkoutBuilder from './WorkoutBuilder';
 // Workout, Nutrition, Gallery, Notes, Calendar, Settings.
 //
 // Rendering modes:
-//   - Standalone (from ClientManager): tabs + full-width content, no rail
-//   - Embedded in CoachWorkspace: `showRail` = right-side client info rail
+//  - Standalone (from ClientManager): tabs + full-width content, no rail
+//  - Embedded in CoachWorkspace: `showRail` = right-side client info rail
 //     always visible; `conversationId` + `clientName` = Chats tab renders
 //     the MessageThread inline in the center pane (FitBudd-style 3-column)
 
@@ -1801,11 +1801,11 @@ function LevelsTab({ clientId }) {
 
 // ═══ Gallery ═══════════════════════════════════════════════════════════
 // ─────────────────────────────────────────────────────────────────────
-// Goals tab — read-only view of the client's active + achieved goals
+// Goals tab - read-only view of the client's active + achieved goals
 // ─────────────────────────────────────────────────────────────────────
 // Active goals first (with progress ring + auto/manual badge), then
 // achieved below. Coach can see the same data the client sees, no
-// edit controls — goals are owned by the client. Future: allow coach
+// edit controls - goals are owned by the client. Future: allow coach
 // to add/edit on the client's behalf if needed.
 const GOAL_CATEGORY_COLORS = {
   Mobility: '#3DFFD2', Flexibility: '#64D2FF', Consistency: '#FF9500',
@@ -2036,7 +2036,7 @@ function GoalsTab({ clientId }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Pain tab — issue-based pain log
+// Pain tab - issue-based pain log
 // ─────────────────────────────────────────────────────────────────────
 // Active pain issues at top with severity sparkline + last entry date.
 // Tap an issue → expanded panel with full trend chart + entry history.
@@ -2227,12 +2227,12 @@ function PainIssueCard({ issue, expanded, detail, onExpand, onResolve, resolving
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Assessments tab — quiz attempts + movement assessment selections
+// Assessments tab - quiz attempts + movement assessment selections
 // ─────────────────────────────────────────────────────────────────────
 // Coach view of the client's assessment history:
-//   - Quiz attempts (Ground Zero / ReBuild / Prime) with score + pass
+//  - Quiz attempts (Ground Zero / ReBuild / Prime) with score + pass
 //     status, ordered most recent first.
-//   - Movement assessment responses (tap-to-pick photo selections)
+//  - Movement assessment responses (tap-to-pick photo selections)
 //     grouped by lesson, showing the latest pick + history per lesson.
 function AssessmentsTab({ clientId }) {
   const { token } = useAuth();

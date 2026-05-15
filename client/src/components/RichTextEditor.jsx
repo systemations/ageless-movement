@@ -18,9 +18,9 @@ import './rich-text.css';
 // dangerouslySetInnerHTML) keeps working without changes.
 //
 // Two modes for the parent:
-//   - Pass `editorRef` (a useRef) and call `editorRef.current.getHTML()`
+//  - Pass `editorRef` (a useRef) and call `editorRef.current.getHTML()`
 //     on save. Lowest-friction migration from the old DOM-ref pattern.
-//   - Pass `onChange(html)` for controlled-input style. Fires on every
+//  - Pass `onChange(html)` for controlled-input style. Fires on every
 //     edit so it's heavier on re-renders; usually you want the ref.
 //
 // Image upload: pass `uploadEndpoint` + `authToken`. Toolbar's image
@@ -31,7 +31,7 @@ export default function RichTextEditor({
   initialValue = '',
   onChange,
   editorRef,
-  placeholder = 'Start writing — press / for blocks, type away for paragraphs.',
+  placeholder = 'Start writing - press / for blocks, type away for paragraphs.',
   uploadEndpoint = '/api/upload',
   authToken,
   minHeight = 220,
@@ -188,7 +188,7 @@ function Toolbar({ editor, uploadEndpoint, authToken }) {
 
       <Sep />
 
-      {/* Color picker — brand-aware palette so coaches can't drift off-brand */}
+      {/* Color picker - brand-aware palette so coaches can't drift off-brand */}
       <div className="rt-dd">
         <button
           type="button"

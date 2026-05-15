@@ -115,7 +115,7 @@ router.post('/me/choose', authenticateToken, (req, res) => {
 
     const isFree = plan.price_cents === 0;
 
-    // Mark onboarding complete — picking a plan is the terminal step of
+    // Mark onboarding complete - picking a plan is the terminal step of
     // the funnel, regardless of whether they came via the questionnaire.
     pool.query(
       'UPDATE client_profiles SET onboarding_complete = 1 WHERE user_id = ?',
@@ -290,7 +290,7 @@ router.delete('/admin/:id', ...requireCoach, (req, res) => {
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
     const existing = pool.query('SELECT id FROM payment_plans WHERE id = ?', [id]).rows[0];
     if (!existing) return res.status(404).json({ error: 'Plan not found' });
-    // Don't hard-delete if there are purchases against it — soft-delete via active=0.
+    // Don't hard-delete if there are purchases against it - soft-delete via active=0.
     const purchaseCount = pool.query('SELECT COUNT(*) as c FROM user_purchases WHERE plan_id = ?', [id]).rows[0].c;
     if (purchaseCount > 0) {
       pool.query('UPDATE payment_plans SET active = 0 WHERE id = ?', [id]);
@@ -364,7 +364,7 @@ router.put('/admin/:id/automations', ...requireCoach, (req, res) => {
   }
 });
 
-// Manual fulfilment — coach marks a client as having paid for a plan.
+// Manual fulfilment - coach marks a client as having paid for a plan.
 // Runs the same processPurchase() that Stripe/IAP webhooks will hit later.
 router.post('/admin/:id/mark-paid', ...requireCoach, requireCoachOwnsClientBody('user_id'), (req, res) => {
   try {

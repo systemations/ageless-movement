@@ -58,7 +58,7 @@ const withRollup = (issue) => {
 // proper push needs either a new coach_alerts table or surfacing red
 // dots/badges on the Pain tab from the entry data itself. The data is
 // already captured so a "filter pain entries severity >= 7" query gets
-// us 90% of the value without any new plumbing — this stub keeps the
+// us 90% of the value without any new plumbing - this stub keeps the
 // call site clean for when we wire something up.
 const notifyCoachIfHighSeverity = (userId, issue, severity) => {
   if (severity < SEVERITY_NOTIFY_THRESHOLD) return;

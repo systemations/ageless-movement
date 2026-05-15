@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-// Pain Log — issue-based tracking. Each pain_issue is a discrete entity
+// Pain Log - issue-based tracking. Each pain_issue is a discrete entity
 // (e.g. "right shoulder impingement") that the client logs severity
 // entries against over time. New issue creation goes through a body-
 // region picker; ongoing entries are just the severity slider on the
@@ -34,7 +34,7 @@ const BODY_REGIONS = [
   { key: 'foot_r',       label: 'Right Foot',          x: 62, y: 94 },
 ];
 
-// Skeleton line connections — each pair is an edge in the joint graph.
+// Skeleton line connections - each pair is an edge in the joint graph.
 // Drawn as glowing lines on top of a faint body shadow, VALD-style.
 const SKELETON_EDGES = [
   ['neck', 'upper_back'],
@@ -200,7 +200,7 @@ export default function PainLogging({ onBack }) {
   );
 }
 
-// Active issue card — title + region + last severity dot + Log button.
+// Active issue card - title + region + last severity dot + Log button.
 function IssueCard({ issue, onTap, onLog }) {
   const sev = issue.latest_entry?.severity;
   const color = severityColor(sev);
@@ -251,7 +251,7 @@ function BodyShadow({ sex }) {
       <ellipse cx="50" cy="14" rx={female ? '7' : '7.5'} ry={female ? '8.5' : '9'} />
       {/* Neck */}
       <rect x={female ? '47' : '46'} y="21" width={female ? '6' : '8'} height="5" />
-      {/* Torso — male V-shape vs female hourglass */}
+      {/* Torso - male V-shape vs female hourglass */}
       {female ? (
         <path d="M33,28 Q30,30 31,40 L34,54 Q32,62 33,72 Q31,82 31,92 Q31,100 36,101 L64,101 Q69,100 69,92 Q69,82 67,72 Q68,62 66,54 L69,40 Q70,30 67,28 L58,26 L42,26 Z" />
       ) : (
@@ -276,7 +276,7 @@ function BodyShadow({ sex }) {
   );
 }
 
-// Skeleton overlay — bright lines + halo glow connecting joint dots.
+// Skeleton overlay - bright lines + halo glow connecting joint dots.
 // BODY_REGIONS y values are 0-100 (percent of container) but the SVG
 // viewBox is 0-200 in Y so the body shadow paths can use anatomical
 // proportions cleanly. We scale region.y * 2 inside the SVG so dot +
@@ -601,7 +601,7 @@ function IssueDetail({ token, issueId, onBack }) {
         </div>
       </div>
 
-      {/* Trend chart — simple bars, oldest → newest left to right. */}
+      {/* Trend chart - simple bars, oldest → newest left to right. */}
       {chronological.length > 0 && (
         <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 }}>

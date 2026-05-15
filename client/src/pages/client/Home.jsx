@@ -40,7 +40,7 @@ export default function Home() {
   const location = useLocation();
   const { favourites } = useFavourites() || { favourites: [] };
   const [dashboard, setDashboard] = useState(homeCache.dashboard);
-  // Onboarding checklist status — controls whether Today's Tasks hides.
+  // Onboarding checklist status - controls whether Today's Tasks hides.
   // Today's Tasks only appears once the 5 first-action tasks are done.
   const [onboardingDone, setOnboardingDone] = useState(false);
   const [tasks, setTasks] = useState([]);
@@ -100,7 +100,7 @@ export default function Home() {
     } catch {}
   };
 
-  // BMR recovery — silent self-heal for users whose questionnaire never
+  // BMR recovery - silent self-heal for users whose questionnaire never
   // landed server-side (e.g. closed the app between the last question
   // and the SuggestionScreen / Packages step pre-2026-04-29). If profile
   // is loaded with no biology fields AND we still have their answers in
@@ -128,7 +128,7 @@ export default function Home() {
       if (!r.ok) return;
       try { localStorage.removeItem('am_onboarding_answers'); } catch {}
       refreshProfile?.();
-    }).catch(() => { /* silent — user can still use the prompt card */ });
+    }).catch(() => { /* silent - user can still use the prompt card */ });
   }, [authProfile?.user_id, token]);
 
   // Lightweight poll of the onboarding checklist so Today's Tasks
@@ -551,7 +551,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Onboarding checklist — sits in the prominent Daily Tasks slot
+      {/* Onboarding checklist - sits in the prominent Daily Tasks slot
           for new clients. Auto-hides as soon as all 5 first-actions
           are complete so it doesn't crowd Home for established users. */}
       <OnboardingChecklistCard token={token} />
@@ -1364,11 +1364,11 @@ export default function Home() {
       </div>
       </>}
       {/* end of {!hasEnhancedToday} block. Nutrition cards + meal plan
-          below always render — they were previously buried inside the
+          below always render - they were previously buried inside the
           enhanced-today gate which hid them for any client auto-enrolled
           in a program (i.e. every new signup). */}
 
-      {/* Nutrition setup prompt — empty-state CTA shown when the client
+      {/* Nutrition setup prompt - empty-state CTA shown when the client
           hasn't filled in the BMR inputs yet. Once they tap through and
           save, this card disappears and the calculated targets show in
           the Targets section / meal plan card. Auto-hides if the data
@@ -1378,10 +1378,10 @@ export default function Home() {
       {/* Daily Targets card was here. Removed 2026-04-29: it duplicated
           EnhancedToday's "Targets" card (both showed the same BMR-
           derived kcal + macros). The Targets card is now tappable to
-          navigate to /profile?section=nutrition for editing — the
+          navigate to /profile?section=nutrition for editing - the
           discoverability affordance lives there instead. */}
 
-      {/* Today's Meal Plan strip removed 2026-04-29 — the plan title
+      {/* Today's Meal Plan strip removed 2026-04-29 - the plan title
           + schedule + week/day now appear inline on the Targets card
           via the mealPlan prop, and the Log Meals button on that card
           handles the tap-through. Single source of truth for the
@@ -1392,7 +1392,7 @@ export default function Home() {
         <h2>Activity</h2>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
-        {/* Water — hidden when client toggles Water Intake off in
+        {/* Water - hidden when client toggles Water Intake off in
             Profile -> Reminders. Steps stays on its own and stretches
             to full width via flex when water is gone. */}
         {prefs.water_intake !== false && (
@@ -1695,7 +1695,7 @@ function OnboardingChecklistCard({ token }) {
 // Nutrition setup prompt
 // ─────────────────────────────────────────────────────────────────────
 // Empty-state CTA for clients who haven't filled in the BMR inputs.
-// Auto-hides once any of sex/height_cm/weight_kg is missing — i.e. as
+// Auto-hides once any of sex/height_cm/weight_kg is missing - i.e. as
 // soon as the modal saves a complete set, the card disappears on the
 // next dashboard fetch.
 //
@@ -1705,8 +1705,8 @@ function OnboardingChecklistCard({ token }) {
 //
 // New signups going through onboarding already fill these in, so this
 // card only fires for:
-//   - Clients who signed up before the BMR feature shipped
-//   - Anyone who skipped the questions for some reason
+//  - Clients who signed up before the BMR feature shipped
+//  - Anyone who skipped the questions for some reason
 //
 // Tapping the CTA opens a modal with all 4 questions on one screen.
 // 30-second flow as Dan asked for.
@@ -1763,7 +1763,7 @@ function NutritionSetupPromptCard({ profile, token, onComplete }) {
 
 // Modal with the 4 BMR-input questions on a single scrollable screen.
 // Live preview at the bottom shows the calculated daily target as the
-// user answers — same calc the server runs on save, so the user sees
+// user answers - same calc the server runs on save, so the user sees
 // what they're committing to before they hit Calculate.
 function NutritionSetupModal({ profile, token, onClose, onSaved }) {
   const [form, setForm] = useState({

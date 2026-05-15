@@ -1,4 +1,4 @@
-// Goals — hybrid manual/auto progress tracking.
+// Goals - hybrid manual/auto progress tracking.
 //
 // metric_type='manual': user updates progress directly via a slider on
 // the goal card. progress column is the source of truth.
@@ -7,7 +7,7 @@
 // workout_logs (count of completed sessions in the last 7 days /
 // target_value × 100, capped 0-100). Updating manually is blocked.
 //
-// Add more auto types by extending computeProgress() — same pattern.
+// Add more auto types by extending computeProgress() - same pattern.
 
 import { Router } from 'express';
 import pool from '../db/pool.js';
@@ -64,7 +64,7 @@ const computeProgress = (goal) => {
     return cap(streak / target);
   }
 
-  // Workouts total — lifetime count toward a milestone (e.g. 100 workouts).
+  // Workouts total - lifetime count toward a milestone (e.g. 100 workouts).
   if (goal.metric_type === 'workouts_total') {
     if (!target || target <= 0) return 0;
     const count = pool.query(
@@ -75,7 +75,7 @@ const computeProgress = (goal) => {
     return cap(count / target);
   }
 
-  // Course completion — % of lessons completed in the course whose id
+  // Course completion - % of lessons completed in the course whose id
   // is stored as target_value. Pulls live from user_lesson_completions
   // so it stays in sync as the client ticks lessons off.
   if (goal.metric_type === 'course_completion') {
@@ -168,7 +168,7 @@ router.post('/', authenticateToken, (req, res) => {
   }
 });
 
-// Update progress on a manual goal. Auto-typed goals reject — their
+// Update progress on a manual goal. Auto-typed goals reject - their
 // progress is computed from real data.
 router.post('/:id/progress', authenticateToken, (req, res) => {
   try {
@@ -226,7 +226,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Coach view — read-only across all of a client's goals.
+// Coach view - read-only across all of a client's goals.
 router.get('/clients/:userId', authenticateToken, requireRole('coach'), requireCoachOwnsClient('userId'), (req, res) => {
   try {
     const rows = pool.query(

@@ -80,7 +80,7 @@ function ensureClientTeamInboxes(currentUserId) {
   }
 
   // If a brand-new coach just signed up, also make sure existing DMs
-  // (private side-threads) remain intact — we don't touch those here.
+  // (private side-threads) remain intact - we don't touch those here.
   void currentUserId;
 }
 
@@ -124,7 +124,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
     // - invite_only: only explicit members (already enforced by the JOIN above).
     // - active_clients: hide if the user isn't an active client (or coach).
     // - all_clients: visible to everyone who has a client_profile.
-    // Also hide empty coach→client DMs on the client side — a coach only
+    // Also hide empty coach→client DMs on the client side - a coach only
     // surfaces in Direct Messages once they've actually written.
     convos = convos.filter(c => {
       if (c.client_id) return true;
@@ -171,7 +171,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
         return { ...c, scope: 'team', client, unread_count: unread, starred };
       }
 
-      // Direct (2-person) — attach other user with resolved photo
+      // Direct (2-person) - attach other user with resolved photo
       if (c.type === 'direct') {
         const other = pool.query(`
           SELECT u.id, u.name, u.role,
@@ -368,7 +368,7 @@ router.post('/conversations/:id/unread', authenticateToken, (req, res) => {
   }
 });
 
-// Mark unread ON BEHALF OF another coach — so Dan can flag a client reply
+// Mark unread ON BEHALF OF another coach - so Dan can flag a client reply
 // for Joonas to pick up. Coach-only. Target must be a coach and a member
 // of the conversation.
 router.post('/conversations/:id/unread-for', authenticateToken, (req, res) => {
@@ -408,7 +408,7 @@ router.post('/conversations/:id/unread-for', authenticateToken, (req, res) => {
   }
 });
 
-// Toggle star on a conversation — per-coach
+// Toggle star on a conversation - per-coach
 router.post('/conversations/:id/star', authenticateToken, (req, res) => {
   try {
     const member = pool.query('SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [req.params.id, req.user.id]);
@@ -478,9 +478,9 @@ router.post('/conversations/direct', authenticateToken, async (req, res) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────
-// Community groups — coach admin CRUD (Phase 2)
+// Community groups - coach admin CRUD (Phase 2)
 //
-// `type='group' AND client_id IS NULL` is the filter for community groups —
+// `type='group' AND client_id IS NULL` is the filter for community groups - 
 // team inbox conversations are ALSO type='group' but always carry a client_id,
 // so exclude them from every query in this section.
 // ────────────────────────────────────────────────────────────────────────

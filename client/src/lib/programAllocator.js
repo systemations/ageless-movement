@@ -67,8 +67,8 @@ export function allocateProgram(answers = {}) {
   // of who actually signs up before we codify the real mapping.
   //
   // Two safety nets still route to coach review rather than auto-enrol:
-  //   - Anyone who flagged an injury → coach reviews before prescribing
-  //   - Seniors (75+) → coach assigns a suitable gentle-track plan
+  //  - Anyone who flagged an injury → coach reviews before prescribing
+  //  - Seniors (75+) → coach assigns a suitable gentle-track plan
   if (injured) {
     return reviewResult('You mentioned some areas we should look at - a coach will review your answers and set you up personally within 24 hours.');
   }

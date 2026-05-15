@@ -3,7 +3,7 @@ import pool from '../db/pool.js';
 import { config } from '../lib/config.js';
 
 // In-memory map of userId -> last last_active_at bump timestamp. Prevents
-// us from hitting the DB on every single API call — we only update when
+// us from hitting the DB on every single API call - we only update when
 // the user has been quiet for 60s+.
 const lastActiveBump = new Map();
 const ACTIVE_DEBOUNCE_MS = 60_000;
@@ -28,7 +28,7 @@ export const authenticateToken = (req, res, next) => {
 
   try {
     // Pin the algorithm explicitly. jsonwebtoken >=9 blocks `none` by
-    // default, but callers that rely on defaults have been bitten before —
+    // default, but callers that rely on defaults have been bitten before - 
     // an algorithm whitelist is defence-in-depth and costs nothing.
     const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = decoded;
@@ -48,7 +48,7 @@ export const requireRole = (role) => (req, res, next) => {
 
 // Middleware factory: verify the caller is the coach assigned to the client
 // identified by `req.params[paramName]`. If the caller is an admin user (a
-// coach flagged as the sole-admin instance) the check passes — useful while
+// coach flagged as the sole-admin instance) the check passes - useful while
 // Dan is the only coach. Once multi-coach, this blocks coach A from reading
 // coach B's clients via a path param.
 //
@@ -90,7 +90,7 @@ export const requireCoachOwnsClient = (paramName = 'id') => (req, res, next) => 
 };
 
 // Body-param variant. Used when the target client is passed in the request
-// body rather than the URL — e.g. /schedules POST where body={ user_id }.
+// body rather than the URL - e.g. /schedules POST where body={ user_id }.
 export const requireCoachOwnsClientBody = (bodyKey = 'user_id') => (req, res, next) => {
   try {
     if (checkCoachOwnsClient(req, res, Number(req.body?.[bodyKey]))) next();

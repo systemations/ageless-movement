@@ -1,9 +1,9 @@
-// Mirror of server/src/lib/nutritionTargets.js — KEEP IN SYNC.
+// Mirror of server/src/lib/nutritionTargets.js - KEEP IN SYNC.
 //
 // Used on the client for:
-//   - Onboarding live preview (so the user sees their target form as
+//  - Onboarding live preview (so the user sees their target form as
 //     they answer height/weight/etc questions)
-//   - Profile page editable BMR card (recompute on change without a
+//  - Profile page editable BMR card (recompute on change without a
 //     round-trip until they commit)
 //
 // The server runs the same calc on register + profile updates so a
@@ -18,13 +18,13 @@ export const ACTIVITY_LEVELS = [
 ];
 
 export const EATING_STYLES = [
-  { value: 'balanced',      label: 'Balanced',                hint: 'A bit of everything — no foods restricted',             p: 30, f: 30, c: 40 },
+  { value: 'balanced',      label: 'Balanced',                hint: 'A bit of everything - no foods restricted',             p: 30, f: 30, c: 40 },
   { value: 'high_protein',  label: 'High protein / cutting',  hint: 'Lean focus: more protein, less fat',                    p: 40, f: 25, c: 35 },
   { value: 'mediterranean', label: 'Mediterranean / endurance', hint: 'Higher carbs for runners, cyclists, court sports',    p: 25, f: 30, c: 45 },
-  { value: 'low_carb',      label: 'Low carb',                hint: 'Reduced grains and sugars — not full keto',             p: 35, f: 40, c: 25 },
+  { value: 'low_carb',      label: 'Low carb',                hint: 'Reduced grains and sugars - not full keto',             p: 35, f: 40, c: 25 },
   { value: 'keto',          label: 'Keto',                    hint: 'Very low carb (~25 g/day), high fat',                   p: 25, f: 70, c: 5  },
-  { value: 'carnivore',     label: 'Carnivore',               hint: 'Animal foods only — minimal carbs, high fat + protein', p: 35, f: 60, c: 5  },
-  { value: 'plant_based',   label: 'Plant-based',             hint: 'Vegetarian or vegan — higher carb, moderate fat',       p: 20, f: 30, c: 50 },
+  { value: 'carnivore',     label: 'Carnivore',               hint: 'Animal foods only - minimal carbs, high fat + protein', p: 35, f: 60, c: 5  },
+  { value: 'plant_based',   label: 'Plant-based',             hint: 'Vegetarian or vegan - higher carb, moderate fat',       p: 20, f: 30, c: 50 },
 ];
 
 export const SEX_OPTIONS = [

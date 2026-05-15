@@ -1,5 +1,5 @@
 // Centralised server config. Loads from process.env and enforces that
-// security-critical values are set in production — so a missed Render env
+// security-critical values are set in production - so a missed Render env
 // var crashes the boot instead of silently running with a dev default.
 //
 // dotenv is loaded *here* (not just in index.js) because ESM imports hoist
@@ -12,7 +12,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = NODE_ENV === 'production';
 
 // The old baked-in default. Anyone still using this in prod is shipping
-// a known-bad secret — treat it as if the env var is unset.
+// a known-bad secret - treat it as if the env var is unset.
 const LEGACY_DEV_SECRET = 'ageless-movement-jwt-secret-change-in-production';
 
 function loadJwtSecret() {
@@ -20,14 +20,14 @@ function loadJwtSecret() {
   const isMissing = !fromEnv || fromEnv === LEGACY_DEV_SECRET;
   if (isMissing && IS_PROD) {
     // Refuse to boot. A running server with a known secret is worse than
-    // no server at all — anyone with the secret can forge tokens.
+    // no server at all - anyone with the secret can forge tokens.
     throw new Error(
       'JWT_SECRET is missing or uses the legacy dev default. Set a long random value in the production environment before launching.',
     );
   }
   if (isMissing) {
     // Dev: generate an ephemeral secret so the server still boots. Every
-    // restart invalidates existing sessions — annoying but safe.
+    // restart invalidates existing sessions - annoying but safe.
     const ephemeral = crypto.randomBytes(48).toString('hex');
     console.warn('[config] JWT_SECRET not set; generated ephemeral dev secret. Set JWT_SECRET in .env for stable sessions.');
     return ephemeral;

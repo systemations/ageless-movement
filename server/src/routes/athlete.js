@@ -342,7 +342,7 @@ router.get('/today', authenticateToken, (req, res) => {
               }
             }
           }
-        } catch (e) { /* fall through — Targets card just hides */ }
+        } catch (e) { /* fall through - Targets card just hides */ }
       }
     }
 
@@ -749,7 +749,7 @@ router.put('/preferences', authenticateToken, (req, res) => {
   }
 });
 
-// App feedback — client submits rating + message. Coaches list recent
+// App feedback - client submits rating + message. Coaches list recent
 // entries on the More screen so Dan can see reactions without a DB poke.
 router.post('/feedback', authenticateToken, (req, res) => {
   try {

@@ -15,13 +15,13 @@ import {
 
 // Onboarding questionnaire. Renders in two modes:
 //
-//   - Logged-in (slim signup flow, default): user already has an account
+//  - Logged-in (slim signup flow, default): user already has an account
 //     with onboarding_complete = 0. The routing guard in App.jsx forces
 //     them here. Submitting the suggestion screen calls
 //     /api/onboarding/finalize which writes everything and flips the
 //     gate; refreshProfile() lets them through to /home.
 //
-//   - Logged-out (legacy / deep-link): the answers go to localStorage
+//  - Logged-out (legacy / deep-link): the answers go to localStorage
 //     and pass to /register as part of the signup payload, which calls
 //     the same finalize helper server-side. Should rarely fire now that
 //     Welcome's "Get Started" CTA points at /register first.
@@ -33,12 +33,12 @@ const STORAGE_KEY = 'am_onboarding_answers';
 
 // ── Questions ───────────────────────────────────────────────────────────
 // Structure:
-//   id        - key on the answers object
-//   title     - shown to user
-//   subtitle  - optional small copy
-//   type      - 'age' | 'single' | 'multi' | 'body_metrics'
-//   options   - array of { value, label, hint? }
-//   optional  - true for questions that can proceed with no selections
+//   id       - key on the answers object
+//   title    - shown to user
+//   subtitle - optional small copy
+//   type     - 'age' | 'single' | 'multi' | 'body_metrics'
+//   options  - array of { value, label, hint? }
+//   optional - true for questions that can proceed with no selections
 
 const QUESTIONS = [
   {
@@ -271,7 +271,7 @@ export default function OnboardingQuestionnaire() {
           )}
         </div>
 
-        {/* Intro framing — shows once at the top of Q1 so the user knows
+        {/* Intro framing - shows once at the top of Q1 so the user knows
             why each input matters. After Q1 we drop it to keep the
             screen focused on the actual question. */}
         {step === 0 && (
@@ -280,7 +280,7 @@ export default function OnboardingQuestionnaire() {
             background: 'rgba(133,255,186,0.06)', border: '1px solid rgba(133,255,186,0.18)',
             fontSize: 12, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5,
           }}>
-            <strong style={{ color: 'var(--accent-mint)' }}>Why we ask:</strong> these answers match you to a starting program and set up your daily kcal + macro targets. Takes about 2 minutes — your coach can adjust anything later.
+            <strong style={{ color: 'var(--accent-mint)' }}>Why we ask:</strong> these answers match you to a starting program and set up your daily kcal + macro targets. Takes about 2 minutes - your coach can adjust anything later.
           </div>
         )}
 
@@ -397,7 +397,7 @@ function AgeInput({ value, onChange }) {
 
 function BodyMetricsInput({ heightCm, weightKg, onChange }) {
   // Stored values in answers stay metric (cm + kg). The toggle only flips
-  // what the user types — we convert on the fly. Default is metric since
+  // what the user types - we convert on the fly. Default is metric since
   // Dan is Australia-based; clients can flip to imperial per session.
   const [heightUnit, setHeightUnit] = useState('cm');
   const [weightUnit, setWeightUnit] = useState('kg');
@@ -523,11 +523,11 @@ function UnitToggle({ options, value, onChange }) {
   );
 }
 
-// SuggestionScreen — outcome of the questionnaire. Shows three cards:
-//   1. The matched program (Free tier — what they get out of the box)
-//   2. Group subscription (Prime — opens an upgrade-intent chat thread
+// SuggestionScreen - outcome of the questionnaire. Shows three cards:
+//   1. The matched program (Free tier - what they get out of the box)
+//   2. Group subscription (Prime - opens an upgrade-intent chat thread
 //      with their coach until Stripe is wired)
-//   3. 1:1 coaching (Elite — opens the handsdan.com booking page)
+//   3. 1:1 coaching (Elite - opens the handsdan.com booking page)
 //
 // Each card lists the actual feature breakdown from the tiers table so
 // users can compare without leaving the screen. Picking any of the
@@ -557,7 +557,7 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
 
   // Posts to the finalize endpoint (logged-in) or routes to /register
   // (logged-out legacy path). On success, runs the post-finalize action
-  // for the picked CTA — open chat / booking link / just go home.
+  // for the picked CTA - open chat / booking link / just go home.
   const finalizeAndAct = async (intent) => {
     setError(null);
     if (!isLoggedIn) {
@@ -581,12 +581,12 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
 
       if (intent === 'elite' && eliteTier?.cta_url) {
         // Open the booking page in a new tab so they can come back to
-        // the app afterwards. Then route them home in this tab — the
+        // the app afterwards. Then route them home in this tab - the
         // server already logged the intent so the coach knows.
         window.open(eliteTier.cta_url, '_blank', 'noopener');
         navigate('/home?intent=elite');
       } else if (intent === 'prime') {
-        // Stripe isn't wired yet — server stamped tier_requested_id +
+        // Stripe isn't wired yet - server stamped tier_requested_id +
         // logged the activity, so the coach will pick this up in the
         // priority inbox. Drop the user into Messages with the team
         // inbox preselected so they can chat about payment details.
@@ -627,7 +627,7 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
                 <div style={{ fontSize: 26, marginBottom: 6 }}>👋</div>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>Coach review within 24 hours</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
-                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan — you'll get a notification when it's ready.
+                  Your answers go straight to Dan or Joonas. They'll review and set you up with the right plan - you'll get a notification when it's ready.
                 </div>
               </div>
             </>
@@ -660,7 +660,7 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
               />
             )}
 
-            {/* Prime — group subscription */}
+            {/* Prime - group subscription */}
             <TierCard
               badge="MOST POPULAR"
               badgeColor="var(--accent)"
@@ -674,7 +674,7 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
               loading={submitting === 'prime'}
             />
 
-            {/* Elite — 1:1 (no price per Dan) */}
+            {/* Elite - 1:1 (no price per Dan) */}
             <TierCard
               badge="1:1"
               badgeColor="var(--accent-mint)"
@@ -693,7 +693,7 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
           )}
 
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 18, lineHeight: 1.5 }}>
-            Not sure? Pick free for now — you can upgrade any time from your profile.
+            Not sure? Pick free for now - you can upgrade any time from your profile.
           </p>
         </div>
       </div>

@@ -1,14 +1,14 @@
 // Shared onboarding finalisation logic. Used by:
-//   - Legacy /api/auth/register (anonymous funnel: posts answers + creds
+//  - Legacy /api/auth/register (anonymous funnel: posts answers + creds
 //     in one shot, server runs this immediately after creating the user)
-//   - New /api/onboarding/finalize (slim register flow: user is already
+//  - New /api/onboarding/finalize (slim register flow: user is already
 //     logged in, posts the answers when they hit the suggestion screen)
 //
 // Persists onboarding answers, computes targets, enrols in matched
 // program, flips onboarding_complete = 1. Returns { allocation, targets }
 // so the caller can render the outcome screen.
 //
-// Server-side execution is deliberate — clients can't tamper their way
+// Server-side execution is deliberate - clients can't tamper their way
 // into a tier or program by patching the request, because the allocator
 // + Mifflin re-run from the server-trusted answer fields.
 
@@ -79,7 +79,7 @@ export function finalizeOnboarding(userId, answers) {
   pool.query(`UPDATE client_profiles SET ${sets.join(', ')} WHERE user_id = ?`, vals);
 
   // 5. Run allocator and auto-enrol in the matched program. Review
-  //    cases (injured / 75+ / etc.) skip enrolment — the coach will
+  //    cases (injured / 75+ / etc.) skip enrolment - the coach will
   //    pick on their review pass.
   const allocation = allocateProgram(answers);
   if (allocation.program_id) {

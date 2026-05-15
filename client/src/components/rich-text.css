@@ -1,8 +1,8 @@
 /* Rich-text editor + rendered output styles.
  *
  * Two consumers:
- *   - .rt-shell: the TipTap-based RichTextEditor in admin authoring
- *   - .lesson-description: the read-only rendered HTML in CourseDetail
+ *  - .rt-shell: the TipTap-based RichTextEditor in admin authoring
+ *  - .lesson-description: the read-only rendered HTML in CourseDetail
  *
  * Same typography rules apply to both so what coaches see while writing
  * matches exactly what clients see, no surprise re-flows.
@@ -283,7 +283,7 @@
   text-underline-offset: 3px;
 }
 
-/* Images — full width by default. No frame: PNGs with transparent
+/* Images - full width by default. No frame: PNGs with transparent
    backgrounds (e.g. coach headshots in orange rings) carry their own
    shape, and a generic border just fights the artwork. */
 .rt-content-wrap .ProseMirror img,

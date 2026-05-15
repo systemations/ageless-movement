@@ -5,7 +5,7 @@
 //
 // Idempotent: only writes a description if the lesson currently has
 // none (or only the placeholder length we know about). Safe to run on
-// every server start — a coach editing a lesson via the admin TipTap
+// every server start - a coach editing a lesson via the admin TipTap
 // editor won't be overwritten because the next start sees a populated
 // description and skips the lesson.
 
@@ -28,7 +28,7 @@ const img = (file, alt) =>
 const captureBaseline = `<p>Capture a side or front photo of yourself in this end position. Save it to a photo album on your phone called "mobility progress" - create the album first if you don't have one. We'll compare against this in 4 weeks.</p>`;
 
 // Each entry: id, expected title, html. The seeder asserts the title
-// matches before writing — so if a coach renames a lesson the seeder
+// matches before writing - so if a coach renames a lesson the seeder
 // won't overwrite the wrong record.
 const LESSONS = [
   {
@@ -91,7 +91,7 @@ ${captureBaseline}`,
   },
   {
     id: 21, title: '90/90',
-    html: `<p>The 90/90 position assesses internal rotation in your front hip + external rotation in your back hip simultaneously. Test both sides — they're often very different.</p>
+    html: `<p>The 90/90 position assesses internal rotation in your front hip + external rotation in your back hip simultaneously. Test both sides - they're often very different.</p>
 <ol><li>Sit with front leg bent at 90 degrees and back leg bent at 90 degrees.</li><li>Maintain an upright posture; switch sides.</li></ol>
 ${img('ninety-ninety-1.webp', '90/90 right side')}
 ${img('ninety-ninety-2.webp', '90/90 left side')}
@@ -109,7 +109,7 @@ ${captureBaseline}`,
   {
     id: 23, title: 'Straddle Pancake',
     html: `<p>Both legs out wide at the same time. Tests adductor length + the spine's ability to fold forward in a wide stance.</p>
-<ol><li>Sit with legs out wide, knees pointing up.</li><li>Keep your spine long and fold forward from the hips.</li><li>Don't round the upper back to fake range — sit tall and only go where the hips allow.</li></ol>
+<ol><li>Sit with legs out wide, knees pointing up.</li><li>Keep your spine long and fold forward from the hips.</li><li>Don't round the upper back to fake range - sit tall and only go where the hips allow.</li></ol>
 ${img('straddle-pancake-1.webp', 'Straddle pancake position 1')}
 ${img('straddle-pancake-2.webp', 'Straddle pancake position 2')}
 ${img('straddle-pancake-3.webp', 'Straddle pancake position 3')}
@@ -118,8 +118,8 @@ ${captureBaseline}`,
   },
   {
     id: 24, title: 'Shoulder Flexion',
-    html: `<p>How far overhead you can reach with shoulders working properly (not faking it with the lower back). Lie on the floor with your lower back pressed flat — anything you reach past that is real shoulder flexion.</p>
-<ol><li>Lie flat on the floor with knees bent, lower back pressed into the floor.</li><li>Reach both arms overhead, keeping arms straight and palms facing each other.</li><li>Stop where the lower back wants to lift off the floor — don't let it.</li></ol>
+    html: `<p>How far overhead you can reach with shoulders working properly (not faking it with the lower back). Lie on the floor with your lower back pressed flat - anything you reach past that is real shoulder flexion.</p>
+<ol><li>Lie flat on the floor with knees bent, lower back pressed into the floor.</li><li>Reach both arms overhead, keeping arms straight and palms facing each other.</li><li>Stop where the lower back wants to lift off the floor - don't let it.</li></ol>
 ${img('shoulder-flexion-1.webp', 'Shoulder flexion position 1')}
 ${img('shoulder-flexion-2.webp', 'Shoulder flexion position 2')}
 ${img('shoulder-flexion-3.webp', 'Shoulder flexion position 3')}
@@ -152,7 +152,7 @@ ${captureBaseline}`,
   },
   // STEP 3 quiz intros. Render above the questions so the page isn't
   // blank before the user starts answering. Coach can replace via the
-  // admin TipTap editor — the seeder skips any lesson with a populated
+  // admin TipTap editor - the seeder skips any lesson with a populated
   // description, so edits stick.
   {
     id: 29, title: 'AMS | Ground Zero™',
@@ -166,7 +166,7 @@ ${captureBaseline}`,
   },
   {
     id: 31, title: 'AMS | Prime™',
-    html: `<p>The final tier. Pass this and you've earned a spot on Prime — full intensity, full range. Take your time on each question and answer for where your body is right now, not where you want it to be.</p>`,
+    html: `<p>The final tier. Pass this and you've earned a spot on Prime - full intensity, full range. Take your time on each question and answer for where your body is right now, not where you want it to be.</p>`,
   },
 ];
 
@@ -177,7 +177,7 @@ ${captureBaseline}`,
 // renamed/replaced, do nothing rather than overwrite the wrong row).
 export function seedAssessmentLessons() {
   // Idempotent copy migration: the original "save it somewhere named
-  // 'mobility progress'" line was confusing — clients didn't know
+  // 'mobility progress'" line was confusing - clients didn't know
   // where "somewhere" was. New copy points them at a named phone
   // album with explicit "create one if you don't have it" guidance.
   // Only fires when the old wording is found, so it's safe on every
@@ -208,7 +208,7 @@ export function seedAssessmentLessons() {
   }
   // Idempotent cleanup: lesson id 28 ("What do I do Now?") was the
   // original placeholder wrap-up at the end of the Shoulders sub-
-  // module. Dan dropped it 2026-04-28 — Shoulder Internal Rotation is
+  // module. Dan dropped it 2026-04-28 - Shoulder Internal Rotation is
   // a clean stopping point. We delete by both id AND title so we
   // never accidentally remove a re-used row. ON DELETE CASCADE on
   // related response tables keeps things clean.

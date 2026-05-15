@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = Router();
 
 // ─── Default weekday convention ─────────────────────────────────────────
-// Programs carry a raw `day_number` on each workout — in older seeds that's
+// Programs carry a raw `day_number` on each workout - in older seeds that's
 // literally "day N after enrollment starts", in newer seeds it matches
 // calendar weekdays. Rather than trust the raw value we normalise at
 // display time: sort a week's workouts by day_number, assign session
@@ -73,8 +73,8 @@ function computeSessionDate(startedAt, weekNumber, sessionIndex, workoutsPerWeek
 //      map onto calendar dates starting from `started_at`. Week N day M
 //      lands on `started_at + (N-1)*7 + (M-1)` days.
 //      Respects workout_reschedules:
-//        - permanent overrides shift the day_number for all future weeks
-//        - one-off overrides move a specific date's workout to a new date
+//       - permanent overrides shift the day_number for all future weeks
+//       - one-off overrides move a specific date's workout to a new date
 //   2. user_scheduled_workouts -- explicit additive entries the client
 //      added on top. These don't override the program; both show up together.
 //
@@ -561,7 +561,7 @@ router.post('/suppress', authenticateToken, (req, res) => {
   }
 });
 
-// DELETE /api/schedule/suppress?workout_id=X&date=Y — undo a suppression
+// DELETE /api/schedule/suppress?workout_id=X&date=Y - undo a suppression
 router.delete('/suppress', authenticateToken, (req, res) => {
   try {
     const { workout_id, date } = req.query;

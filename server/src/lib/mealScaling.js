@@ -6,12 +6,12 @@
 // plan's macro rollup is recomputed from the scaled servings.
 //
 // Scaling rules:
-//   - scale_factor = client_target / plan.target_calories
-//   - clamped to [0.6, 2.0] to avoid silly suggestions (e.g. 4× a snack)
-//   - snacks stay at 1× — we bump main meals instead of multiplying trail mix
-//   - if plan.target_calories is 0 or null we return the plan unchanged
+//  - scale_factor = client_target / plan.target_calories
+//  - clamped to [0.6, 2.0] to avoid silly suggestions (e.g. 4× a snack)
+//  - snacks stay at 1× - we bump main meals instead of multiplying trail mix
+//  - if plan.target_calories is 0 or null we return the plan unchanged
 //
-// This is the single source of truth — routes and seeders should both use it
+// This is the single source of truth - routes and seeders should both use it
 // so the same plan surfaces to clients with wildly different calorie needs
 // without needing N copies in the DB.
 
@@ -62,10 +62,10 @@ export function computeScaleFactor(plan, clientTargetCalories) {
 
 /**
  * Scale a loaded plan for a specific client calorie target. Returns a new
- * object — does not mutate the input. Each item gets `scaled_serving_qty`,
+ * object - does not mutate the input. Each item gets `scaled_serving_qty`,
  * `scaled_calories`, `scaled_protein`, `scaled_fat`, `scaled_carbs`.
  *
- * Snacks (meal_type = 'Snack') are NOT scaled — bumping snack portions feels
+ * Snacks (meal_type = 'Snack') are NOT scaled - bumping snack portions feels
  * weird. The factor is applied to Breakfast/Lunch/Dinner only.
  *
  * @param {{plan, items}} loaded

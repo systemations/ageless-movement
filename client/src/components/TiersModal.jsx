@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 // Shown when a client taps a locked Explore item. Renders a side-by-side
 // comparison of every tier (price, description, feature checklist) with
 // the current tier marked, and a CTA button per tier:
-//   - message_coach → routes to the team inbox
-//   - booking_link  → opens cta_url in a new tab (external booking page)
+//  - message_coach → routes to the team inbox
+//  - booking_link  → opens cta_url in a new tab (external booking page)
 // Context: {itemTitle, requiredTierName} so the modal opens with a framed
 // "Unlock {title}" header.
 

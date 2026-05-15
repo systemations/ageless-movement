@@ -199,7 +199,7 @@ router.get('/programs/:id', authenticateToken, async (req, res) => {
     const program = pool.query('SELECT p.*, t.level as tier_level FROM programs p LEFT JOIN tiers t ON t.id = p.tier_id WHERE p.id = ?', [req.params.id]);
     if (program.rows.length === 0) return res.status(404).json({ error: 'Program not found' });
 
-    // Check if user is enrolled — enrolment bypasses the tier guard so
+    // Check if user is enrolled - enrolment bypasses the tier guard so
     // clients don't lose access to something already assigned to them.
     const enrollment = pool.query('SELECT * FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, req.params.id]);
     if (enrollment.rows.length === 0) {
@@ -254,7 +254,7 @@ router.post('/programs/:id/enroll', authenticateToken, async (req, res) => {
       ORDER BY cp.started_at DESC LIMIT 1
     `, [req.user.id]);
 
-    // Also consider training_blocks — on Home these drive the phase banner
+    // Also consider training_blocks - on Home these drive the phase banner
     // and today's sessions, so a new enrollment must replace them too.
     const existingBlock = pool.query(`
       SELECT tb.*, p.title as program_title
@@ -363,7 +363,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Get alternatives for each exercise — respects per-instance overrides
+    // Get alternatives for each exercise - respects per-instance overrides
     // and the alternates_disabled master switch on workout_exercise_meta
     const exercisesWithAlts = exercises.rows.map(ex => {
       // Master disable kills all alternates for this slot
@@ -375,7 +375,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
         return { ...ex, alternatives: [] };
       }
 
-      // Per-instance overrides — now carry their own metric override so a
+      // Per-instance overrides - now carry their own metric override so a
       // coach can say "if client swaps to rowing, row 5km intervals" even
       // though the primary is "run 40 min steady".
       const overrides = pool.query(`

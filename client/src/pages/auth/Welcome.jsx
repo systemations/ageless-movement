@@ -119,7 +119,7 @@ const collageImg = {
   filter: 'grayscale(0.25) contrast(1.05) brightness(0.9)',
 };
 
-// Constant black layer over the photos — keeps every image dim enough
+// Constant black layer over the photos - keeps every image dim enough
 // that the white copy on top reads in any cell of the collage.
 const blackWash = {
   position: 'absolute',
@@ -202,7 +202,7 @@ const taglineSmall = {
   letterSpacing: 6,
   color: 'rgba(255,255,255,0.92)',
   fontWeight: 700,
-  // Mint glow behind the word — same accent-mint hue used on the AM logo
+  // Mint glow behind the word - same accent-mint hue used on the AM logo
   // shadow in global.css so the brand language stays consistent. Two layers:
   // a wide soft halo + a tighter inner glow that lifts the letters off the
   // collage background.

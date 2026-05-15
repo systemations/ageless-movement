@@ -1132,9 +1132,9 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
         </button>
 
         {/* Session types - split by format.
-            - one_on_one (or legacy NULL) go through the slot-picker booking flow
-            - follow_along renders as a "Watch anytime" info card (async content)
-            - webinar/masterclass/in_person come from coach_events, not here - hidden from this list */}
+           - one_on_one (or legacy NULL) go through the slot-picker booking flow
+           - follow_along renders as a "Watch anytime" info card (async content)
+           - webinar/masterclass/in_person come from coach_events, not here - hidden from this list */}
         {bookingOpen && (() => {
           const oneOnOne = data.session_types.filter(st => !st.event_format || st.event_format === 'one_on_one');
           const followAlong = data.session_types.filter(st => st.event_format === 'follow_along');

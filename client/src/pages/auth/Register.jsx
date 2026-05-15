@@ -4,13 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 
 // First step of the slim signup flow. Captures name + email + password
 // so we can lock the lead before the questionnaire runs. After a
-// successful register we route to /onboarding (not /home) — the routing
+// successful register we route to /onboarding (not /home) - the routing
 // guard in App.jsx enforces that anyway, but explicit is friendlier.
 //
 // We deliberately don't pass onboarding answers here: the questions are
 // asked post-signup so we always have an account on record even if the
 // user bails mid-questionnaire. If a leftover localStorage payload from
-// an older build is present we drop it — a stale anonymous funnel
+// an older build is present we drop it - a stale anonymous funnel
 // shouldn't backfill the new account.
 //
 // Coaches are invite-only - they don't come through this screen.

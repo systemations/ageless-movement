@@ -96,7 +96,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
         <img src="/logo.png" alt="" style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, opacity: 0.8 }} />
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, lineHeight: 1.2 }}>{program.title}</h1>
 
-        {/* Coach intro video — sits just under the title so the program
+        {/* Coach intro video - sits just under the title so the program
             opens with the pitch before the meta + description. Optional;
             renders only when intro_video_url is set on the program. */}
         {program.intro_video_url && (

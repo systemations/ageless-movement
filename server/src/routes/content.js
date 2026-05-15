@@ -96,7 +96,7 @@ router.delete('/workouts/:id', authenticateToken, requireRole('coach'), (req, re
   res.json({ success: true });
 });
 
-// Quick slot move — used by the Program Builder drag-and-drop grid to reassign
+// Quick slot move - used by the Program Builder drag-and-drop grid to reassign
 // a workout to a new (week, day) without sending the full workout body.
 // Accepts optional program_id so you can also move a workout between programs.
 router.patch('/workouts/:id/slot', authenticateToken, requireRole('coach'), (req, res) => {
@@ -226,7 +226,7 @@ router.get('/exercises/:id/alternatives', authenticateToken, (req, res) => {
 
 router.post('/exercises/:id/alternatives', authenticateToken, requireRole('coach'), (req, res) => {
   const { alternative_id, reps } = req.body;
-  // Only insert one direction — the GET query handles bidirectional
+  // Only insert one direction - the GET query handles bidirectional
   pool.query('INSERT OR IGNORE INTO exercise_alternatives (exercise_id, alternative_id, reps) VALUES (?, ?, ?)',
     [req.params.id, alternative_id, reps || null]);
   res.json({ success: true });
@@ -240,7 +240,7 @@ router.delete('/exercises/:id/alternatives/:altId', authenticateToken, requireRo
 });
 
 // ===== PER-WORKOUT-EXERCISE ALTERNATES (manage which alts show in this slot) =====
-// GET — returns the resolved list with override state, plus alternates_disabled.
+// GET - returns the resolved list with override state, plus alternates_disabled.
 // If overrides exist, returns them (enabled flags + sort order).
 // Otherwise, returns the global pool with enabled=1 in default order.
 router.get('/workout-exercises/:id/alternates', authenticateToken, requireRole('coach'), (req, res) => {
@@ -294,7 +294,7 @@ router.get('/workout-exercises/:id/alternates', authenticateToken, requireRole('
   });
 });
 
-// PATCH — saves the per-instance overrides and the master disable flag.
+// PATCH - saves the per-instance overrides and the master disable flag.
 // Body: { alternates_disabled, alternates: [{ id, enabled, sort_order }, ...] }
 router.patch('/workout-exercises/:id/alternates', authenticateToken, requireRole('coach'), (req, res) => {
   const weId = req.params.id;
@@ -345,7 +345,7 @@ router.patch('/workout-exercises/:id/alternates', authenticateToken, requireRole
 
 // Save interval_structure (phase list) on a specific workout_exercise row.
 // Body: { interval_structure: [{label, duration_secs, intensity, zone, notes}, ...] | null }
-// Passing null clears it — the workout player falls back to simple sets/duration.
+// Passing null clears it - the workout player falls back to simple sets/duration.
 router.patch('/workout-exercises/:id/interval', authenticateToken, requireRole('coach'), (req, res) => {
   try {
     const { interval_structure } = req.body || {};
@@ -379,7 +379,7 @@ router.get('/tiers', authenticateToken, (req, res) => {
   res.json({ tiers: tiers.rows });
 });
 
-// Public read of the tier list — used by the pre-register PackageSelection
+// Public read of the tier list - used by the pre-register PackageSelection
 // step. Same payload as the auth'd endpoint, but callable before signup.
 router.get('/tiers/public', (req, res) => {
   const tiers = pool.query('SELECT * FROM tiers ORDER BY level');
@@ -632,7 +632,7 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
       let quiz = null;
       if (lesson.quiz_data) {
         try { quiz = JSON.parse(lesson.quiz_data); }
-        catch (e) { /* malformed — treat as no quiz */ }
+        catch (e) { /* malformed - treat as no quiz */ }
       }
       // Movement assessment lessons: any lesson living under STEP 2's
       // Mobility Assessment sub-tree (parent_module_id = 22) with no
@@ -776,7 +776,7 @@ router.post('/lessons/:id/quiz-attempt', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'selections must be an object' });
     }
 
-    // Server-side scoring — same rules as the renderer (sum of option
+    // Server-side scoring - same rules as the renderer (sum of option
     // scores / question count → percentage; any C is auto-fail).
     let scoreSum = 0;
     let hasC = false;
@@ -801,7 +801,7 @@ router.post('/lessons/:id/quiz-attempt', authenticateToken, (req, res) => {
   }
 });
 
-// History — own quiz attempts for a lesson (most recent first).
+// History - own quiz attempts for a lesson (most recent first).
 router.get('/lessons/:id/quiz-attempts', authenticateToken, (req, res) => {
   try {
     const rows = pool.query(
@@ -885,7 +885,7 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
     // deep-link instead of dumping the user on /explore.
     const courseId = eligible[0].course_id;
 
-    // Latest assessment response per (user, lesson) — one query, then
+    // Latest assessment response per (user, lesson) - one query, then
     // map back into the lesson list. Plus a count of attempts so the
     // card can show "3 attempts on file" if useful.
     const responses = pool.query(
@@ -1117,7 +1117,7 @@ router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), async
   // and didn't already provide a manual thumbnail. Done synchronously
   // BEFORE the save so the response includes the populated thumbnail
   // and the client doesn't have to refetch. Failures fall through
-  // silently — coach can still save the lesson without it.
+  // silently - coach can still save the lesson without it.
   let resolvedThumbnail = video_thumbnail ?? l.video_thumbnail;
   const newVideoUrl = video_url ?? l.video_url;
   const videoChanged = video_url && video_url !== l.video_url;
@@ -1126,7 +1126,7 @@ router.put('/course-lessons/:id', authenticateToken, requireRole('coach'), async
     try {
       const fetched = await fetchVimeoThumbnail(newVideoUrl);
       if (fetched) resolvedThumbnail = fetched;
-    } catch (e) { /* ignore — save still proceeds without thumb */ }
+    } catch (e) { /* ignore - save still proceeds without thumb */ }
   }
 
   // quiz_data is stored as serialised JSON. Accept either an object (we

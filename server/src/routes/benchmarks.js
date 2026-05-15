@@ -200,7 +200,7 @@ router.get('/', authenticateToken, (req, res) => {
     }
 
     // Only surface age buckets that actually have at least one client in
-    // them — the client-side chip row hides empty buckets so leaderboards
+    // them - the client-side chip row hides empty buckets so leaderboards
     // never show "no athletes yet" dead ends for an alpha with ~6 real
     // clients.
     const ageCounts = pool.query(
@@ -335,7 +335,7 @@ router.get('/:slug/leaderboard', authenticateToken, (req, res) => {
 // ── Leaderboard: Ageless Mover (all-rounder points across all benchmarks) ─
 // Points per level: 1/3/6/10/15. Only numeric benchmarks count. Only verified
 // and self_reported attempts (pending/rejected excluded). Each benchmark
-// contributes the user's BEST attempt's level — direction-aware.
+// contributes the user's BEST attempt's level - direction-aware.
 router.get('/leaderboards/ageless-mover', authenticateToken, (req, res) => {
   try {
     const { gender, bucket } = parseFilters(req);
@@ -507,8 +507,8 @@ router.get('/leaderboards/steps', authenticateToken, (req, res) => {
 });
 
 // ── Coach: review queue + approve/reject ──────────────────────────────────
-// scope=mine (default) — only clients assigned to this coach.
-// scope=all             — every coach's pending submissions, plus unassigned.
+// scope=mine (default) - only clients assigned to this coach.
+// scope=all             - every coach's pending submissions, plus unassigned.
 router.get('/coach/review-queue', authenticateToken, requireRole('coach'), (req, res) => {
   try {
     const scope = req.query.scope === 'all' ? 'all' : 'mine';

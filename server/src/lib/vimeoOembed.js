@@ -1,9 +1,9 @@
 // Shared Vimeo oEmbed helpers. Used by:
-//   - fetch-vimeo-thumbnails.js (one-shot batch backfill of exercises +
+//  - fetch-vimeo-thumbnails.js (one-shot batch backfill of exercises +
 //     workouts on first ingest)
-//   - PUT /api/content/course-lessons/:id (auto-populate the
+//  - PUT /api/content/course-lessons/:id (auto-populate the
 //     video_thumbnail when a coach pastes a Vimeo URL in the lesson
-//     editor — fires after the save responds, fire-and-forget)
+//     editor - fires after the save responds, fire-and-forget)
 //
 // Vimeo's oEmbed endpoint is public and doesn't require auth even for
 // unlisted videos as long as the URL includes the privacy hash. It

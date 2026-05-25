@@ -1086,7 +1086,7 @@ export default function Home() {
                             width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                             background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                           </div>
                         </div>
                       ))
@@ -1134,7 +1134,7 @@ export default function Home() {
                             width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                             background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                           </div>
                         </div>
                       ))
@@ -1194,7 +1194,7 @@ export default function Home() {
                                 width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                                 background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                               }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                               </div>
                             </div>
                           ))}
@@ -1278,7 +1278,7 @@ export default function Home() {
                 border: movePermanent ? 'none' : '2px solid var(--text-tertiary)',
                 background: movePermanent ? 'var(--accent-orange)' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#000', fontSize: 14, fontWeight: 900,
+                color: '#fff', fontSize: 14, fontWeight: 900,
               }}>
                 {movePermanent && '\u2713'}
               </div>

@@ -1518,7 +1518,7 @@ function BookingGroup({ title, items, onUpdate, muted }) {
               width: 44, height: 44, borderRadius: '50%',
               background: b.client_avatar ? `url(${b.client_avatar}) center/cover` : 'var(--accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#000', fontWeight: 700, flexShrink: 0,
+              color: '#fff', fontWeight: 700, flexShrink: 0,
             }}>
               {!b.client_avatar && b.client_name?.charAt(0)}
             </div>

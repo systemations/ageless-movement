@@ -70,7 +70,7 @@ export default function RecipeBrowser({ onBack }) {
             width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           {/* Bookmark overlay */}
           <div style={{ position: 'absolute', top: 16, right: 16 }}>
@@ -215,7 +215,7 @@ export default function RecipeBrowser({ onBack }) {
             width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h2 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>{cat.title}</h2>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{cat.recipes.length}</span>
@@ -265,7 +265,7 @@ export default function RecipeBrowser({ onBack }) {
             width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         )}
         <h2 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: onBack ? 'center' : 'left' }}>Recipes</h2>

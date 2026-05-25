@@ -11,3 +11,7 @@ server/data/
 *.db-journal
 *.db-shm
 *.db-wal
+
+# Exception: the bundled production content snapshot MUST ship in the repo so
+# a fresh Render disk can seed itself on first boot (see server/src/db/pool.js).
+!server/seed/ageless-seed.db

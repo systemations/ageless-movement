@@ -91,6 +91,11 @@ const INTENSITY_COLORS = {
   max:      '#FF453A',
   rest:     '#64D2FF',
 };
+
+const timerBtnStyle = {
+  flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+  background: 'rgba(255,255,255,0.08)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
+};
 const phaseColor = (intensity) => INTENSITY_COLORS[intensity] || '#94a3b8';
 
 export default function WorkoutPlayer({ workout, exercises, onBack }) {
@@ -115,8 +120,9 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
   const timerRef = useRef(null);
   const intervalTimerRef = useRef(null);
 
-  const [settings, setSettings] = useState({
+  const SETTINGS_DEFAULTS = {
     mode: 'guided',
+    timerMode: 'auto', // 'auto' = timers start themselves; 'manual' = tap the Timer button
     autoForward: false,
     logRepsWeight: true,
     showVideo: true,
@@ -124,7 +130,58 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
     audioCues: false,
     completeWhistle: true,
     prepTime: true,
+  };
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('am_player_settings') || '{}');
+      return { ...SETTINGS_DEFAULTS, ...saved };
+    } catch { return SETTINGS_DEFAULTS; }
   });
+  useEffect(() => {
+    try { localStorage.setItem('am_player_settings', JSON.stringify(settings)); } catch {}
+  }, [settings]);
+
+  // ===== In-app countdown timer (rest periods + timed exercises) =====
+  // A timer runs a list of segments: each {secs, label}. For a per-side
+  // duration move that's two segments ("First side" / "Switch sides"); rest is
+  // a single segment. Beeps between segments and at the end (respects audioCues).
+  const [timer, setTimer] = useState(null); // { segs, idx, secsLeft, running, title, onDone }
+  const timerTickRef = useRef(null);
+
+  const startTimer = (segs, title, onDone = null, forIdx = null) => {
+    const clean = (segs || []).filter(s => s && s.secs > 0);
+    if (!clean.length) { if (onDone) onDone(); return; }
+    setTimer({ segs: clean, idx: 0, secsLeft: clean[0].secs, running: true, title, onDone, forIdx });
+  };
+  const stopTimer = () => setTimer(null);
+  const adjustTimer = (delta) => setTimer(t => t ? { ...t, secsLeft: Math.max(1, t.secsLeft + delta) } : t);
+  const toggleTimer = () => setTimer(t => t ? { ...t, running: !t.running } : t);
+
+  // Timer tick: counts the active segment down, advances through segments,
+  // then fires onDone when the last segment finishes.
+  useEffect(() => {
+    clearInterval(timerTickRef.current);
+    if (!timer || !timer.running || isPaused) return;
+    timerTickRef.current = setInterval(() => {
+      setTimer(t => {
+        if (!t) return t;
+        if (t.secsLeft > 1) return { ...t, secsLeft: t.secsLeft - 1 };
+        // segment finished -- the timer is an alarm, so it always beeps
+        // (independent of the per-second Audio Cues tick setting).
+        if (t.idx < t.segs.length - 1) {
+          playTone('beep');
+          const nextIdx = t.idx + 1;
+          return { ...t, idx: nextIdx, secsLeft: t.segs[nextIdx].secs };
+        }
+        // whole timer finished
+        playTone('beep');
+        const done = t.onDone;
+        if (done) setTimeout(done, 0);
+        return null;
+      });
+    }, 1000);
+    return () => clearInterval(timerTickRef.current);
+  }, [timer, isPaused, settings.audioCues]);
 
   // Initial countdown
   useEffect(() => {
@@ -176,6 +233,60 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
     ? currentEx.interval_structure
     : null;
   const currentPhase = currentPhases ? currentPhases[intervalPhaseIdx] : null;
+
+  // ---- per-exercise timer helpers ----
+  const exIsDuration = (ex) => {
+    const tt = ex?.meta_tracking_type || ex?.tracking_type || '';
+    if (tt.toLowerCase() === 'duration') return true;
+    const v = String(ex?.reps || '');
+    return v.includes(':') || v.endsWith('s') || v.endsWith('m');
+  };
+  const exDurationSecs = (ex) => {
+    if (ex?.meta_duration_secs) return Number(ex.meta_duration_secs);
+    if (ex?.duration_secs) return Number(ex.duration_secs);
+    const v = String(ex?.reps || '');
+    const m = v.match(/(\d+):(\d{2})/);
+    if (m) return Number(m[1]) * 60 + Number(m[2]);
+    const s = v.match(/^(\d+)\s*s/i);
+    if (s) return Number(s[1]);
+    return null;
+  };
+  const exPerSide = (ex) => {
+    const ps = ex?.meta_per_side ?? ex?.per_side;
+    if (ps == null) return null;
+    const v = String(ps).toLowerCase();
+    return (v === '' || v === 'none' || v === '0') ? null : v.replace(/_/g, ' ');
+  };
+  const exRestSecs = (ex) => {
+    const r = Number(ex?.rest_secs);
+    return Number.isFinite(r) && r > 0 ? r : 30;
+  };
+  // Build the segment list for timing an exercise (two sides => two segments).
+  const exerciseSegments = (ex) => {
+    const secs = exDurationSecs(ex);
+    if (!secs) return [];
+    const side = exPerSide(ex);
+    if (side) return [{ secs, label: `First ${side}` }, { secs, label: `Other ${side}` }];
+    return [{ secs, label: ex?.name || 'Work' }];
+  };
+  const startExerciseTimer = () => startTimer(exerciseSegments(currentEx), currentEx?.name || 'Timer', null, currentIdx);
+  const startRestTimer = (onDone = null) => startTimer([{ secs: exRestSecs(currentEx), label: 'Rest' }], 'Rest', onDone);
+
+  // Keep the timer in sync with the active exercise. When the exercise changes,
+  // any leftover exercise timer is dropped, and (in auto mode) a timed exercise
+  // starts its own countdown. A timer already tied to this exercise is left
+  // running. Interval-cardio exercises keep their separate phase engine.
+  useEffect(() => {
+    if (phase !== 'active') return;
+    if (timer && timer.forIdx === currentIdx) return; // already timing this one
+    if (settings.timerMode === 'auto' && !currentPhases && exIsDuration(currentEx)) {
+      // startTimer replaces any stale timer left from the previous exercise
+      startTimer(exerciseSegments(currentEx), currentEx?.name || 'Timer', null, currentIdx);
+    } else if (timer && timer.forIdx != null && timer.forIdx !== currentIdx) {
+      stopTimer(); // new exercise isn't auto-timed: clear the stale one
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx, phase]);
 
   // Reset phase index + remaining secs when the active exercise changes.
   useEffect(() => {
@@ -257,7 +368,11 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
   const handleLogSave = (exerciseId, sets) => {
     setLoggedSets({ ...loggedSets, [exerciseId]: sets });
     setShowLog(null);
-    if (settings.autoForward) {
+    const loggedEx = exercises.find(e => e.exercise_id === exerciseId) || currentEx;
+    if (settings.timerMode === 'auto') {
+      // Rest timer kicks in on log; if Auto Forward is on, advance once rest ends.
+      startTimer([{ secs: exRestSecs(loggedEx), label: 'Rest' }], 'Rest', settings.autoForward ? handleNext : null);
+    } else if (settings.autoForward) {
       handleNext();
     }
   };
@@ -354,7 +469,7 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
           width: 80, height: 80, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
         }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Workout Complete!</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 8 }}>{workout.title}</p>
@@ -374,9 +489,9 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
           {isPaused ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#000"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#000"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
           )}
         </button>
         <span style={{ fontSize: 16, fontWeight: 600 }}>{formatTime(elapsed)}</span>
@@ -441,7 +556,7 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
           <p style={{ fontSize: 12, color: 'var(--accent-orange)', fontWeight: 600, marginBottom: 4 }}>
             {currentPhases
               ? `Phase ${intervalPhaseIdx + 1} of ${currentPhases.length}`
-              : currentEx?.group_type
+              : (currentEx?.group_type && !['regular', 'standard', 'warmup'].includes(currentEx.group_type))
                 ? `${currentEx.group_type.charAt(0).toUpperCase() + currentEx.group_type.slice(1)} ${Math.floor(currentIdx / 3) + 1} / ${currentEx.sets}`
                 : `Set 1 / ${currentEx?.sets || 1}`}
           </p>
@@ -557,13 +672,44 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
                     cursor: 'pointer',
                   }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* ===== IN-APP TIMER OVERLAY ===== */}
+      {timer && (
+        <div style={{
+          position: 'absolute', left: 12, right: 12, bottom: 96, zIndex: 15,
+          background: 'var(--bg-card)', border: '1px solid var(--divider)', borderRadius: 16,
+          padding: '14px 16px', boxShadow: '0 8px 30px rgba(0,0,0,0.45)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-mint)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              {timer.title}
+              {timer.segs.length > 1 ? ` · ${timer.segs[timer.idx].label} (${timer.idx + 1}/${timer.segs.length})` : ''}
+            </span>
+            <button onClick={stopTimer} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              {timer.onDone ? 'Skip' : 'Done'}
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums', minWidth: 110 }}>
+              {Math.floor(timer.secsLeft / 60)}:{String(timer.secsLeft % 60).padStart(2, '0')}
+            </span>
+            <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+              <button onClick={() => adjustTimer(-15)} style={timerBtnStyle}>-15s</button>
+              <button onClick={toggleTimer} style={{ ...timerBtnStyle, background: 'var(--accent)', color: '#fff', fontWeight: 700 }}>
+                {timer.running ? 'Pause' : 'Resume'}
+              </button>
+              <button onClick={() => adjustTimer(15)} style={timerBtnStyle}>+15s</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom navigation */}
       <div style={{
@@ -586,11 +732,25 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
 
+        {/* In-app timer button - times the current exercise (or a rest) so the
+            client never has to leave the app for their phone's clock. */}
+        <button onClick={() => {
+          if (timer) { stopTimer(); return; }
+          if (exIsDuration(currentEx)) startExerciseTimer();
+          else startRestTimer();
+        }} style={{
+          width: 48, height: 48, borderRadius: '50%', border: '2px solid var(--accent-mint)',
+          background: timer ? 'var(--accent-mint)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={timer ? '#000' : 'var(--accent-mint)'} strokeWidth="2.2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>
+        </button>
+
         <button onClick={handleNext} style={{
           width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
 
@@ -646,6 +806,26 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.4 }}>
               Follow the workout exercise by exercise. Personalise your experience using the options below.
+            </p>
+
+            {/* Timer mode: Auto starts rest + timed-exercise countdowns on its
+                own; Manual waits for you to tap the in-app Timer button. */}
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>Timer</p>
+            <div style={{ display: 'flex', background: 'var(--bg-primary)', borderRadius: 50, padding: 3, marginBottom: 8 }}>
+              {[['auto', 'Auto'], ['manual', 'Manual']].map(([m, label]) => (
+                <button key={m} onClick={() => setSettings({ ...settings, timerMode: m })} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600, border: 'none',
+                  background: settings.timerMode === m ? 'rgba(61,255,210,0.15)' : 'transparent',
+                  color: settings.timerMode === m ? 'var(--accent-mint)' : 'var(--text-secondary)',
+                }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.4 }}>
+              {settings.timerMode === 'auto'
+                ? 'Rest and timed-exercise countdowns start automatically. Beeps when each finishes.'
+                : 'Timers stay off until you tap the Timer button - no need to leave the app for your phone clock.'}
             </p>
 
             {[
@@ -713,7 +893,7 @@ function LogExerciseModal({ exercise, onSave, onClose, existing }) {
             width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
           <h3 style={{ fontSize: 18, fontWeight: 700 }}>Log Exercise</h3>
           <div style={{ width: 32 }} />

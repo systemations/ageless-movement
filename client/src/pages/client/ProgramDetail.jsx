@@ -83,7 +83,7 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
           width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
       </div>
 
@@ -176,7 +176,10 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
                   thumbnailUrl={w.image_url}
                   aspectRatio="1/1"
                   borderRadius={10}
-                  titleFontSize={9}
+                  label={(() => {
+                    const m = String(w.title || '').match(/session\s*(\d+)/i);
+                    return m ? `S${m[1]}` : `D${w.day_number}`;
+                  })()}
                 />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>

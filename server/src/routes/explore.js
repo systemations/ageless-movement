@@ -379,7 +379,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
       // coach can say "if client swaps to rowing, row 5km intervals" even
       // though the primary is "run 40 min steady".
       const overrides = pool.query(`
-        SELECT wea.alternative_id, e.name, e.thumbnail_url, e.body_part, wea.sort_order,
+        SELECT wea.alternative_id, e.name, e.thumbnail_url, e.demo_video_url, e.body_part, wea.sort_order,
           wea.sets, wea.reps, wea.duration_secs, wea.rest_secs,
           wea.tracking_type, wea.notes, wea.interval_structure
         FROM workout_exercise_alternates wea
@@ -401,7 +401,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
 
       // Fallback: global alternatives for this exercise
       const alts = pool.query(`
-        SELECT ea.alternative_id, e.name, e.thumbnail_url, e.body_part
+        SELECT ea.alternative_id, e.name, e.thumbnail_url, e.demo_video_url, e.body_part
         FROM exercise_alternatives ea
         JOIN exercises e ON ea.alternative_id = e.id
         WHERE ea.exercise_id = ?

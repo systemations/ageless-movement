@@ -152,13 +152,13 @@ const chipCurrent = {
 };
 const chipRecommended = {
   position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
-  background: 'var(--accent)', color: '#000',
+  background: 'var(--accent)', color: '#fff',
   fontSize: 10, fontWeight: 800, padding: '4px 12px', borderRadius: 10,
   letterSpacing: 0.5, textTransform: 'uppercase',
 };
 const btnPrimary = {
   marginTop: 'auto', padding: '13px 16px', borderRadius: 12, border: 'none',
-  background: 'var(--accent)', color: '#000', fontSize: 14, fontWeight: 800,
+  background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 800,
   cursor: 'pointer',
 };
 const btnGhost = {

@@ -21,6 +21,7 @@ const BLOCK_COLORS = {
 
 const BLOCK_LABELS = {
   standard: 'Straight Sets',
+  regular: 'Straight Sets',
   warmup: 'Warm Up',
   superset: 'Superset',
   triset: 'Triset',
@@ -31,9 +32,21 @@ const BLOCK_LABELS = {
   notes: 'Notes',
 };
 
-const getBlockColor = (type) => BLOCK_COLORS[type] || '#FF8C00';
-const getBlockLabel = (type, label) => {
-  const typeName = BLOCK_LABELS[type] || type?.toUpperCase() || 'Block';
+// Bright yellow is unreadable on the light-mode page, so the warm-up accent
+// drops to a darker goldenrod in light mode. Other block colours read fine.
+const getBlockColor = (type) => {
+  if (type === 'warmup') {
+    const light = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+    return light ? '#B8860B' : '#FFD60A';
+  }
+  return BLOCK_COLORS[type] || '#FF8C00';
+};
+const getBlockLabel = (type, label, sets = 1) => {
+  let typeName = BLOCK_LABELS[type] || type?.toUpperCase() || 'Block';
+  // Straight-set blocks pluralise off the actual set count: "Straight Set" vs "Straight Sets".
+  if (type === 'regular' || type === 'standard') {
+    typeName = `Straight Set${Number(sets) > 1 ? 's' : ''}`;
+  }
   return label ? `${label} - ${typeName}` : typeName;
 };
 
@@ -88,6 +101,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
             ? swap.interval_structure
             : ex.interval_structure,
           thumbnail_url: swap.thumbnail_url || ex.thumbnail_url,
+          demo_video_url: swap.demo_video_url || null,
           _swapped_to: swap.name,
         };
       }
@@ -246,6 +260,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
           ? swap.interval_structure
           : ex.interval_structure,
         thumbnail_url: swap.thumbnail_url || ex.thumbnail_url,
+        demo_video_url: swap.demo_video_url || null,
       };
     }
     if (durOverride != null) {
@@ -262,7 +277,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
           width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         {/* Favourite heart - saves this workout to the client's Favourites tab */}
         <div style={{
@@ -366,7 +381,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
       {/* Exercise List (skipped for follow-along workouts) */}
       {!isFollowAlong && groups.map((group, gi) => {
         const blockColor = getBlockColor(group.type);
-        const blockLabel = getBlockLabel(group.type, group.label);
+        const blockLabel = getBlockLabel(group.type, group.label, group.sets);
 
         return (
           <div key={gi} style={{
@@ -518,7 +533,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
                   width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
               )}
             </div>
@@ -551,7 +566,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
                       width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
                   ) : (
                     <span style={{

@@ -10,6 +10,17 @@ const dbPath = path.join(__dirname, '..', '..', 'data', 'ageless.db');
 import fs from 'fs';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
+// First-boot content seed. On a fresh disk (e.g. a new Render deploy) the
+// data dir is empty, so we copy the bundled production snapshot — the full
+// program/exercise/Explore library plus the coach accounts — into place
+// before opening the DB. Only runs when no live DB exists, so it never
+// overwrites real production data on subsequent boots.
+const seedPath = path.join(__dirname, '..', '..', 'seed', 'ageless-seed.db');
+if (!fs.existsSync(dbPath) && fs.existsSync(seedPath)) {
+  fs.copyFileSync(seedPath, dbPath);
+  console.log('[db] fresh disk — seeded from bundled production snapshot');
+}
+
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');

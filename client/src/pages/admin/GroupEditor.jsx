@@ -339,7 +339,7 @@ const input = {
 const labelSm = { fontSize: 11, color: 'var(--text-secondary)', display: 'block', fontWeight: 600 };
 const btnPrimary = {
   padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-  background: 'var(--accent)', color: '#000', fontSize: 13, fontWeight: 700,
+  background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700,
 };
 const btnGhost = {
   padding: '10px 16px', borderRadius: 10, border: '1px solid var(--divider)',

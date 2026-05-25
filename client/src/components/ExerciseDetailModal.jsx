@@ -170,7 +170,7 @@ export default function ExerciseDetailModal({
                       <div style={{
                         width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-orange)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        fontSize: 12, fontWeight: 700, color: '#000',
+                        fontSize: 12, fontWeight: 700, color: '#fff',
                       }}>
                         {i + 1}
                       </div>

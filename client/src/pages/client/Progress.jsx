@@ -1085,7 +1085,7 @@ function PhotoCompareView({ view, onBack }) {
           width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h2 style={{ fontSize: 16, fontWeight: 700 }}>Compare</h2>
       </div>

@@ -25,17 +25,40 @@ const SOLID_COLORS = [
   '#047857', // emerald
 ];
 
-function hashIndex(str = '', mod) {
+// Per-session badge palette. The session number maps directly to its colour
+// (S1 -> [0], S2 -> [1] ...) so a given session is the same colour across every
+// week and every program. 14 distinct hues cover up to 14 sessions in a week;
+// ordered so consecutive sessions (usually shown together) contrast strongly.
+const SESSION_COLORS = [
+  '#4338CA', // 1 indigo
+  '#BE185D', // 2 magenta
+  '#0369A1', // 3 ocean blue
+  '#047857', // 4 emerald
+  '#B45309', // 5 bronze
+  '#7C3AED', // 6 violet
+  '#0D9488', // 7 teal
+  '#DC2626', // 8 crimson
+  '#15803D', // 9 forest green
+  '#2563EB', // 10 royal blue
+  '#C2410C', // 11 burnt orange
+  '#9333EA', // 12 purple
+  '#DB2777', // 13 pink
+  '#475569', // 14 slate
+];
+
+function hashIndex(str, mod) {
+  const s = str || '';
   let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h % mod;
 }
 
 // Mini fallback for small list tiles (48-56px). Shows initials on a solid
 // colour derived from the title, matching the Sweat Session brand palette.
 export function MiniThumb({ title = '', size = 56, borderRadius = 10 }) {
-  const bg = SOLID_COLORS[hashIndex(title, SOLID_COLORS.length)];
-  const initials = title.split(/[\s|]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'W';
+  const safeTitle = title || '';
+  const bg = SOLID_COLORS[hashIndex(safeTitle, SOLID_COLORS.length)];
+  const initials = safeTitle.split(/[\s|]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'W';
   return (
     <div style={{
       width: size, height: size, borderRadius, flexShrink: 0,
@@ -59,6 +82,7 @@ export default function WorkoutThumb({
   borderRadius = 14,
   style = {},
   titleFontSize,
+  label = null, // short badge (e.g. "S1") shown instead of the wrapping full title on small tiles
 }) {
   const baseStyle = {
     width: '100%',
@@ -86,6 +110,29 @@ export default function WorkoutThumb({
 
   const bg = SOLID_COLORS[hashIndex(title, SOLID_COLORS.length)];
   const resolvedFontSize = titleFontSize ?? 22;
+
+  // Short-label mode: a compact badge (e.g. "S1") for small tiles where the
+  // full title would wrap into an unreadable block.
+  if (label) {
+    // Colour keys off the session number so the same badge (S1/S2/S3...) is the
+    // same colour across every week and every program. Falls back to a hash for
+    // non-numbered labels.
+    const num = parseInt(String(label).match(/\d+/)?.[0] ?? '', 10);
+    const labelBg = Number.isFinite(num)
+      ? SESSION_COLORS[(num - 1) % SESSION_COLORS.length]
+      : SOLID_COLORS[hashIndex(label, SOLID_COLORS.length)];
+    return (
+      <div style={{ ...baseStyle, background: labelBg, containerType: 'inline-size' }} aria-label={title || label} title={title || label}>
+        <span style={{
+          fontSize: '34cqw', fontWeight: 900, color: '#fff', letterSpacing: 1,
+          textShadow: '1px 1px 0 rgba(0,0,0,0.25)',
+          fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+        }}>
+          {label}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

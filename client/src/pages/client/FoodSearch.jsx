@@ -90,7 +90,7 @@ export default function FoodSearch({ mealType, onSelect, onBack }) {
           width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <h2 style={{ fontSize: 16, fontWeight: 700, flex: 1, textAlign: 'center' }}>{mealType}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -199,7 +199,7 @@ export default function FoodSearch({ mealType, onSelect, onBack }) {
             width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
       ))}

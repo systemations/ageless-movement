@@ -89,7 +89,7 @@ export default function CheckinForm({ onClose, onSuccess }) {
           width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none',
         }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>Add Check-in</h1>
         <div style={{ width: 32 }} />

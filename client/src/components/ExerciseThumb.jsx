@@ -52,8 +52,8 @@ export default function ExerciseThumb({
       <div
         style={{
           ...baseStyle,
-          background: color,
-          border: `1px solid ${color}`,
+          background: 'var(--block-chip-bg)',
+          border: '1px solid var(--block-chip-bg)',
         }}
         aria-label={`${label} ${name}`}
         title={name}
@@ -62,9 +62,8 @@ export default function ExerciseThumb({
           style={{
             fontSize,
             fontWeight: 800,
-            color: '#000',
+            color: 'var(--block-chip-text)',
             letterSpacing: 0.5,
-            textShadow: '0 1px 1px rgba(255,255,255,0.2)',
           }}
         >
           {label}

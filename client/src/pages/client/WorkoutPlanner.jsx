@@ -396,7 +396,7 @@ export default function WorkoutPlanner({ onBack, onSelectWorkout }) {
               )}
             </div>
             <p style={{
-              fontSize: 13, fontWeight: 700, color: '#000',
+              fontSize: 13, fontWeight: 700, color: '#fff',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
             }}>
               {dragging.workout.title}

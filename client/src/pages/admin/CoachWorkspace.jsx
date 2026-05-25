@@ -113,7 +113,7 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
                 onClick={() => { setSelected(null); setEditing({ mode: 'new' }); }}
                 style={{
                   padding: '5px 12px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                  background: 'var(--accent)', color: '#000', fontSize: 11, fontWeight: 800,
+                  background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 800,
                 }}
               >
                 + New Group

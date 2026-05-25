@@ -23,6 +23,9 @@
   --text-primary: #FFFFFF;
   --text-secondary: #9AA8BB;
   --text-tertiary: #6B7B93;
+  /* Block position chip (A1, B1...). Slate chip + navy text in dark mode. */
+  --block-chip-bg: #9AA8BB;
+  --block-chip-text: #0A1428;
   --logo-bg: #1E1A2E;
   --divider: #253A57;
   --success: #30D158;
@@ -51,6 +54,9 @@
   --text-primary: #0A0A0A;
   --text-secondary: #6C6C70;
   --text-tertiary: #AEAEB2;
+  /* Light mode: faded-grey chip with on-brand deep-indigo (logo colour) text. */
+  --block-chip-bg: #DADADF;
+  --block-chip-text: #17122D;
   --logo-bg: #E8E5F0;
   --divider: #DCDCDC;
   --success: #28A745;

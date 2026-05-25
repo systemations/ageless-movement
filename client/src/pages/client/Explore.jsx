@@ -28,7 +28,7 @@ function LockOverlay({ tierName, compact }) {
       {tierName && (
         <div style={{
           fontSize: compact ? 9 : 10, fontWeight: 800, letterSpacing: 0.8,
-          padding: '3px 8px', borderRadius: 10, background: 'var(--accent)', color: '#000',
+          padding: '3px 8px', borderRadius: 10, background: 'var(--accent)', color: '#fff',
           textTransform: 'uppercase',
         }}>{tierName}</div>
       )}
@@ -160,7 +160,7 @@ export default function Explore() {
             width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 20, fontWeight: 800 }}>Challenges</h1>
         </div>

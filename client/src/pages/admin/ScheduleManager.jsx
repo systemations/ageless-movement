@@ -504,7 +504,7 @@ export default function ScheduleManager() {
                           onClick={duplicateWeek}
                           disabled={repeatBusy}
                           style={{
-                            fontSize: 12, fontWeight: 700, color: '#000', background: 'var(--accent)',
+                            fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--accent)',
                             border: 'none', borderRadius: 6, padding: '6px 12px',
                             cursor: repeatBusy ? 'default' : 'pointer', opacity: repeatBusy ? 0.6 : 1,
                           }}

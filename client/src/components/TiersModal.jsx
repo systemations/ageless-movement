@@ -185,13 +185,13 @@ const chipCurrent = {
 };
 const chipRequired = {
   position: 'absolute', top: -10, right: 14,
-  background: 'var(--accent)', color: '#000',
+  background: 'var(--accent)', color: '#fff',
   fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 10,
   letterSpacing: 0.5, textTransform: 'uppercase',
 };
 const btnPrimary = {
   marginTop: 'auto', padding: '11px 16px', borderRadius: 10, border: 'none',
-  background: 'var(--accent)', color: '#000', fontSize: 13, fontWeight: 800,
+  background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 800,
   cursor: 'pointer',
 };
 const btnGhost = {

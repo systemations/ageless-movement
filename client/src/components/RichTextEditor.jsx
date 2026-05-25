@@ -228,7 +228,7 @@ function Toolbar({ editor, uploadEndpoint, authToken }) {
       </div>
 
       <Btn onClick={() => editor.chain().focus().toggleHighlight({ color: '#FF9C33' }).run()} active={isActive('highlight')} title="Highlight">
-        <span style={{ background: '#FF9C33', color: '#000', padding: '0 4px', borderRadius: 2, fontWeight: 700 }}>H</span>
+        <span style={{ background: '#FF9C33', color: '#fff', padding: '0 4px', borderRadius: 2, fontWeight: 700 }}>H</span>
       </Btn>
 
       <Sep />

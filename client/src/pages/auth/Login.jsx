@@ -81,7 +81,7 @@ export default function Login() {
 
         <p style={newHere}>
           New here?{' '}
-          <Link to="/onboarding" style={newHereLink}>Get started →</Link>
+          <Link to="/register" style={newHereLink}>Get started →</Link>
         </p>
       </div>
     </div>

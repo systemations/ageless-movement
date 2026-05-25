@@ -592,8 +592,12 @@ function LessonPlayer({ course, lessonId, onBack, onPickLesson, onToggleComplete
           ))}
         </aside>
 
-        {/* Main lesson body */}
-        <div>
+        {/* Main lesson body. Keyed by lesson.id so each lesson mounts fresh:
+            otherwise the body component (StyledLessonBody / QuizPlayer) is
+            reused across Next/Prev and its internal state leaks between
+            lessons — the assessment "logged" flag, quiz selections, and the
+            video iframe all carry over, so the next lesson renders wrong. */}
+        <div key={lesson.id}>
           {/* Quiz lesson: replaces the standard video + description
               layout entirely. The renderer handles its own state,
               scoring, and pass/fail routing. */}

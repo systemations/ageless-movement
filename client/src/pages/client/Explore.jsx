@@ -36,7 +36,9 @@ function LockOverlay({ tierName, compact }) {
   );
 }
 
-const tabs = ['Workouts', 'Nutrition', 'Resources'];
+// 'Resources' hidden for now - will return as the home for past recordings.
+// Its render block + parent_tab='resources' sections are left intact below.
+const tabs = ['Workouts', 'Nutrition'];
 
 export default function Explore() {
   const { token } = useAuth();

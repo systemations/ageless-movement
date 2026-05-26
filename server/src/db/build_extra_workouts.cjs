@@ -21,20 +21,8 @@ const WORKOUTS = [
       { sets: 3, rest: 60, items: [ [337, '20s to 1:00', { time_based: 1, duration_secs: 45 }] ] },
     ],
   },
-  {
-    section_id: 18, // Lower Body Workout
-    title: "Hammy's & Glutes Workout",
-    description: 'A hamstring and glute focused strength session. (Cable Donkey Kickback omitted - not yet in the exercise library.)',
-    duration_mins: 51, intensity: 'Moderate', body_parts: 'Lower Body, Core, Upper Body, Hips', equipment: 'Resistance Bands, Body Weight, Barbell, Cable Station, TRX',
-    blocks: [
-      { type: 'warmup', sets: 1, rest: 30, items: [ [1286, '3:00', { time_based: 1, duration_secs: 180 }] ] },
-      { sets: 2, rest: 60, items: [ [163, '1:00', { time_based: 1, duration_secs: 60 }], [63, '10 reps / leg', { per_side: 'leg' }], [102, '1:00', { time_based: 1, duration_secs: 60 }] ] },
-      { sets: 3, rest: 60, items: [ [145, '10 reps'], [141, '10 reps / leg', { per_side: 'leg' }], [350, '15 reps'] ] },
-      { sets: 2, rest: 60, items: [ [218, '10 reps'] ] },
-      { sets: 2, rest: 60, items: [ [331, '10 reps'], [333, '10 reps'], [107, '10 reps / leg', { per_side: 'leg' }] ] },
-      { sets: 2, rest: 60, items: [ [282, '5 reps'] ] },
-    ],
-  },
+  // Hammy's & Glutes moved to build_fitbudd_classes.cjs (name-based, so it can
+  // include Cable Donkey Kickback which isn't yet in the library).
   {
     section_id: 17, // Gymnastics Strength Training
     title: 'Rings | Beginner',

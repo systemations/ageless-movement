@@ -257,6 +257,21 @@ export default function Explore() {
         </div>
       </div>
 
+      {/* Sub-tabs - pinned at the top, under the header */}
+      <div style={{
+        display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
+        padding: 4, maxWidth: 360, width: '100%', margin: '0 auto 20px',
+      }}>
+        {tabs.map((tab) => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
+            background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
+            color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
+            border: 'none',
+          }}>{tab}</button>
+        ))}
+      </div>
+
       {activeTab === 'Workouts' && (
         <>
           {/* ===== DYNAMIC SECTIONS ===== */}
@@ -683,21 +698,6 @@ export default function Explore() {
         </>
       )}
 
-      {/* Sub-tabs */}
-      <div style={{
-        position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
-        padding: 4, maxWidth: 360, width: 'calc(100% - 32px)',
-      }}>
-        {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
-            background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
-            color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
-            border: 'none',
-          }}>{tab}</button>
-        ))}
-      </div>
     </div>
 
     {/* Exercise detail modal */}

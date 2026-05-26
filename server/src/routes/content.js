@@ -634,14 +634,16 @@ router.get('/courses/:id', authenticateToken, (req, res) => {
         try { quiz = JSON.parse(lesson.quiz_data); }
         catch (e) { /* malformed - treat as no quiz */ }
       }
-      // Movement assessment lessons: any lesson living under STEP 2's
-      // Mobility Assessment sub-tree (parent_module_id = 22) with no
-      // video and at least one image in its description gets tap-to-
-      // pick interaction. Toe Balance/Dexterity have videos so are
-      // excluded; Thoracic / Pike / etc are the targets.
-      const inAssessmentTree = mod.parent_module_id === 22;
-      const hasImg = !!lesson.description && /<img\b/i.test(lesson.description);
-      const isMovementAssessment = inAssessmentTree && hasImg && !lesson.video_url;
+      // Movement assessment lessons get tap-to-pick interaction. Detected
+      // by content, not module id: the assessment photos are served from
+      // /assessments/*, so a lesson whose description embeds an
+      // /assessments/ image and has no video is an assessment. (Was keyed
+      // on a hardcoded parent_module_id = 22, which only held in the dev DB
+      // — in any other DB the id differs and the picker silently died.)
+      // Toe Balance/Dexterity have videos so are excluded.
+      const hasAssessmentImg = !!lesson.description
+        && /<img\b[^>]*src=["'][^"']*\/assessments\//i.test(lesson.description);
+      const isMovementAssessment = hasAssessmentImg && !lesson.video_url;
       // Quiz prerequisite lock. Quiz B's prereq is whichever quiz A
       // points at B via pass_next_quiz_lesson_id. Locked = there is a
       // prereq AND the user has not passed it yet. The first quiz in a
@@ -868,13 +870,16 @@ router.get('/assessment-summary', authenticateToken, (req, res) => {
               m.course_id, l.sort_order AS lesson_sort
          FROM course_lessons l
          JOIN course_modules m ON m.id = l.module_id
-        WHERE m.parent_module_id = 22
+        WHERE l.description LIKE '%/assessments/%'
         ORDER BY m.sort_order, l.sort_order`,
     ).rows;
 
+    // Content-based match (see the course endpoint): an /assessments/ image
+    // and no video. Not keyed on a hardcoded module id, which broke in prod.
     const eligible = lessons.filter(l => {
-      const hasImg = !!l.description && /<img\b/i.test(l.description);
-      return hasImg && !l.video_url;
+      const hasAssessmentImg = !!l.description
+        && /<img\b[^>]*src=["'][^"']*\/assessments\//i.test(l.description);
+      return hasAssessmentImg && !l.video_url;
     });
     const eligibleIds = eligible.map(l => l.id);
     if (eligibleIds.length === 0) {

@@ -21,6 +21,16 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 // Module-level cache so tab switches don't flash blank while data refetches.
 const homeCache = { dashboard: null, weekSchedule: null, athleteFeatures: null, hasEnhancedToday: false };
+// Reset the home view cache on logout so a subsequent login doesn't briefly
+// render the previous user's dashboard (e.g. a stale workout thumbnail).
+if (typeof window !== 'undefined') {
+  window.addEventListener('am-logout', () => {
+    homeCache.dashboard = null;
+    homeCache.weekSchedule = null;
+    homeCache.athleteFeatures = null;
+    homeCache.hasEnhancedToday = false;
+  });
+}
 
 function getWeekDates() {
   const today = new Date();

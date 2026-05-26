@@ -14,6 +14,11 @@ const phaseThemes = {
 
 // Module-level cache: on tab remount seed from cache to avoid blank-flash.
 const todayCache = { today: null };
+// Drop the cached "today" on logout so the next login doesn't flash the
+// previous user's session/thumbnail before the fresh fetch lands.
+if (typeof window !== 'undefined') {
+  window.addEventListener('am-logout', () => { todayCache.today = null; });
+}
 
 // Fire this when something changes today's sessions (e.g. user adds a workout)
 // so the Home phase card refetches instead of showing stale data.

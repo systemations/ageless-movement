@@ -124,6 +124,9 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setProfile(null);
+    // Clear per-session view caches (home dashboard, today) so the next
+    // login doesn't briefly flash the previous user's content.
+    try { window.dispatchEvent(new Event('am-logout')); } catch { /* SSR/no-window */ }
   };
 
   return (

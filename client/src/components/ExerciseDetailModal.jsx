@@ -375,6 +375,9 @@ const stepperBtn = {
 // flow: tap exercise → see its detail + a grid of alternates → tap an alt
 // to swap. Also surfaces the coach's per-alt notes + metric overrides.
 function AlternativesPicker({ primary, alternatives, onSwap, onResetToPrimary }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? alternatives : alternatives.slice(0, 2);
+  const hasMore = alternatives.length > 2;
   const fmtSecs = (secs) => {
     if (!secs) return '';
     const m = Math.floor(secs / 60);
@@ -407,7 +410,7 @@ function AlternativesPicker({ primary, alternatives, onSwap, onResetToPrimary })
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-        {alternatives.map((alt) => (
+        {visible.map((alt) => (
           <button
             key={alt.alternative_id || alt.id}
             onClick={() => onSwap(alt)}
@@ -434,6 +437,19 @@ function AlternativesPicker({ primary, alternatives, onSwap, onResetToPrimary })
           </button>
         ))}
       </div>
+
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            width: '100%', marginTop: 8, padding: '8px 0',
+            background: 'none', border: 'none',
+            color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          {expanded ? 'Show less' : `Show all ${alternatives.length} options`}
+        </button>
+      )}
 
       <button
         onClick={onResetToPrimary}

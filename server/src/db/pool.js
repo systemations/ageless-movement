@@ -10,15 +10,50 @@ const dbPath = path.join(__dirname, '..', '..', 'data', 'ageless.db');
 import fs from 'fs';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-// First-boot content seed. On a fresh disk (e.g. a new Render deploy) the
-// data dir is empty, so we copy the bundled production snapshot — the full
-// program/exercise/Explore library plus the coach accounts — into place
-// before opening the DB. Only runs when no live DB exists, so it never
-// overwrites real production data on subsequent boots.
+// Content seed, version-stamped.
+//
+// The bundled production snapshot (seed/ageless-seed.db) holds the full
+// program/exercise/Explore library plus the coach accounts. We install it
+// in two situations:
+//   1. Fresh disk — no live DB exists yet (new Render deploy).
+//   2. Content refresh — the disk's installed seed version differs from the
+//      bundled SEED_VERSION below.
+//
+// A sidecar file (data/.seed_version) records which snapshot the live DB was
+// built from. When SEED_VERSION changes, we back up the existing DB and
+// install the fresh snapshot over it.
+//
+// ⚠️ BUMPING SEED_VERSION OVERWRITES THE PRODUCTION DATABASE on next boot.
+// It is safe right now because production has no real user data — the only
+// accounts are the three coaches that ship inside the snapshot. Once real
+// clients exist, DO NOT bump this to push content; build a content-only
+// migration that preserves user rows instead. A timestamped backup is left
+// at data/ageless.db.pre-seed-<ts> so a botched reseed can be recovered.
+const SEED_VERSION = '2026-05-26-content-refresh';
 const seedPath = path.join(__dirname, '..', '..', 'seed', 'ageless-seed.db');
-if (!fs.existsSync(dbPath) && fs.existsSync(seedPath)) {
-  fs.copyFileSync(seedPath, dbPath);
-  console.log('[db] fresh disk — seeded from bundled production snapshot');
+const seedVersionPath = path.join(path.dirname(dbPath), '.seed_version');
+
+if (fs.existsSync(seedPath)) {
+  const installedVersion = fs.existsSync(seedVersionPath)
+    ? fs.readFileSync(seedVersionPath, 'utf8').trim()
+    : null;
+  const liveDbExists = fs.existsSync(dbPath);
+
+  if (!liveDbExists) {
+    fs.copyFileSync(seedPath, dbPath);
+    fs.writeFileSync(seedVersionPath, SEED_VERSION);
+    console.log(`[db] fresh disk — seeded from bundled snapshot (${SEED_VERSION})`);
+  } else if (installedVersion !== SEED_VERSION) {
+    const backupPath = `${dbPath}.pre-seed-${Date.now()}`;
+    fs.copyFileSync(dbPath, backupPath);
+    for (const suffix of ['', '-wal', '-shm']) {
+      const f = dbPath + suffix;
+      if (fs.existsSync(f)) fs.rmSync(f);
+    }
+    fs.copyFileSync(seedPath, dbPath);
+    fs.writeFileSync(seedVersionPath, SEED_VERSION);
+    console.log(`[db] content refresh ${installedVersion || '(none)'} → ${SEED_VERSION}; backed up old DB to ${path.basename(backupPath)}`);
+  }
 }
 
 const db = new Database(dbPath);

@@ -29,7 +29,7 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 // clients exist, DO NOT bump this to push content; build a content-only
 // migration that preserves user rows instead. A timestamped backup is left
 // at data/ageless.db.pre-seed-<ts> so a botched reseed can be recovered.
-const SEED_VERSION = '2026-05-26-reseed-pickleball-order';
+const SEED_VERSION = '2026-05-26-prehab-rehab-tags';
 const seedPath = path.join(__dirname, '..', '..', 'seed', 'ageless-seed.db');
 const seedVersionPath = path.join(path.dirname(dbPath), '.seed_version');
 
@@ -686,6 +686,15 @@ db.exec(`
 
 // Add columns to existing tables (safe - SQLite ignores if already exists)
 const alterStatements = [
+  // Exercise reference metadata (coach-side: Type / Tracking / Per-Side /
+  // Target Area). CREATE TABLE defines these, but pre-existing DBs (incl.
+  // older prod disks + the dev DB) were missing them, which broke exercise
+  // create/edit (the API INSERT/UPDATE reference these columns). Populated
+  // from the Video Database CSV via import_exercise_tags.py.
+  "ALTER TABLE exercises ADD COLUMN exercise_type TEXT DEFAULT 'Strength'",
+  "ALTER TABLE exercises ADD COLUMN tracking_fields TEXT DEFAULT 'Repetitions with Weight'",
+  "ALTER TABLE exercises ADD COLUMN per_side TEXT DEFAULT 'None'",
+  "ALTER TABLE exercises ADD COLUMN target_area TEXT",
   // Supplements: section/display grouping + sort order + optional notes per supp.
   "ALTER TABLE supplements ADD COLUMN section TEXT",        // e.g. "Upon Waking", "After Breakfast"
   "ALTER TABLE supplements ADD COLUMN section_order INTEGER DEFAULT 0",

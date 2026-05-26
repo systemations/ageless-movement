@@ -1375,6 +1375,44 @@ export default function Home() {
           is already on file. */}
       <NutritionSetupPromptCard profile={profile} token={token} onComplete={fetchDashboard} />
 
+      {/* Daily Targets card - shown when EnhancedToday isn't rendering its
+          own Targets card (i.e. no active training block, e.g. a brand-new
+          self-onboarded client). Without this, free signups who completed
+          onboarding saw no calorie target at all. The basic Mifflin target
+          is free for everyone; EnhancedToday's card takes over once a block
+          is active. Hidden if BMR isn't set yet (the prompt card shows then). */}
+      {!hasEnhancedToday && profile?.calorie_target ? (
+        <div
+          className="card"
+          onClick={() => navigate('/profile?section=nutrition')}
+          style={{ marginTop: 12, cursor: 'pointer' }}
+        >
+          <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 2 }}>
+            Daily Targets
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginLeft: 8, letterSpacing: 0.6 }}>EDIT →</span>
+          </h3>
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 12 }}>Based on your details. Editable any time.</p>
+          <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>
+            {profile.calorie_target.toLocaleString()}
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)', marginLeft: 4 }}>kcal</span>
+          </div>
+          {(profile.protein_target || profile.fat_target || profile.carbs_target) && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              {[
+                { label: 'PROTEIN', g: profile.protein_target, color: '#85FFBA' },
+                { label: 'FAT', g: profile.fat_target, color: '#FF6B8A' },
+                { label: 'CARBS', g: profile.carbs_target, color: '#5AC8FA' },
+              ].map((m) => (
+                <div key={m.label} style={{ flex: 1, background: 'var(--bg-secondary, rgba(255,255,255,0.04))', borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: m.color }}>{m.g != null ? `${m.g}g` : '-'}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: 0.6, marginTop: 2 }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {/* Daily Targets card was here. Removed 2026-04-29: it duplicated
           EnhancedToday's "Targets" card (both showed the same BMR-
           derived kcal + macros). The Targets card is now tappable to

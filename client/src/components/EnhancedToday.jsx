@@ -362,7 +362,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
       {/* ═══════════════════════════════════════════════════════
           4. MACRO TARGETS
           ═══════════════════════════════════════════════════════ */}
-      {features?.smart_targets?.unlocked && today?.calorie_targets && (() => {
+      {today?.calorie_targets && (() => {
         // When a coach has assigned a meal plan, the plan IS the target - 
         // the BMR figure was just the calc that informed the prescription.
         // Show plan totals + plan title here so we don't render two

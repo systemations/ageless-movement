@@ -3,6 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { BookmarkIcon, SearchIcon } from '../../components/Icons';
 import FavButton from '../../components/FavButton';
 
+// Categories Dan doesn't want surfaced in the client recipe browser (thin /
+// ingredient-style buckets). Hidden here only - the recipes still exist and
+// remain searchable; we just don't show these as browse carousels.
+const HIDDEN_CATEGORIES = new Set([
+  'Beverages', 'Broths', 'Fats', 'Proteins', 'Supplements', 'Sweeteners',
+]);
+
 export default function RecipeBrowser({ onBack }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
@@ -293,7 +300,7 @@ export default function RecipeBrowser({ onBack }) {
       )}
 
       {/* Category carousels */}
-      {data.categories.map((cat) => (
+      {data.categories.filter((cat) => !HIDDEN_CATEGORIES.has(cat.title)).map((cat) => (
         <div key={cat.title} style={{ marginBottom: 24 }}>
           <div className="section-header" onClick={() => setSelectedCategory(cat.title)} style={{ cursor: 'pointer' }}>
             <h2 style={{ fontSize: 16 }}>{cat.title} &gt;</h2>

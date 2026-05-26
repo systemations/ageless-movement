@@ -14,7 +14,7 @@ import pool from '../db/pool.js';
 const COACH_DAN_EMAIL = 'danny@handsdan.com';
 const POLL_INTERVAL_MS = 60 * 1000;
 
-const WELCOME_DM_DELAY_MS = 5 * 60 * 1000;       // 5 min after signup
+const WELCOME_DM_DELAY_MS = 2 * 60 * 1000;       // 2 min after signup
 const PLANS_NUDGE_DELAY_MS = 24 * 60 * 60 * 1000; // 24h after signup
 
 function nowSqlite() {
@@ -70,11 +70,31 @@ function runWelcomeDm(task) {
   if (!conversationId) return;
 
   const firstName = (client.name || '').split(' ')[0] || 'there';
+  const coachName = dan.name || 'your coach'; // user row reads "Coach Dan"
   const body = `Hey ${firstName}, welcome in. I'm Dan. If you've got questions or want a hand finding the right place to start, just reply here.`;
 
   pool.query(
     'INSERT INTO messages (conversation_id, sender_id, content, message_type) VALUES (?, ?, ?, ?)',
     [conversationId, dan.id, body, 'text'],
+  );
+
+  // Proactively notify the client - a chat message alone only bumps the
+  // passive unread badge, which they'd miss unless they open Messages. This
+  // surfaces it in their notification feed with a tap-through to the chat.
+  pool.query(
+    `INSERT INTO in_app_notifications
+      (kind, title, body, cta_label, cta_url, audience, audience_user_id,
+       starts_at, recurrence, active, created_by)
+     VALUES ('announcement', ?, ?, ?, ?, 'user', ?, ?, 'none', 1, ?)`,
+    [
+      `New message from ${coachName}`,
+      body,
+      'Open chat',
+      '/messages',
+      client.id,
+      nowSqlite(),
+      dan.id,
+    ],
   );
 }
 

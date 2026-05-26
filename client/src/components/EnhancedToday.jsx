@@ -643,7 +643,7 @@ function SessionCard({ entry, theme, onNavigateWorkout, onRemove, stacked = fals
             color: theme.accent,
             textTransform: 'uppercase', letterSpacing: 0.5,
           }}>
-            {entry.session_type}
+            {(entry.session_type || '').replace(/_/g, ' ')}
           </span>
           {entry.time_slot && (
             <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>

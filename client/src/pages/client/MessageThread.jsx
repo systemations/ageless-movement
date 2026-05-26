@@ -274,11 +274,13 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
             }}>
               {!isMe && (
                 <div style={{
-                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
                   background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 700, color: '#fff',
                 }}>
-                  {item.sender_name?.charAt(0) || '?'}
+                  {item.sender_avatar
+                    ? <img src={item.sender_avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : ((item.sender_name || '').replace(/^coach\s+/i, '').trim().charAt(0).toUpperCase() || '?')}
                 </div>
               )}
               <div style={{ position: 'relative', maxWidth: '75%' }}>

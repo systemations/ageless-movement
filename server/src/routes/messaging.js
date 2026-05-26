@@ -208,9 +208,12 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
     if (member.rows.length === 0) return res.status(403).json({ error: 'Not a member' });
 
     const messages = pool.query(`
-      SELECT m.*, u.name as sender_name, u.avatar_url as sender_avatar, u.role as sender_role
+      SELECT m.*, u.name as sender_name, u.role as sender_role,
+             COALESCE(cp.photo_url, clp.profile_image_url, u.avatar_url) as sender_avatar
       FROM messages m
       JOIN users u ON m.sender_id = u.id
+      LEFT JOIN coach_profiles cp ON cp.user_id = u.id
+      LEFT JOIN client_profiles clp ON clp.user_id = u.id
       WHERE m.conversation_id = ?
       ORDER BY m.created_at ASC
     `, [req.params.id]).rows;

@@ -74,7 +74,7 @@ const WORKOUTS = [
   },
   {
     section_id: 6, title: 'Full Body Flexibility Workout',
-    description: 'A full-body stretch session: a mixture of passive, dynamic and loaded stretches plus PNF-style contractions to build flexibility. (Partial list - more to be added.)',
+    description: 'A full-body stretch session: a mixture of passive, dynamic and loaded stretches plus PNF-style contractions to build flexibility.',
     duration_mins: 32, intensity: 'Low', body_parts: 'Lower Body, Upper Body, Core', equipment: 'Body Weight',
     blocks: [
       { sets: 1, rest: 30, items: [['Ant Tib Raises', '1:00', { time_based: 1, duration_secs: 60 }]] },
@@ -82,7 +82,11 @@ const WORKOUTS = [
       { sets: 1, rest: 30, items: [['Frog Stretch', '2:30', { time_based: 1, duration_secs: 150 }]] },
       { sets: 1, rest: 30, items: [['Piriformis Stretch with Contractions', '2:30 / side', { time_based: 1, duration_secs: 150, per_side: 'side' }]] },
       { sets: 1, rest: 30, items: [['Shoulder Capsule Stretch', '1:30 / side', { time_based: 1, duration_secs: 90, per_side: 'side' }]] },
-      { sets: 1, rest: 30, items: [['Cactus Up Stretch with Contractions', '1:30', { time_based: 1, duration_secs: 90 }]] },
+      { sets: 1, rest: 30, items: [['Cactus Up Stretch with Contractions', '1:30 / side', { time_based: 1, duration_secs: 90, per_side: 'side' }]] },
+      { sets: 1, rest: 30, items: [['Active Seal', '5 reps']] },
+      { sets: 1, rest: 30, items: [['Spinal Segmentation - Jefferson Curls', '5 reps']] },
+      { sets: 1, rest: 30, items: [['Couch Stretch', '2:30 / side', { time_based: 1, duration_secs: 150, per_side: 'side' }]] },
+      { sets: 1, rest: 30, items: [['Hamstring Stretch', '2:30 / side', { time_based: 1, duration_secs: 150, per_side: 'side' }]] },
     ],
   },
 ];

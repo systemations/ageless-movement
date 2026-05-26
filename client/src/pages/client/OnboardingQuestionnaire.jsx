@@ -211,39 +211,16 @@ export default function OnboardingQuestionnaire() {
 
   const next = async () => {
     if (!isLast) { setStep(s => s + 1); return; }
-    // Final question answered. Logged-in users go to the Packages step
-    // which stamps tier_requested + runs the purchase chain on Free.
-    // Logged-out users hit the legacy SuggestionScreen which routes
-    // them to /register first (no account = no plan to attach to).
-    if (!isLoggedIn) { setShowSuggestion(true); return; }
-
-    // HARD GATE: finalize MUST succeed before we move on. Pre-today the
-    // catch swallowed every error (including non-2xx responses) and the
-    // user proceeded to Packages with un-saved answers, leaving them on
-    // schema-default 2200 kcal forever. Now: any failure keeps them on
-    // this step with an error + retry. localStorage is only cleared
-    // after the server confirms.
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch('/api/onboarding/finalize', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Save failed (${res.status})`);
-      }
-      try { localStorage.removeItem(STORAGE_KEY); } catch {}
-      await refreshProfile();
-      setSaving(false);
-      navigate('/onboarding/packages');
-    } catch (err) {
-      console.error('Finalize failed:', err);
-      setSaving(false);
-      setSaveError(err.message || 'Could not save your answers. Tap Continue to try again.');
-    }
+    // Everyone (logged-in and logged-out) lands on the tier suggestion
+    // screen: Free / Prime / Elite. Selecting a card finalizes the answers
+    // (logged-in path) or routes to /register (logged-out path). Crucially,
+    // Elite (high-ticket 1:1) is a "book a call" booking link, so the
+    // expensive option stays OFF-platform and the App Store never takes a
+    // 30% cut. This replaces the old PackageSelection step, which surfaced
+    // every paid plan (incl. the high-ticket monthly) as an in-app purchase.
+    // The finalize hard-gate still applies: SuggestionScreen only routes a
+    // logged-in user onward after /api/onboarding/finalize succeeds.
+    setShowSuggestion(true);
   };
 
   const back = () => {

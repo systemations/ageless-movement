@@ -376,19 +376,6 @@ export default function Profile({ onBack }) {
         ))}
       </div>
 
-      {/* References */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div onClick={() => alert('Health recommendation sources: WHO, ACSM, NHS guidelines')} style={{ padding: '14px 0', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 18 }}>🔗</span>
-            <span style={{ fontSize: 15, fontWeight: 500 }}>References</span>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, marginLeft: 30 }}>
-            Learn more about sources of health recommendations
-          </p>
-        </div>
-      </div>
-
       {/* Settings Group 5 */}
       <div className="card" style={{ marginBottom: 12 }}>
         <div onClick={() => setShowSubPage('appearance')} style={{

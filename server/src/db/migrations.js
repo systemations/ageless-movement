@@ -15,7 +15,22 @@ import pool from './pool.js';
 // Example:
 //   { name: '2026-06-10-add-mobility-program', up: () => { pool.query('INSERT ...'); } },
 const MIGRATIONS = [
-  // (none yet — add new content/schema changes here post-beta)
+  // Move the Kettlebell Foundations program to the front of the "Programs"
+  // Explore section (it was added last, so it sat off-screen at the end of
+  // the carousel). Pure sort_order change - no user data touched.
+  {
+    name: '2026-05-27-kettlebell-front-of-programs',
+    up: () => {
+      const sec = pool.query("SELECT id FROM explore_sections WHERE title = 'Programs' AND content_type = 'program' LIMIT 1").rows[0];
+      const kb = pool.query("SELECT id FROM programs WHERE title LIKE 'Kettlebell Foundations%' LIMIT 1").rows[0];
+      if (!sec || !kb) return;
+      const min = pool.query('SELECT MIN(sort_order) AS m FROM explore_section_items WHERE section_id = ?', [sec.id]).rows[0]?.m ?? 0;
+      pool.query(
+        "UPDATE explore_section_items SET sort_order = ? WHERE section_id = ? AND item_type = 'program' AND item_id = ?",
+        [min - 1, sec.id, kb.id],
+      );
+    },
+  },
 ];
 
 export function runMigrations() {

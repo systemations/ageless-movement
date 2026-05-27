@@ -29,7 +29,7 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 // clients exist, DO NOT bump this to push content; build a content-only
 // migration that preserves user rows instead. A timestamped backup is left
 // at data/ageless.db.pre-seed-<ts> so a botched reseed can be recovered.
-const SEED_VERSION = '2026-05-26-explore-reorder';
+const SEED_VERSION = '2026-05-26-pfp-to-ams';
 const seedPath = path.join(__dirname, '..', '..', 'seed', 'ageless-seed.db');
 const seedVersionPath = path.join(path.dirname(dbPath), '.seed_version');
 

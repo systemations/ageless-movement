@@ -31,7 +31,11 @@ LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def cell(ws, r, c):
     v = ws.cell(row=r, column=c).value
-    return '' if v is None else re.sub(r'\s+', ' ', str(v)).strip()
+    if v is None:
+        return ''
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return re.sub(r'\s+', ' ', str(v)).strip()
 
 
 def parse_reps(raw):

@@ -50,6 +50,82 @@ const MIGRATIONS = [
       }
     },
   },
+  // Strip the trailing ".0" from whole-number reps (a float artifact from the
+  // spreadsheet imports: "10.0" should read "10"). Only touches values that
+  // are a plain integer followed by ".0" - free-text reps like "8-10", "60s",
+  // "1:00", "x2" are left alone. There are no genuine fractional reps.
+  {
+    name: '2026-05-27-strip-float-reps',
+    up: () => {
+      for (const table of ['workout_exercises', 'workout_exercise_alternates']) {
+        pool.query(
+          `UPDATE ${table}
+             SET reps = substr(reps, 1, length(reps) - 2)
+           WHERE reps LIKE '%.0'
+             AND length(reps) > 2
+             AND substr(reps, 1, length(reps) - 2) NOT GLOB '*[^0-9]*'`,
+        );
+      }
+    },
+  },
+  // Retire the "Beta Testers" community group. The server no longer recreates
+  // it; this removes the existing row + its memberships/reads/stars, but only
+  // if no messages were ever posted (so any real discussion is preserved).
+  {
+    name: '2026-05-27-remove-beta-testers-group',
+    up: () => {
+      const g = pool.query(
+        "SELECT id FROM conversations WHERE type = 'group' AND title = 'Beta Testers' AND client_id IS NULL",
+      ).rows[0];
+      if (!g) return;
+      const msgs = pool.query('SELECT COUNT(*) AS c FROM messages WHERE conversation_id = ?', [g.id]).rows[0].c;
+      if (msgs > 0) return;
+      pool.query('DELETE FROM conversation_members WHERE conversation_id = ?', [g.id]);
+      pool.query('DELETE FROM conversation_reads WHERE conversation_id = ?', [g.id]);
+      pool.query('DELETE FROM conversation_stars WHERE conversation_id = ?', [g.id]);
+      pool.query('DELETE FROM conversations WHERE id = ?', [g.id]);
+    },
+  },
+  // Add a free "Testimonial Recording" session type for Coach Dan (user 2) so
+  // clients can book a short recorded video chat from the testimonial flow.
+  // event_format='testimonial' keeps it out of the normal 1:1 list; it's
+  // reached by deep-link from the testimonial screen. Idempotent.
+  {
+    name: '2026-05-27-testimonial-recording-session',
+    up: () => {
+      const exists = pool.query(
+        "SELECT id FROM coach_session_types WHERE coach_user_id = 2 AND event_format = 'testimonial'",
+      ).rows[0];
+      if (exists) return;
+      pool.query(
+        `INSERT INTO coach_session_types
+           (coach_user_id, title, description, duration_minutes, price_cents, currency, event_format, is_active, sort_order)
+         VALUES (2, 'Testimonial Recording',
+           'A short, relaxed video call where you share your experience with Ageless Movement. With your permission we may feature clips on social media to help others discover the app.',
+           15, 0, 'USD', 'testimonial', 1, 99)`,
+      );
+    },
+  },
+  // Re-date the existing demo events into the future and make them free so beta
+  // testers can actually register (the free web beta charges nothing). Keyed by
+  // title so it updates whatever the seed/live DB holds; preserves any existing
+  // registrations. Re-run a fresh dated migration if these dates pass mid-beta.
+  {
+    name: '2026-05-27-refresh-demo-events-for-beta',
+    up: () => {
+      const reschedule = [
+        ['Pickleball Mobility Masterclass', '2026-06-04T18:00'],
+        ['5-Minute Morning Mobility Routine', '2026-06-11T07:00'],
+        ['Ageless Movement Workshop', '2026-06-19T10:00'],
+      ];
+      for (const [title, when] of reschedule) {
+        pool.query(
+          "UPDATE coach_events SET scheduled_at = ?, status = 'published', price_cents = 0 WHERE title = ?",
+          [when, title],
+        );
+      }
+    },
+  },
 ];
 
 export function runMigrations() {

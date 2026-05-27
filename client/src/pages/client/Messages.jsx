@@ -8,6 +8,13 @@ import MessageThread from './MessageThread';
 // client is chatting with themselves.
 const TEAM_INBOX_LABEL = 'Ageless Movement Team';
 const TEAM_INBOX_ICON  = '🏋️';
+// Feedback & Testimonials renders in its own section, not among community groups.
+const FEEDBACK_TITLE = 'Feedback & Testimonials';
+// Fixed display order for the community groups.
+const GROUP_ORDER = ['Active Clients', 'Weekly Wins', 'Q&A for the Community'];
+// Per-section tints so the three kinds of conversation read as distinct.
+const TINT_DIRECT   = { background: 'rgba(255,156,51,0.07)', border: '1px solid rgba(255,156,51,0.28)' };
+const TINT_FEEDBACK = { background: 'rgba(133,255,186,0.06)' };
 const isTeamInboxForClient = (conv, viewerId) =>
   conv.client_id && viewerId && conv.client_id === viewerId;
 
@@ -60,8 +67,23 @@ export default function Messages() {
     return <MessageThread conversationId={selectedConvo.id} title={title} onBack={() => { setSelectedConvo(null); fetchConversations(); }} />;
   }
 
-  const direct = conversations.filter(c => c.type === 'direct');
-  const groups = conversations.filter(c => c.type === 'group');
+  // The "Ageless Movement Team" inbox is stored as a group (client_id set) but
+  // should read as the client's direct line to the team, so it sits at the top
+  // of Direct Messages rather than buried among community groups.
+  const teamInbox = conversations.find(c => isTeamInboxForClient(c, user?.id));
+  const direct = [
+    teamInbox,
+    ...conversations.filter(c => c.type === 'direct' && !isTeamInboxForClient(c, user?.id)),
+  ].filter(Boolean);
+  const feedback = conversations.find(
+    c => c.type === 'group' && !c.client_id && c.title === FEEDBACK_TITLE,
+  );
+  const groups = conversations
+    .filter(c => c.type === 'group' && !isTeamInboxForClient(c, user?.id) && c.title !== FEEDBACK_TITLE)
+    .sort((a, b) => {
+      const rank = (t) => { const i = GROUP_ORDER.indexOf(t); return i === -1 ? GROUP_ORDER.length : i; };
+      return rank(a.title) - rank(b.title);
+    });
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -89,36 +111,47 @@ export default function Messages() {
       {direct.length > 0 && (
         <>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>DIRECT MESSAGES</p>
-          {direct.map((conv) => (
-            <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
-              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-            }}>
-              {conv.other_user?.photo_url ? (
-                <img
-                  src={conv.other_user.photo_url}
-                  alt=""
-                  style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                />
-              ) : (
-                <div style={{
-                  width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, fontWeight: 700, color: '#fff',
-                }}>
-                  {conv.other_user?.name?.charAt(0) || '?'}
+          {direct.map((conv) => {
+            const isTeam = isTeamInboxForClient(conv, user?.id);
+            return (
+              <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                ...(isTeam ? TINT_DIRECT : {}),
+              }}>
+                {isTeam ? (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,140,0,0.12)', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+                  }}>
+                    {TEAM_INBOX_ICON}
+                  </div>
+                ) : conv.other_user?.photo_url ? (
+                  <img
+                    src={conv.other_user.photo_url}
+                    alt=""
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, fontWeight: 700, color: '#fff',
+                  }}>
+                    {conv.other_user?.name?.charAt(0) || '?'}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontWeight: 600, fontSize: 15 }}>{isTeam ? TEAM_INBOX_LABEL : (conv.other_user?.name || 'Coach')}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(conv.last_message_at)}</p>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {conv.last_message || 'No messages yet'}
+                  </p>
                 </div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontWeight: 600, fontSize: 15 }}>{conv.other_user?.name || 'Coach'}</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(conv.last_message_at)}</p>
-                </div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {conv.last_message || 'No messages yet'}
-                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
 
@@ -127,11 +160,10 @@ export default function Messages() {
         <>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, margin: '20px 0 8px', letterSpacing: 1 }}>GROUPS</p>
           {groups.map((conv) => {
-            const teamInbox = isTeamInboxForClient(conv, user?.id);
-            const displayTitle = teamInbox ? TEAM_INBOX_LABEL : conv.title;
-            const displayIcon  = teamInbox ? TEAM_INBOX_ICON : (conv.icon || '💬');
-            const iconBg       = teamInbox ? 'rgba(255,140,0,0.12)' : (conv.icon_bg || 'var(--bg-card)');
-            const brandedImage = !teamInbox ? conv.image_url : null;
+            const displayTitle = conv.title;
+            const displayIcon  = conv.icon || '💬';
+            const iconBg       = conv.icon_bg || 'var(--bg-card)';
+            const brandedImage = conv.image_url;
             return (
               <div key={conv.id} onClick={() => setSelectedConvo(conv)} className="card-sm" style={{
                 display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
@@ -164,6 +196,33 @@ export default function Messages() {
               </div>
             );
           })}
+        </>
+      )}
+
+      {/* Feedback & Testimonials - its own section, tinted to read apart from groups */}
+      {feedback && (
+        <>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, margin: '20px 0 8px', letterSpacing: 1 }}>FEEDBACK &amp; TESTIMONIALS</p>
+          <div onClick={() => navigate('/feedback')} className="card-sm" style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            ...TINT_FEEDBACK,
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', background: feedback.icon_bg || 'rgba(133,255,186,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
+            }}>
+              {feedback.icon || '⭐'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontWeight: 600, fontSize: 15 }}>{feedback.title}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(feedback.last_message_at)}</p>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {feedback.last_message || 'Share feedback or a testimonial'}
+              </p>
+            </div>
+          </div>
         </>
       )}
 

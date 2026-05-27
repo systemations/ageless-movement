@@ -17,15 +17,13 @@ const router = Router();
 // ────────────────────────────────────────────────────────────────────────
 
 function ensureGroupConversations(userId) {
-  // Community groups maintained for everyone. Beta Testers is the active
-  // chat group for the beta cohort; the others are visible so testers can
-  // see the community channels. Feedback is read-only with a form link.
-  // Full props are set on create so a recreated group keeps its visibility /
-  // chat-enabled / CTA (not just title + icon).
+  // Community groups maintained for everyone. The client app lists them in a
+  // fixed order (see Messages.jsx); Feedback sits last and is read-only with a
+  // form link. Full props are set on create so a recreated group keeps its
+  // visibility / chat-enabled / CTA (not just title + icon).
   const groups = [
-    { title: 'Beta Testers', icon: '🧪', icon_bg: '#E5D9F7', visibility: 'all_clients', chat_enabled: 1, description: 'Welcome to the beta! Share bugs, ideas and first impressions here.' },
-    { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD', visibility: 'active_clients', chat_enabled: 1 },
     { title: 'Active Clients', icon: '👤', icon_bg: '#D1ECF1', visibility: 'active_clients', chat_enabled: 1 },
+    { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD', visibility: 'active_clients', chat_enabled: 1 },
     { title: 'Q&A for the Community', icon: '❓', icon_bg: '#FFE0B2', visibility: 'active_clients', chat_enabled: 1 },
     { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9', visibility: 'all_clients', chat_enabled: 0, cta_label: 'Give Feedback', cta_url: '/feedback' },
   ];

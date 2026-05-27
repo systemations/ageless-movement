@@ -5,6 +5,7 @@ const CAT = {
   bug: { label: '🐛 Bug', color: '#ff8fa0' },
   idea: { label: '💡 Idea', color: 'var(--accent)' },
   praise: { label: '⭐ Praise', color: 'var(--accent-mint)' },
+  testimonial: { label: '🌟 Testimonial', color: 'var(--accent-mint)' },
   other: { label: '💬 Other', color: 'var(--text-secondary)' },
 };
 
@@ -32,7 +33,7 @@ export default function FeedbackViewer() {
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {['all', 'bug', 'idea', 'praise', 'other'].map(k => (
+        {['all', 'bug', 'idea', 'praise', 'testimonial', 'other'].map(k => (
           <button
             key={k}
             onClick={() => setFilter(k)}

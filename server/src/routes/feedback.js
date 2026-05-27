@@ -20,7 +20,7 @@ pool.query(`
   )
 `);
 
-const CATEGORIES = new Set(['bug', 'idea', 'praise', 'other']);
+const CATEGORIES = new Set(['bug', 'idea', 'praise', 'other', 'testimonial']);
 
 // Submit feedback (any logged-in user).
 router.post('/', authenticateToken, (req, res) => {

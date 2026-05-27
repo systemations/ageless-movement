@@ -42,6 +42,8 @@ def cell_str(ws, r, c):
     v = ws.cell(row=r, column=c).value
     if v is None:
         return ''
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
     return re.sub(r'\s+', ' ', str(v)).strip()
 
 

@@ -134,6 +134,23 @@ export default function Events() {
     fetchMyRegistrations();
   }, [token]);
 
+  // Deep-link from the testimonial screen: ?book=testimonial drops the client
+  // straight into the slot picker for Coach Dan's free "Testimonial Recording"
+  // session. Falls back to his coach profile if the session type isn't found.
+  const TESTIMONIAL_COACH_ID = 2;
+  useEffect(() => {
+    if (!token || searchParams.get('book') !== 'testimonial') return;
+    (async () => {
+      const res = await fetch(`${API}/coaches/${TESTIMONIAL_COACH_ID}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const st = (data.session_types || []).find(s => s.event_format === 'testimonial');
+      setSelectedCoachId(TESTIMONIAL_COACH_ID);
+      if (st) { setSelectedSessionType(st); setView('book'); }
+      else { setView('coach'); }
+    })();
+  }, [token, searchParams]);
+
   // ---- view: coach profile ------------------------------------------------
   if (view === 'coach' && selectedCoachId) {
     return (

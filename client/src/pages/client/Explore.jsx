@@ -71,6 +71,33 @@ export default function Explore() {
   const [exerciseBrowserSection, setExerciseBrowserSection] = useState(null);
   const [showChallengesList, setShowChallengesList] = useState(false);
   const [seeAllSection, setSeeAllSection] = useState(null);
+  // Top-of-Explore search across workouts, programs, courses, exercises, recipes.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [recipeSearchSeed, setRecipeSearchSeed] = useState('');
+
+  // Debounced search fetch. Clears results when the box is emptied.
+  useEffect(() => {
+    const q = searchTerm.trim();
+    if (q.length < 2) { setSearchResults(null); return; }
+    const t = setTimeout(() => {
+      fetch(`/api/explore/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setSearchResults(d))
+        .catch(() => { /* non-blocking */ });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [searchTerm, token]);
+
+  const openSearchResult = (type, item) => {
+    setSearchTerm('');
+    setSearchResults(null);
+    if (type === 'workout') navigate(`/explore?workout=${item.id}`);
+    else if (type === 'program') navigate(`/explore?program=${item.id}`);
+    else if (type === 'course') navigate(`/explore?course=${item.id}`);
+    else if (type === 'exercise') setSelectedExercise(item);
+    else if (type === 'recipe') { setActiveTab('Nutrition'); setRecipeSearchSeed(item.title); }
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -292,6 +319,33 @@ export default function Explore() {
         </div>
       </div>
 
+      {/* Search bar - searches workouts, programs, courses, exercises, recipes */}
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search workouts, programs, recipes..."
+          style={{
+            width: '100%', padding: '12px 38px 12px 38px', borderRadius: 12,
+            background: 'var(--bg-card)', border: '1px solid var(--divider)',
+            color: 'var(--text-primary)', fontSize: 14, outline: 'none',
+          }}
+        />
+        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}>
+          <SearchIcon />
+        </span>
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} style={{
+            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 18, cursor: 'pointer', padding: 6,
+          }}>×</button>
+        )}
+      </div>
+
+      {searchResults ? (
+        <SearchResults results={searchResults} onOpen={openSearchResult} />
+      ) : (
+      <>
       {/* Sub-tabs - pinned at the top, under the header */}
       <div style={{
         display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
@@ -685,7 +739,7 @@ export default function Explore() {
           })}
 
           {/* Full recipe browser below */}
-          <RecipeBrowser onLocked={() => openTiersModal({ title: 'Recipes' })} />
+          <RecipeBrowser onLocked={() => openTiersModal({ title: 'Recipes' })} initialSearch={recipeSearchSeed} />
         </>
       )}
 
@@ -758,6 +812,8 @@ export default function Explore() {
           </div>
         </>
       )}
+      </>
+      )}
 
     </div>
 
@@ -774,6 +830,53 @@ export default function Explore() {
       itemTitle={tiersModal?.itemTitle}
     />
     </>
+  );
+}
+
+// Grouped search results. Each group only renders if it has hits.
+function SearchResults({ results, onOpen }) {
+  const groups = [
+    { key: 'workouts', type: 'workout', label: 'Workouts', title: w => w.title, sub: w => w.body_parts || 'Workout', img: w => w.image_url },
+    { key: 'programs', type: 'program', label: 'Programs', title: p => p.title, sub: () => 'Program', img: p => p.image_url },
+    { key: 'courses', type: 'course', label: 'Courses', title: c => c.title, sub: () => 'Course', img: c => c.image_url },
+    { key: 'exercises', type: 'exercise', label: 'Exercises', title: e => e.name, sub: e => e.body_part || 'Exercise', img: e => e.thumbnail_url },
+    { key: 'recipes', type: 'recipe', label: 'Recipes', title: r => r.title, sub: r => r.category || 'Recipe', img: r => r.thumbnail_url },
+  ];
+  const total = groups.reduce((n, g) => n + (results[g.key]?.length || 0), 0);
+  if (total === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No matches found</p>
+        <p style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 4 }}>Try a different word.</p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      {groups.map(g => {
+        const items = results[g.key] || [];
+        if (items.length === 0) return null;
+        return (
+          <div key={g.key} style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>{g.label}</p>
+            {items.map(item => (
+              <div key={`${g.key}-${item.id}`} onClick={() => onOpen(g.type, item)} className="card-sm" style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+              }}>
+                <div style={{ width: 48, height: 48, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card-hover)' }}>
+                  {g.img(item) && <img src={g.img(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title(item)}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.sub(item)}</p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

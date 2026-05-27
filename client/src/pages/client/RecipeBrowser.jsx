@@ -26,7 +26,7 @@ function RecipeLock() {
   );
 }
 
-export default function RecipeBrowser({ onBack, onLocked }) {
+export default function RecipeBrowser({ onBack, onLocked, initialSearch = '' }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -35,6 +35,11 @@ export default function RecipeBrowser({ onBack, onLocked }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [addQty, setAddQty] = useState(1);
   const [addMeal, setAddMeal] = useState('Breakfast');
+
+  // Seed the recipe search when arriving from the global Explore search.
+  useEffect(() => {
+    if (initialSearch) { setSearchQuery(initialSearch); setShowSearch(true); }
+  }, [initialSearch]);
 
   useEffect(() => {
     const params = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';

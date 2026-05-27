@@ -210,6 +210,43 @@ router.get('/content', authenticateToken, async (req, res) => {
   }
 });
 
+// Unified Explore search across workouts, programs, courses, exercises and
+// recipes. Title/name match, a handful per type. Tier locks aren't applied
+// here - tapping a result still goes through the normal gated detail views.
+router.get('/search', authenticateToken, (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (q.length < 2) {
+      return res.json({ workouts: [], programs: [], courses: [], exercises: [], recipes: [] });
+    }
+    const like = `%${q}%`;
+    const workouts = pool.query(
+      "SELECT id, title, body_parts, image_url FROM workouts WHERE COALESCE(visible,1)=1 AND title LIKE ? ORDER BY title LIMIT 8",
+      [like],
+    ).rows;
+    const programs = pool.query(
+      "SELECT id, title, image_url FROM programs WHERE COALESCE(visible,1)=1 AND title LIKE ? ORDER BY title LIMIT 8",
+      [like],
+    ).rows;
+    const courses = pool.query(
+      "SELECT id, title, image_url FROM courses WHERE COALESCE(visible,1)=1 AND title LIKE ? ORDER BY title LIMIT 8",
+      [like],
+    ).rows;
+    const exercises = pool.query(
+      "SELECT id, name, thumbnail_url, body_part, equipment, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0 AND name LIKE ? ORDER BY name LIMIT 10",
+      [like],
+    ).rows;
+    const recipes = pool.query(
+      "SELECT id, title, category, thumbnail_url FROM recipes WHERE title LIKE ? ORDER BY title LIMIT 8",
+      [like],
+    ).rows;
+    res.json({ workouts, programs, courses, exercises, recipes });
+  } catch (err) {
+    console.error('Explore search error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get single program with phases and workouts
 router.get('/programs/:id', authenticateToken, async (req, res) => {
   try {

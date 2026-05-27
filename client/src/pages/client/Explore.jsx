@@ -66,6 +66,7 @@ export default function Explore() {
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [exerciseBrowserSection, setExerciseBrowserSection] = useState(null);
   const [showChallengesList, setShowChallengesList] = useState(false);
+  const [seeAllSection, setSeeAllSection] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -152,6 +153,17 @@ export default function Explore() {
 
   if (exerciseBrowserSection) {
     return <ExerciseBrowser initialFilter={exerciseBrowserSection} onBack={() => setExerciseBrowserSection(null)} />;
+  }
+  if (seeAllSection) {
+    return (
+      <SeeAllGrid
+        section={seeAllSection}
+        onBack={() => setSeeAllSection(null)}
+        onOpenProgram={(id) => { setSeeAllSection(null); setSelectedProgram(id); }}
+        onOpenWorkout={(id) => { setSeeAllSection(null); setSelectedWorkout(id); }}
+        onLocked={(item) => openTiersModal(item)}
+      />
+    );
   }
 
   if (showChallengesList) {
@@ -397,9 +409,20 @@ export default function Explore() {
               return (
                 <div key={section.id} style={{ marginBottom: 24 }}>
                   <div className="section-header">
-                    <h2 style={{ fontSize: 16 }}>
+                    <h2
+                      style={{ fontSize: 16, cursor: itemCount > 4 ? 'pointer' : 'default' }}
+                      onClick={() => { if (itemCount > 4) setSeeAllSection(section); }}
+                    >
                       {section.title}
                     </h2>
+                    {itemCount > 4 && (
+                      <button
+                        onClick={() => setSeeAllSection(section)}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        See all
+                      </button>
+                    )}
                   </div>
                   <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
                     {section.items.map((item) => {
@@ -447,9 +470,20 @@ export default function Explore() {
               return (
                 <div key={section.id} style={{ marginBottom: 24 }}>
                   <div className="section-header">
-                    <h2 style={{ fontSize: 16 }}>
+                    <h2
+                      style={{ fontSize: 16, cursor: itemCount > 4 ? 'pointer' : 'default' }}
+                      onClick={() => { if (itemCount > 4) setSeeAllSection(section); }}
+                    >
                       {section.title}
                     </h2>
+                    {itemCount > 4 && (
+                      <button
+                        onClick={() => setSeeAllSection(section)}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        See all
+                      </button>
+                    )}
                   </div>
                   {itemCount === 0 ? (
                     <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
@@ -715,5 +749,55 @@ export default function Explore() {
       requiredTierLevel={tiersModal?.requiredTierLevel}
     />
     </>
+  );
+}
+
+// Full-grid "See all" view for a section, opened from a tappable section
+// title / "See all" link. Renders every item in the group as a wrapping
+// grid (vs the inline horizontal carousel). Reuses WorkoutThumb + the same
+// tap-through targets (program detail / workout overview).
+function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked }) {
+  const isProgram = section.content_type === 'program'
+    || (section.items?.[0]?.item_type === 'program');
+  return (
+    <div className="page-content" style={{ paddingBottom: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <button
+          onClick={onBack}
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+        >
+          ← Back
+        </button>
+        <h2 style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>{section.title}</h2>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {(section.items || []).map((item) => (
+          <div
+            key={item.id}
+            onClick={() => item.item_locked
+              ? onLocked(item)
+              : (isProgram ? onOpenProgram(item.item_id) : onOpenWorkout(item.item_id))}
+            style={{ cursor: 'pointer' }}
+          >
+            <div style={{ width: '100%', position: 'relative', borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
+              <WorkoutThumb
+                title={item.title}
+                thumbnailUrl={item.image_url}
+                aspectRatio="1/1"
+                borderRadius={12}
+                titleFontSize={14}
+              />
+              {item.item_locked && <LockOverlay tierName={item.tier_name} compact />}
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>{item.title}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              {isProgram
+                ? `${item.duration_weeks || ''} weeks · ${item.workouts_per_week || ''} workouts/wk`
+                : `${item.duration ? item.duration + ' mins' : ''}${item.body_parts ? ' · ' + item.body_parts : ''}`}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

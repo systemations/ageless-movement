@@ -17,17 +17,26 @@ const router = Router();
 // ────────────────────────────────────────────────────────────────────────
 
 function ensureGroupConversations(userId) {
-  // Only the Feedback group is maintained for the beta. The other community
-  // groups (Weekly Wins / Active Clients / Q&A) were retired; don't recreate
-  // them here or they'd reappear on the next messages open.
+  // Community groups maintained for everyone. Beta Testers is the active
+  // chat group for the beta cohort; the others are visible so testers can
+  // see the community channels. Feedback is read-only with a form link.
+  // Full props are set on create so a recreated group keeps its visibility /
+  // chat-enabled / CTA (not just title + icon).
   const groups = [
-    { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9' },
+    { title: 'Beta Testers', icon: '🧪', icon_bg: '#E5D9F7', visibility: 'all_clients', chat_enabled: 1, description: 'Welcome to the beta! Share bugs, ideas and first impressions here.' },
+    { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD', visibility: 'active_clients', chat_enabled: 1 },
+    { title: 'Active Clients', icon: '👤', icon_bg: '#D1ECF1', visibility: 'active_clients', chat_enabled: 1 },
+    { title: 'Q&A for the Community', icon: '❓', icon_bg: '#FFE0B2', visibility: 'active_clients', chat_enabled: 1 },
+    { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9', visibility: 'all_clients', chat_enabled: 0, cta_label: 'Feedback Form', cta_url: 'https://forms.gle/CGa74PW1Dxty2X7x5' },
   ];
 
   for (const g of groups) {
     const existing = pool.query("SELECT c.id FROM conversations c WHERE c.type = 'group' AND c.title = ? AND c.client_id IS NULL", [g.title]);
     if (existing.rows.length === 0) {
-      const convo = pool.query("INSERT INTO conversations (type, title, icon, icon_bg) VALUES ('group', ?, ?, ?) RETURNING id", [g.title, g.icon, g.icon_bg]);
+      const convo = pool.query(
+        "INSERT INTO conversations (type, title, icon, icon_bg, visibility, chat_enabled, cta_label, cta_url, description) VALUES ('group', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+        [g.title, g.icon, g.icon_bg, g.visibility || 'active_clients', g.chat_enabled != null ? g.chat_enabled : 1, g.cta_label || null, g.cta_url || null, g.description || null],
+      );
       pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convo.rows[0].id, userId]);
       const allUsers = pool.query('SELECT id FROM users WHERE id != ?', [userId]);
       for (const u of allUsers.rows) {

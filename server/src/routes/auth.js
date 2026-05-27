@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import pool from '../db/pool.js';
@@ -240,9 +241,12 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
+    // Tokens are stored hashed (see coach reset-password generation), so hash
+    // the incoming raw token before looking it up.
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const row = pool.query(
       'SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token = ?',
-      [token],
+      [tokenHash],
     ).rows[0];
     if (!row) return res.status(400).json({ error: 'Invalid or expired token' });
     if (row.used_at) return res.status(400).json({ error: 'This reset link has already been used' });

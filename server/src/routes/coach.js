@@ -1268,11 +1268,14 @@ router.post('/clients/:id/reset-password', authenticateToken, requireRole('coach
     );
 
     const token = crypto.randomBytes(32).toString('hex');
+    // Store only a hash of the token, never the raw value - so a DB read can't
+    // be used to hijack a pending reset. The raw token lives only in the URL.
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
     pool.query(
       `INSERT INTO password_reset_tokens (user_id, token, expires_at, created_by)
        VALUES (?, ?, ?, ?)`,
-      [client.id, token, expiresAt, req.user.id],
+      [client.id, tokenHash, expiresAt, req.user.id],
     );
 
     // Until SMTP is wired, the URL is returned to the coach so they can forward it

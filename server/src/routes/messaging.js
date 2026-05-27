@@ -27,7 +27,7 @@ function ensureGroupConversations(userId) {
     { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD', visibility: 'active_clients', chat_enabled: 1 },
     { title: 'Active Clients', icon: '👤', icon_bg: '#D1ECF1', visibility: 'active_clients', chat_enabled: 1 },
     { title: 'Q&A for the Community', icon: '❓', icon_bg: '#FFE0B2', visibility: 'active_clients', chat_enabled: 1 },
-    { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9', visibility: 'all_clients', chat_enabled: 0, cta_label: 'Feedback Form', cta_url: 'https://forms.gle/CGa74PW1Dxty2X7x5' },
+    { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9', visibility: 'all_clients', chat_enabled: 0, cta_label: 'Give Feedback', cta_url: '/feedback' },
   ];
 
   for (const g of groups) {
@@ -43,6 +43,12 @@ function ensureGroupConversations(userId) {
         pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convo.rows[0].id, u.id]);
       }
     } else {
+      // Keep these system-managed groups in sync with the spec (e.g. repoint
+      // the Feedback CTA to the in-app form), and ensure membership.
+      pool.query(
+        'UPDATE conversations SET visibility = ?, chat_enabled = ?, cta_label = ?, cta_url = ?, icon = ?, icon_bg = ? WHERE id = ?',
+        [g.visibility || 'active_clients', g.chat_enabled != null ? g.chat_enabled : 1, g.cta_label || null, g.cta_url || null, g.icon, g.icon_bg, existing.rows[0].id],
+      );
       pool.query('INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [existing.rows[0].id, userId]);
     }
   }

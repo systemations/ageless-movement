@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 // Tier visuals shared with the Clients list + Messages inbox so the user
@@ -12,6 +13,7 @@ const TIER_COLORS = {
 
 export default function MessageThread({ conversationId, title, subtitle, onBack, hideBackButton = false }) {
   const { token, user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [convo, setConvo] = useState(null);
   const [client, setClient] = useState(null);
@@ -477,18 +479,33 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
             Chat is read-only here - use the link below to contribute.
           </p>
           {convo.cta_url ? (
-            <a
-              href={convo.cta_url}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'block', textAlign: 'center',
-                background: 'var(--accent)', color: '#fff', borderRadius: 22, padding: '12px 16px',
-                fontSize: 13, fontWeight: 800, textDecoration: 'none',
-              }}
-            >
-              {convo.cta_label || 'Open link'} ↗
-            </a>
+            // Internal routes (e.g. /feedback) navigate in-app; external URLs
+            // open in a new tab.
+            convo.cta_url.startsWith('/') ? (
+              <button
+                onClick={() => navigate(convo.cta_url)}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer',
+                  background: 'var(--accent)', color: '#fff', borderRadius: 22, padding: '12px 16px',
+                  fontSize: 13, fontWeight: 800,
+                }}
+              >
+                {convo.cta_label || 'Open'} →
+              </button>
+            ) : (
+              <a
+                href={convo.cta_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'block', textAlign: 'center',
+                  background: 'var(--accent)', color: '#fff', borderRadius: 22, padding: '12px 16px',
+                  fontSize: 13, fontWeight: 800, textDecoration: 'none',
+                }}
+              >
+                {convo.cta_label || 'Open link'} ↗
+              </a>
+            )
           ) : null}
         </div>
       ) : (

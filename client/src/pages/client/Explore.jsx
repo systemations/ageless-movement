@@ -461,7 +461,7 @@ export default function Explore() {
                       <div
                         key={item.id}
                         onClick={() => item.item_locked ? openTiersModal(item) : setSelectedWorkout(item.item_id)}
-                        style={{ minWidth: 150, cursor: 'pointer', position: 'relative' }}
+                        style={{ width: 150, minWidth: 150, maxWidth: 150, flexShrink: 0, cursor: 'pointer', position: 'relative' }}
                       >
                         <div style={{ width: 150, marginBottom: 8, position: 'relative', borderRadius: 12, overflow: 'hidden' }}>
                           <WorkoutThumb

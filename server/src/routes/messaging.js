@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { isBetaMode } from '../lib/settings.js';
+import { betaMessage, betaFirstName } from '../jobs/reminders.js';
 
 const router = Router();
+
+const BETA_WELCOME_SENDER = 2; // Coach Dan
 
 // ────────────────────────────────────────────────────────────────────────
 // Conversation bootstrapping
@@ -70,12 +74,14 @@ function ensureClientTeamInboxes(currentUserId) {
       [client.id],
     ).rows[0];
 
+    let justCreated = false;
     if (!convo) {
       const res = pool.query(
         "INSERT INTO conversations (type, client_id, title) VALUES ('group', ?, ?) RETURNING id",
         [client.id, client.name],
       );
       convo = { id: res.rows[0].id };
+      justCreated = true;
     }
 
     // Ensure client is a member
@@ -89,6 +95,23 @@ function ensureClientTeamInboxes(currentUserId) {
         'INSERT OR IGNORE INTO conversation_members (conversation_id, user_id) VALUES (?, ?)',
         [convo.id, c.id],
       );
+    }
+
+    // First time this client's team inbox is created (i.e. just after signup),
+    // drop the beta welcome message in from the coach. Logging it as the first
+    // beta_checklist reminder means the scheduler then continues with the 72h
+    // nudges rather than re-sending the full welcome.
+    if (justCreated && isBetaMode()) {
+      pool.query(
+        "INSERT INTO messages (conversation_id, sender_id, content, message_type) VALUES (?, ?, ?, 'text')",
+        [convo.id, BETA_WELCOME_SENDER, betaMessage(betaFirstName(client.name), true)],
+      );
+      try {
+        pool.query(
+          'INSERT INTO reminder_log (user_id, reminder_kind, fired_local_date, payload_json) VALUES (?, ?, ?, ?)',
+          [client.id, 'beta_checklist', new Date().toISOString().slice(0, 10), JSON.stringify({ welcome: true })],
+        );
+      } catch { /* unique - already logged */ }
     }
   }
 

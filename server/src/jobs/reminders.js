@@ -31,11 +31,11 @@ const BETA_SENDER_ID     = 2;   // Coach Dan - so the DM reads as from the team
 const BETA_QUIET_START   = 8;   // only send between 08:00 and 21:00 local
 const BETA_QUIET_END     = 21;
 
-const betaFirstName = (name) => (name || '').trim().split(/\s+/)[0] || 'there';
+export const betaFirstName = (name) => (name || '').trim().split(/\s+/)[0] || 'there';
 // SQLite stores timestamps as 'YYYY-MM-DD HH:MM:SS' in UTC.
 const parseUtc = (s) => (s ? Date.parse(s.replace(' ', 'T') + 'Z') : NaN);
 
-function betaMessage(firstName, isFirst) {
+export function betaMessage(firstName, isFirst) {
   if (isFirst) {
     return `Hi ${firstName}, welcome to the Ageless Movement beta. Thanks for being one of our first testers. When you have a moment, here is what would help us most:\n\n`
       + `1. Finish onboarding and your movement assessment\n`

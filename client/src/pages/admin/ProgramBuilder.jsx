@@ -18,6 +18,7 @@ export default function ProgramBuilder({ onEditWorkout }) {
   const [programs, setPrograms] = useState([]);
   const [workouts, setWorkouts] = useState([]);
   const [exercises, setExercises] = useState([]);
+  const [tiers, setTiers] = useState([]);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -42,14 +43,16 @@ export default function ProgramBuilder({ onEditWorkout }) {
 
   const fetchAll = async () => {
     const headers = { Authorization: `Bearer ${token}` };
-    const [p, w, e] = await Promise.all([
+    const [p, w, e, t] = await Promise.all([
       fetch('/api/content/programs', { headers }).then(r => r.json()),
       fetch('/api/content/workouts', { headers }).then(r => r.json()),
       fetch('/api/content/exercises', { headers }).then(r => r.json()),
+      fetch('/api/content/tiers', { headers }).then(r => r.json()).catch(() => ({})),
     ]);
     setPrograms(p.programs || []);
     setWorkouts(w.workouts || []);
     setExercises(e.exercises || []);
+    setTiers(t.tiers || []);
   };
 
   const saveProgram = async () => {
@@ -605,6 +608,26 @@ export default function ProgramBuilder({ onEditWorkout }) {
             <label>Workouts/Week</label>
             <input type="number" className="input-field" value={form.workouts_per_week || ''} onChange={e => setForm({ ...form, workouts_per_week: parseInt(e.target.value) || '' })} />
           </div>
+        </div>
+
+        {/* Access tier - the lock level. Clients below this tier see the
+            program locked (the first session stays free as a sample). */}
+        <div className="input-group">
+          <label>Access tier (lock level)</label>
+          <select
+            className="input-field"
+            value={form.tier_id || 1}
+            onChange={e => setForm({ ...form, tier_id: parseInt(e.target.value) })}
+          >
+            {[...tiers].sort((a, b) => (a.level || 0) - (b.level || 0)).map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name}{t.price_label ? ` — ${t.price_label}` : ''}{(t.level || 0) === 0 ? ' (free / open)' : ''}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+            Clients below this tier see the program locked, with the first session free as a sample. Set to a free tier to open it fully.
+          </p>
         </div>
         {!isNew && (() => {
           const programWorkouts = workouts.filter(w => w.program_id === form.id);

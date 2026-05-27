@@ -10,7 +10,23 @@ const HIDDEN_CATEGORIES = new Set([
   'Beverages', 'Broths', 'Fats', 'Proteins', 'Supplements', 'Sweeteners',
 ]);
 
-export default function RecipeBrowser({ onBack }) {
+// Gradient + lock silhouette over a recipe thumbnail, matching the lock
+// treatment used elsewhere in Explore.
+function RecipeLock() {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'linear-gradient(180deg, rgba(8,16,32,0.5) 0%, rgba(4,9,18,0.88) 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="rgba(255,255,255,0.92)" aria-hidden="true">
+        <path d="M12 1.5a5 5 0 0 0-5 5V10H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V6.5a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0V10H9V6.5zM12 14a1.6 1.6 0 0 1 .8 3v1.6a.8.8 0 0 1-1.6 0V17A1.6 1.6 0 0 1 12 14z"/>
+      </svg>
+    </div>
+  );
+}
+
+export default function RecipeBrowser({ onBack, onLocked }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -233,7 +249,7 @@ export default function RecipeBrowser({ onBack }) {
           display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12,
         }}>
           {cat.recipes.map((recipe) => (
-            <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} style={{ cursor: 'pointer' }}>
+            <div key={recipe.id} onClick={() => data?.locked ? onLocked?.() : setSelectedRecipe(recipe)} style={{ cursor: 'pointer' }}>
               <div style={{
                 width: '100%', aspectRatio: '1', borderRadius: 12, background: 'var(--bg-card)',
                 marginBottom: 6, position: 'relative', overflow: 'hidden',
@@ -247,9 +263,11 @@ export default function RecipeBrowser({ onBack }) {
                     <span style={{ fontSize: 32, opacity: 0.3 }}>🍽️</span>
                   </div>
                 )}
-                <div style={{ position: 'absolute', top: 4, right: 4 }}>
-                  <FavButton itemType="recipe" itemId={recipe.id} itemTitle={recipe.name} itemMeta={`${recipe.calories} cals`} />
-                </div>
+                {data?.locked ? <RecipeLock /> : (
+                  <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                    <FavButton itemType="recipe" itemId={recipe.id} itemTitle={recipe.name} itemMeta={`${recipe.calories} cals`} />
+                  </div>
+                )}
               </div>
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{recipe.name}</p>
               <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{recipe.calories} cals</p>
@@ -311,7 +329,7 @@ export default function RecipeBrowser({ onBack }) {
             {cat.recipes.slice(0, 10).map((recipe) => (
               <div
                 key={recipe.id}
-                onClick={() => setSelectedRecipe(recipe)}
+                onClick={() => data?.locked ? onLocked?.() : setSelectedRecipe(recipe)}
                 style={{ minWidth: 160, cursor: 'pointer' }}
               >
                 <div style={{
@@ -327,9 +345,11 @@ export default function RecipeBrowser({ onBack }) {
                       <span style={{ fontSize: 40, opacity: 0.3 }}>🍽️</span>
                     </div>
                   )}
-                  <div style={{ position: 'absolute', top: 4, right: 4 }}>
-                    <FavButton itemType="recipe" itemId={recipe.id} itemTitle={recipe.name} itemMeta={`${recipe.calories} cals`} />
-                  </div>
+                  {data?.locked ? <RecipeLock /> : (
+                    <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                      <FavButton itemType="recipe" itemId={recipe.id} itemTitle={recipe.name} itemMeta={`${recipe.calories} cals`} />
+                    </div>
+                  )}
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{recipe.name}</p>
                 <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{recipe.calories} cals</p>

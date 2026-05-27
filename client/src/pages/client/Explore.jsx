@@ -12,23 +12,27 @@ import ExerciseDetailModal from '../../components/ExerciseDetailModal';
 import ExerciseBrowser from './ExerciseBrowser';
 import ChallengeDetail from './ChallengeDetail';
 import MealPlanView from './MealPlanView';
-import TiersModal from '../../components/TiersModal';
+import PlansModal from '../../components/PlansModal';
 
-// Dark veil + lock icon + tier-name chip overlay, rendered on top of any
-// thumbnail. Replaces the old bare 🔒 emoji so locked content reads
-// unambiguously as "unlock to access" rather than just "favourited".
+// Opaque gradient veil + lock silhouette over a locked thumbnail. The
+// gradient darkens toward the bottom so any title baked into the image stays
+// faintly visible while reading unambiguously as "locked, tap to unlock".
 function LockOverlay({ tierName, compact }) {
+  const size = compact ? 30 : 42;
   return (
     <div style={{
-      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)',
+      position: 'absolute', inset: 0,
+      background: 'linear-gradient(180deg, rgba(8,16,32,0.55) 0%, rgba(6,12,24,0.82) 60%, rgba(4,9,18,0.94) 100%)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 6, color: '#fff',
+      gap: 8, color: '#fff',
     }}>
-      <div style={{ fontSize: compact ? 20 : 26 }}>🔒</div>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="rgba(255,255,255,0.92)" aria-hidden="true">
+        <path d="M12 1.5a5 5 0 0 0-5 5V10H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V6.5a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0V10H9V6.5zM12 14a1.6 1.6 0 0 1 .8 3v1.6a.8.8 0 0 1-1.6 0V17A1.6 1.6 0 0 1 12 14z"/>
+      </svg>
       {tierName && (
         <div style={{
-          fontSize: compact ? 9 : 10, fontWeight: 800, letterSpacing: 0.8,
-          padding: '3px 8px', borderRadius: 10, background: 'var(--accent)', color: '#fff',
+          fontSize: compact ? 9 : 10.5, fontWeight: 800, letterSpacing: 0.8,
+          padding: '3px 9px', borderRadius: 10, background: 'var(--accent)', color: '#fff',
           textTransform: 'uppercase',
         }}>{tierName}</div>
       )}
@@ -134,7 +138,24 @@ export default function Explore() {
   }
 
   if (selectedProgram) {
-    return <ProgramDetail programId={selectedProgram} onBack={closeProgram} onSelectWorkout={setSelectedWorkout} />;
+    // PlansModal must mount in this branch too: tapping a locked session
+    // inside ProgramDetail sets the modal state, but the main render below
+    // never runs while a program is open.
+    return (
+      <>
+        <ProgramDetail
+          programId={selectedProgram}
+          onBack={closeProgram}
+          onSelectWorkout={setSelectedWorkout}
+          onLocked={(w, prog) => openTiersModal({ title: prog?.title || w.title })}
+        />
+        <PlansModal
+          open={!!tiersModal}
+          onClose={() => setTiersModal(null)}
+          itemTitle={tiersModal?.itemTitle}
+        />
+      </>
+    );
   }
 
   if (selectedCourse) {
@@ -432,7 +453,7 @@ export default function Explore() {
                       return (
                         <div
                           key={item.id}
-                          onClick={() => item.item_locked ? openTiersModal(item) : setSelectedProgram(item.item_id)}
+                          onClick={() => setSelectedProgram(item.item_id)}
                           style={{
                             width: CARD_W, minWidth: CARD_W, maxWidth: CARD_W, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-card)',
                             position: 'relative', display: 'flex', flexDirection: 'column', flexShrink: 0,
@@ -449,7 +470,6 @@ export default function Explore() {
                               borderRadius={0}
                               titleFontSize={16}
                             />
-                            {item.item_locked && <LockOverlay tierName={item.tier_name} />}
                           </div>
                           <div style={{ padding: '12px 14px 14px' }}>
                             <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.title}</h4>
@@ -582,18 +602,20 @@ export default function Explore() {
                 {mealSchedules.map(sched => (
                   <div
                     key={sched.id}
-                    onClick={() => setSelectedMealPlanId(sched.id)}
+                    onClick={() => sched.locked ? openTiersModal({ title: 'Meal Schedules' }) : setSelectedMealPlanId(sched.id)}
                     style={{
                       minWidth: 240, maxWidth: 240, cursor: 'pointer',
                       borderRadius: 14, overflow: 'hidden', background: 'var(--bg-card)', flexShrink: 0,
                     }}
                   >
                     <div style={{
-                      height: 130,
+                      height: 130, position: 'relative',
                       background: sched.image_url
                         ? `url(${sched.image_url}) center/cover`
                         : 'linear-gradient(135deg, #1A2E1E, #243D26)',
-                    }} />
+                    }}>
+                      {sched.locked && <LockOverlay />}
+                    </div>
                     <div style={{ padding: '10px 12px 12px' }}>
                       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{sched.title}</p>
                       <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
@@ -633,6 +655,7 @@ export default function Explore() {
                     {section.items.map(item => (
                       <div
                         key={item.id}
+                        onClick={() => item.item_locked ? openTiersModal({ title: 'Recipes' }) : null}
                         style={{
                           minWidth: 150, cursor: 'pointer', flexShrink: 0,
                         }}
@@ -642,8 +665,10 @@ export default function Explore() {
                           background: item.image_url
                             ? `url(${item.image_url}) center/cover`
                             : 'var(--bg-card)',
-                          marginBottom: 6,
-                        }} />
+                          marginBottom: 6, position: 'relative',
+                        }}>
+                          {item.item_locked && <LockOverlay compact />}
+                        </div>
                         <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{item.title}</p>
                         <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                           {item.calories ? `${item.calories} cal` : ''}
@@ -660,7 +685,7 @@ export default function Explore() {
           })}
 
           {/* Full recipe browser below */}
-          <RecipeBrowser />
+          <RecipeBrowser onLocked={() => openTiersModal({ title: 'Recipes' })} />
         </>
       )}
 
@@ -741,12 +766,12 @@ export default function Explore() {
       <ExerciseDetailModal exercise={selectedExercise} onClose={() => setSelectedExercise(null)} />
     )}
 
-    {/* Tier comparison modal - opens when tapping a locked Explore item */}
-    <TiersModal
+    {/* Pricing modal - mirrors the first-login plan screen, opens when
+        tapping a locked Explore item. */}
+    <PlansModal
       open={!!tiersModal}
       onClose={() => setTiersModal(null)}
       itemTitle={tiersModal?.itemTitle}
-      requiredTierLevel={tiersModal?.requiredTierLevel}
     />
     </>
   );
@@ -774,9 +799,9 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked })
         {(section.items || []).map((item) => (
           <div
             key={item.id}
-            onClick={() => item.item_locked
-              ? onLocked(item)
-              : (isProgram ? onOpenProgram(item.item_id) : onOpenWorkout(item.item_id))}
+            onClick={() => isProgram
+              ? onOpenProgram(item.item_id)
+              : (item.item_locked ? onLocked(item) : onOpenWorkout(item.item_id))}
             style={{ cursor: 'pointer' }}
           >
             <div style={{ width: '100%', position: 'relative', borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
@@ -787,7 +812,7 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked })
                 borderRadius={12}
                 titleFontSize={14}
               />
-              {item.item_locked && <LockOverlay tierName={item.tier_name} compact />}
+              {item.item_locked && !isProgram && <LockOverlay tierName={item.tier_name} compact />}
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>{item.title}</p>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>

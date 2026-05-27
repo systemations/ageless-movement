@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import WorkoutThumb from '../../components/WorkoutThumb';
 import VimeoEmbed from '../../components/VimeoEmbed';
 
-export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
+export default function ProgramDetail({ programId, onBack, onSelectWorkout, onLocked }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -164,13 +164,13 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
           {dayWorkouts.map((w) => (
             <div
               key={w.id}
-              onClick={() => onSelectWorkout(w.id)}
+              onClick={() => w.locked ? onLocked?.(w, program) : onSelectWorkout(w.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
                 borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer',
               }}
             >
-              <div style={{ width: 56, flexShrink: 0 }}>
+              <div style={{ width: 56, flexShrink: 0, position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
                 <WorkoutThumb
                   title={w.title}
                   thumbnailUrl={w.image_url}
@@ -181,8 +181,19 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
                     return m ? `S${m[1]}` : `D${w.day_number}`;
                   })()}
                 />
+                {w.locked && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(180deg, rgba(8,16,32,0.5) 0%, rgba(4,9,18,0.9) 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.92)" aria-hidden="true">
+                      <path d="M12 1.5a5 5 0 0 0-5 5V10H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V6.5a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0V10H9V6.5zM12 14a1.6 1.6 0 0 1 .8 3v1.6a.8.8 0 0 1-1.6 0V17A1.6 1.6 0 0 1 12 14z"/>
+                    </svg>
+                  </div>
+                )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, opacity: w.locked ? 0.6 : 1 }}>
                 <p style={{ fontSize: 11, color: 'var(--accent-orange)', fontWeight: 700, marginBottom: 2 }}>
                   {enrollment?.started_at ? formatDayDate(dateForWorkout(w)).toUpperCase() : `DAY ${w.day_number}`}
                 </p>
@@ -190,10 +201,14 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout }) {
                   {w.title}
                 </p>
                 <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                  {w.duration_mins} mins · {w.body_parts}
+                  {w.locked ? 'Unlock with a plan' : `${w.duration_mins} mins · ${w.body_parts}`}
                 </p>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+              {w.locked ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+              )}
             </div>
           ))}
         </div>

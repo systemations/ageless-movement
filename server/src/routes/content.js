@@ -13,10 +13,10 @@ router.get('/programs', authenticateToken, requireRole('coach'), (req, res) => {
 });
 
 router.post('/programs', authenticateToken, requireRole('coach'), (req, res) => {
-  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url } = req.body;
+  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id } = req.body;
   const result = pool.query(
-    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
-    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null, intro_video_url || null]
+    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
+    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null, intro_video_url || null, tier_id || 1]
   );
   res.json({ program: result.rows[0] });
 });

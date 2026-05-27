@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole, requireCoachOwnsClientBody } from '../middleware/auth.js';
+import { clientTierLevel } from '../middleware/tier.js';
 import { loadPlan, scalePlanForClient, getScheduleForClient } from '../lib/mealScaling.js';
 import { calculateTargets } from '../lib/nutritionTargets.js';
 import https from 'https';
@@ -427,12 +428,15 @@ router.get('/meal-schedules', authenticateToken, (req, res) => {
       `).rows;
       return res.json({ schedules });
     }
+    // Meal schedules are a paid feature: free-tier clients see the cards as a
+    // teaser (flagged locked) but the day-by-day plan is gated behind pricing.
+    const locked = clientTierLevel(req.user.id) < 1;
     const schedules = pool.query(`
       SELECT ms.*,
         (SELECT COUNT(*) FROM meal_schedule_entries WHERE schedule_id = ms.id) AS entry_count
       FROM meal_schedules ms ORDER BY ms.title
-    `).rows;
-    res.json({ schedules });
+    `).rows.map(s => ({ ...s, locked }));
+    res.json({ schedules, locked });
   } catch (err) {
     console.error('Meal schedules list error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -442,6 +446,9 @@ router.get('/meal-schedules', authenticateToken, (req, res) => {
 // Schedule detail - full week/day tree scaled for the calling client
 router.get('/meal-schedules/:id', authenticateToken, (req, res) => {
   try {
+    if (req.user.role === 'client' && clientTierLevel(req.user.id) < 1) {
+      return res.status(403).json({ error: 'Tier required' });
+    }
     let target = null;
     if (req.user.role === 'client') {
       // Prefer per-assignment override, fall back to profile target
@@ -519,6 +526,10 @@ router.post('/meal-schedules/:id/enroll', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const scheduleId = req.params.id;
     const { force } = req.body;
+
+    if (clientTierLevel(userId) < 1) {
+      return res.status(403).json({ error: 'Tier required' });
+    }
 
     // Check the schedule exists
     const schedule = pool.query('SELECT id, title FROM meal_schedules WHERE id = ?', [scheduleId]).rows[0];
@@ -842,6 +853,11 @@ router.get('/recipes', authenticateToken, async (req, res) => {
       recipes = pool.query('SELECT * FROM recipes ORDER BY category, title');
     }
 
+    // Recipes are a paid feature: free-tier clients see the cards (name,
+    // image, macros) as a teaser but the actual ingredients/instructions are
+    // withheld and the UI locks them behind the pricing screen.
+    const recipesLocked = clientTierLevel(req.user.id) < 1;
+
     const catOrder = ['Breakfast', 'Smoothies', 'Mains', 'Salads', 'Soups', 'Snacks'];
     const grouped = {};
     recipes.rows.forEach(r => {
@@ -851,8 +867,8 @@ router.get('/recipes', authenticateToken, async (req, res) => {
         id: r.id, name: r.title, description: r.description, thumbnail: r.thumbnail_url,
         calories: r.calories, protein: r.protein, fat: r.fat, carbs: r.carbs,
         servingSize: r.serving_size, servingUnit: r.serving_unit,
-        ingredients: JSON.parse(r.ingredients || '[]'),
-        instructions: JSON.parse(r.instructions || '[]'),
+        ingredients: recipesLocked ? [] : JSON.parse(r.ingredients || '[]'),
+        instructions: recipesLocked ? [] : JSON.parse(r.instructions || '[]'),
         tags: r.tags,
       });
     });
@@ -862,7 +878,7 @@ router.get('/recipes', authenticateToken, async (req, res) => {
       if (!catOrder.includes(c)) categories.push({ title: c, recipes: grouped[c] });
     });
 
-    res.json({ categories });
+    res.json({ categories, locked: recipesLocked });
   } catch (err) {
     console.error('Recipes error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -871,6 +887,9 @@ router.get('/recipes', authenticateToken, async (req, res) => {
 
 router.get('/recipes/:id', authenticateToken, async (req, res) => {
   try {
+    if (clientTierLevel(req.user.id) < 1) {
+      return res.status(403).json({ error: 'Tier required' });
+    }
     const result = pool.query('SELECT * FROM recipes WHERE id = ?', [req.params.id]);
     const r = result.rows[0];
     if (!r) return res.status(404).json({ error: 'Recipe not found' });

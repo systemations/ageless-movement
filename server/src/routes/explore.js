@@ -1,9 +1,23 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { enforceTier } from '../middleware/tier.js';
+import { enforceTier, clientTierLevel } from '../middleware/tier.js';
 
 const router = Router();
+
+// A locked program is still browsable: it opens so the client can do the
+// FIRST session free, with the rest locked behind the tier that covers the
+// program. Rules:
+//   - is_free_preview workouts are always free,
+//   - once the client's tier covers the program, nothing is locked,
+//   - otherwise only session 1 (week 1 / day 1) is free; the rest are locked.
+// Used by /programs/:id (to flag rows) and /workouts/:id (to enforce deep-link).
+function isWorkoutLocked({ clientLevel, programTierLevel, isFreePreview, weekNumber, dayNumber }) {
+  if (isFreePreview) return false;
+  if (clientLevel >= (programTierLevel || 0)) return false;
+  if ((weekNumber || 1) === 1 && (dayNumber || 1) === 1) return false;
+  return true;
+}
 
 // Get all on-demand content for explore tab (dynamic sections with tier filtering)
 router.get('/content', authenticateToken, async (req, res) => {
@@ -166,7 +180,11 @@ router.get('/content', authenticateToken, async (req, res) => {
         locked,
         items: enrichedItems.map(item => ({
           ...item,
-          item_locked: clientLevel < (item.tier_level || 0),
+          // Recipes are a paid feature - locked for free-tier (level 0) clients
+          // regardless of the item's own tier_level.
+          item_locked: item.item_type === 'recipe'
+            ? clientLevel < 1
+            : clientLevel < (item.tier_level || 0),
         })),
       });
     }
@@ -199,15 +217,13 @@ router.get('/programs/:id', authenticateToken, async (req, res) => {
     const program = pool.query('SELECT p.*, t.level as tier_level FROM programs p LEFT JOIN tiers t ON t.id = p.tier_id WHERE p.id = ?', [req.params.id]);
     if (program.rows.length === 0) return res.status(404).json({ error: 'Program not found' });
 
-    // Check if user is enrolled - enrolment bypasses the tier guard so
-    // clients don't lose access to something already assigned to them.
+    // A locked program still opens (so the client can do session 1 free).
+    // Instead of a tier 403, flag each session's locked state. Enrolment
+    // grants full access to the assigned program regardless of tier.
     const enrollment = pool.query('SELECT * FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, req.params.id]);
-    if (enrollment.rows.length === 0) {
-      const guard = enforceTier(req.user.id, program.rows[0].tier_level);
-      if (!guard.ok) {
-        return res.status(403).json({ error: 'Tier required', required_tier: guard.required_tier });
-      }
-    }
+    const enrolled = enrollment.rows.length > 0;
+    const clientLevel = clientTierLevel(req.user.id);
+    const programTierLevel = program.rows[0].tier_level;
 
     const phases = pool.query('SELECT * FROM program_phases WHERE program_id = ? ORDER BY phase_number', [req.params.id]);
 
@@ -215,12 +231,21 @@ router.get('/programs/:id', authenticateToken, async (req, res) => {
       SELECT w.* FROM workouts w
       WHERE w.program_id = ?
       ORDER BY w.week_number, w.day_number
-    `, [req.params.id]);
+    `, [req.params.id]).rows.map(w => ({
+      ...w,
+      locked: enrolled ? false : isWorkoutLocked({
+        clientLevel,
+        programTierLevel,
+        isFreePreview: !!w.is_free_preview,
+        weekNumber: w.week_number,
+        dayNumber: w.day_number,
+      }),
+    }));
 
     res.json({
       program: program.rows[0],
       phases: phases.rows,
-      workouts: workouts.rows,
+      workouts,
       enrollment: enrollment.rows[0] || null,
     });
   } catch (err) {
@@ -325,20 +350,40 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
     const workout = pool.query('SELECT w.*, t.level as tier_level FROM workouts w LEFT JOIN tiers t ON t.id = w.tier_id WHERE w.id = ?', [req.params.id]);
     if (workout.rows.length === 0) return res.status(404).json({ error: 'Workout not found' });
 
-    // Access rules, in order:
-    //   1. Workout flagged is_free_preview → always accessible (lead-magnet
-    //      content for Free-tier signups).
-    //   2. Client is enrolled in the workout's program → accessible.
-    //   3. Otherwise → enforce tier level.
+    // Access rules:
+    //   - is_free_preview → always accessible.
+    //   - Enrolled in the program → accessible (assigned content).
+    //   - Standalone workout (no program) → plain tier gate.
+    //   - Program workout → session 1 is free, the rest need the tier that
+    //     covers the program. Mirrors the locked flags from /programs/:id so a
+    //     deep-link can't bypass the in-program lock.
     const programId = workout.rows[0].program_id;
     const isFreePreview = !!workout.rows[0].is_free_preview;
     const enrolled = programId
       ? pool.query('SELECT 1 FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, programId]).rows.length > 0
       : false;
     if (!isFreePreview && !enrolled) {
-      const guard = enforceTier(req.user.id, workout.rows[0].tier_level);
-      if (!guard.ok) {
-        return res.status(403).json({ error: 'Tier required', required_tier: guard.required_tier });
+      if (!programId) {
+        const guard = enforceTier(req.user.id, workout.rows[0].tier_level);
+        if (!guard.ok) {
+          return res.status(403).json({ error: 'Tier required', required_tier: guard.required_tier });
+        }
+      } else {
+        const programTierLevel = pool.query(
+          'SELECT t.level FROM programs p LEFT JOIN tiers t ON t.id = p.tier_id WHERE p.id = ?',
+          [programId]
+        ).rows[0]?.level || 0;
+        const locked = isWorkoutLocked({
+          clientLevel: clientTierLevel(req.user.id),
+          programTierLevel,
+          isFreePreview,
+          weekNumber: workout.rows[0].week_number,
+          dayNumber: workout.rows[0].day_number,
+        });
+        if (locked) {
+          const guard = enforceTier(req.user.id, programTierLevel);
+          return res.status(403).json({ error: 'Tier required', required_tier: guard.required_tier });
+        }
       }
     }
 
@@ -385,6 +430,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
         FROM workout_exercise_alternates wea
         JOIN exercises e ON wea.alternative_id = e.id
         WHERE wea.workout_exercise_id = ? AND wea.enabled = 1
+          AND e.demo_video_url IS NOT NULL AND length(trim(e.demo_video_url)) > 0
         ORDER BY wea.sort_order, e.name
       `, [ex.id]);
 
@@ -399,12 +445,15 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
         return { ...ex, alternatives: overrides.rows };
       }
 
-      // Fallback: global alternatives for this exercise
+      // Fallback: global alternatives for this exercise. Only surface ones
+      // that have a demo video - a swap option with no video is useless to the
+      // client, so it should never appear as an alternative.
       const alts = pool.query(`
         SELECT ea.alternative_id, e.name, e.thumbnail_url, e.demo_video_url, e.body_part
         FROM exercise_alternatives ea
         JOIN exercises e ON ea.alternative_id = e.id
         WHERE ea.exercise_id = ?
+          AND e.demo_video_url IS NOT NULL AND length(trim(e.demo_video_url)) > 0
       `, [ex.exercise_id]);
       return { ...ex, alternatives: alts.rows };
     });

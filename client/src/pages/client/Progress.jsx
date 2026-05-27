@@ -1119,11 +1119,13 @@ function PhotoSingleView({ checkin, onBack }) {
           {checkin.weight != null && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{checkin.weight} kg</p>}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Angles side by side (front / side / back), matching the check-in
+          upload layout. Single angle just fills the width. */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', gap: 8 }}>
         {angles.map(a => (
-          <div key={a.key}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>{a.label}</p>
-            <img src={checkin[a.key]} alt={a.label} style={{ width: '100%', borderRadius: 12, display: 'block', background: 'var(--bg-card)' }} />
+          <div key={a.key} style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, textAlign: 'center' }}>{a.label}</p>
+            <img src={checkin[a.key]} alt={a.label} style={{ width: '100%', borderRadius: 10, display: 'block', background: 'var(--bg-card)' }} />
           </div>
         ))}
       </div>

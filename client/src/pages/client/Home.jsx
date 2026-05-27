@@ -1760,7 +1760,11 @@ function OnboardingChecklistCard({ token }) {
 // 30-second flow as Dan asked for.
 function NutritionSetupPromptCard({ profile, token, onComplete }) {
   const [open, setOpen] = useState(false);
-  const isSetUp = profile?.sex && profile?.height_cm && profile?.weight_kg;
+  // Hide once the metrics are set OR the client has completed onboarding -
+  // finishing the sign-up questions counts as "set up", so we don't nag a
+  // user who already answered them on the way in.
+  const hasMetrics = profile?.sex && profile?.height_cm && profile?.weight_kg;
+  const isSetUp = hasMetrics || !!profile?.onboarding_complete;
   if (isSetUp) return null;
 
   return (

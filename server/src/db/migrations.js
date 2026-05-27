@@ -31,6 +31,25 @@ const MIGRATIONS = [
       );
     },
   },
+  // Rename the kettlebell program to the AMS family naming, give it the
+  // Kinstretch image, and hide the Kinstretch program from Explore.
+  {
+    name: '2026-05-27-rename-kettlebell-reuse-kinstretch-image',
+    up: () => {
+      const ks = pool.query("SELECT id, image_url FROM programs WHERE title LIKE 'AMS | Kinstretch%' LIMIT 1").rows[0];
+      const kb = pool.query("SELECT id FROM programs WHERE title LIKE 'Kettlebell Foundations%' LIMIT 1").rows[0];
+      if (kb) {
+        pool.query(
+          "UPDATE programs SET title = 'AMS | Kettlebell Foundations', image_url = ? WHERE id = ?",
+          [ks?.image_url || null, kb.id],
+        );
+      }
+      if (ks) {
+        pool.query("DELETE FROM explore_section_items WHERE item_type = 'program' AND item_id = ?", [ks.id]);
+        pool.query('UPDATE programs SET visible = 0 WHERE id = ?', [ks.id]);
+      }
+    },
+  },
 ];
 
 export function runMigrations() {

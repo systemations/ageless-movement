@@ -13,13 +13,32 @@ export default function FeedbackViewer() {
   const { token } = useAuth();
   const [rows, setRows] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [betaMode, setBetaMode] = useState(null);
 
   useEffect(() => {
     fetch('/api/feedback', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setRows(d.feedback || []))
       .catch(() => setRows([]));
+    fetch('/api/coach/beta-mode', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setBetaMode(!!d.beta_mode))
+      .catch(() => setBetaMode(null));
   }, []);
+
+  const toggleBetaMode = async () => {
+    const next = !betaMode;
+    setBetaMode(next);
+    try {
+      const r = await fetch('/api/coach/beta-mode', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      });
+      const d = await r.json();
+      setBetaMode(!!d.beta_mode);
+    } catch { setBetaMode(!next); }
+  };
 
   if (rows === null) return <div style={{ padding: 40, color: 'var(--text-tertiary)' }}>Loading...</div>;
 
@@ -31,6 +50,39 @@ export default function FeedbackViewer() {
       <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
         {rows.length} submission{rows.length === 1 ? '' : 's'} from testers.
       </p>
+
+      {/* Beta checklist reminders: global on/off. When on, testers get a
+          first-name DM nudge (48h then every 72h) until they send feedback. */}
+      {betaMode !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 20,
+          background: 'var(--bg-card)', border: '1px solid var(--divider)', borderRadius: 12,
+        }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>Beta checklist reminders</p>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+              {betaMode
+                ? 'On: testers get a checklist DM (48h, then every 72h) until they send feedback.'
+                : 'Off: no beta reminder DMs are sent.'}
+            </p>
+          </div>
+          <button
+            onClick={toggleBetaMode}
+            role="switch"
+            aria-checked={betaMode}
+            style={{
+              width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', flexShrink: 0,
+              background: betaMode ? 'var(--accent)' : 'var(--divider)', position: 'relative',
+              transition: 'background 0.15s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3, left: betaMode ? 23 : 3, width: 22, height: 22,
+              borderRadius: '50%', background: '#fff', transition: 'left 0.15s',
+            }} />
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {['all', 'bug', 'idea', 'praise', 'testimonial', 'other'].map(k => (

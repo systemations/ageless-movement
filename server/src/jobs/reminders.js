@@ -13,10 +13,43 @@
 // is well within budget.
 
 import pool from '../db/pool.js';
+import { isBetaMode } from '../lib/settings.js';
 
 const POLL_INTERVAL_MS = 60 * 1000;       // 1 minute
 const TICK_WINDOW_MIN  = 5;               // accept a fire up to N min late
 const DEFAULT_TIMEZONE = 'Europe/Dublin'; // Dan-friendly fallback
+
+// ---- Beta checklist reminder -------------------------------------------
+// A personalised DM dropped into each beta tester's team inbox, nudging them
+// through the checklist. First nudge 48h after they sign up, then every 72h.
+// Auto-stops for a tester once they've submitted any feedback. The whole thing
+// is gated by the global beta_mode flag (coach flips it off when beta ends).
+const BETA_KIND          = 'beta_checklist';
+const BETA_FIRST_HOURS   = 48;
+const BETA_REPEAT_HOURS  = 72;
+const BETA_SENDER_ID     = 2;   // Coach Dan - so the DM reads as from the team
+const BETA_QUIET_START   = 8;   // only send between 08:00 and 21:00 local
+const BETA_QUIET_END     = 21;
+
+const betaFirstName = (name) => (name || '').trim().split(/\s+/)[0] || 'there';
+// SQLite stores timestamps as 'YYYY-MM-DD HH:MM:SS' in UTC.
+const parseUtc = (s) => (s ? Date.parse(s.replace(' ', 'T') + 'Z') : NaN);
+
+function betaMessage(firstName, isFirst) {
+  if (isFirst) {
+    return `Hi ${firstName}, welcome to the Ageless Movement beta. Thanks for being one of our first testers. When you have a moment, here is what would help us most:\n\n`
+      + `1. Finish onboarding and your movement assessment\n`
+      + `2. Start a program from Explore (try AMS Ground Zero)\n`
+      + `3. Do and log a workout, and give the rest timer a go\n`
+      + `4. Log a workout you did outside the app ("Log Other Workout")\n`
+      + `5. Have a browse of Explore: a follow-along, recipe or event\n`
+      + `6. Book your free Testimonial Recording (optional, but a big help)\n`
+      + `7. Send us one piece of feedback. Open "Feedback & Testimonials" in your Messages to share a bug, idea or testimonial.\n\n`
+      + `You can grab the full guide as a PDF in that section too. Reply here any time, I read every message. Dan`;
+  }
+  return `Hi ${firstName}, a quick beta nudge. No pressure at all, but if you get a chance we would love you to try a workout and send one piece of feedback. `
+    + `Open "Feedback & Testimonials" in your Messages to share. Your input genuinely shapes what we build next. Thanks, Dan`;
+}
 
 // Per-kind schedule definition. Each entry says "what time + which
 // weekday should this reminder fire" plus the payload to write. Kind
@@ -145,9 +178,72 @@ export function runReminderTick() {
   }
 }
 
+// Walk beta testers and drop the checklist DM into their team inbox when due.
+export function runBetaChecklistTick() {
+  if (!isBetaMode()) return;
+  const nowUtc = Date.now();
+
+  // Active clients who have NOT yet sent feedback (sending feedback = done,
+  // so we stop nudging them). Pull tz for a polite send window.
+  const clients = pool.query(`
+    SELECT u.id, u.name, cp.created_at, cp.timezone
+      FROM users u
+      JOIN client_profiles cp ON cp.user_id = u.id
+     WHERE u.role = 'client'
+       AND COALESCE(cp.status, 'active') = 'active'
+       AND NOT EXISTS (SELECT 1 FROM feedback f WHERE f.user_id = u.id)
+  `).rows;
+
+  for (const c of clients) {
+    const tz = c.timezone || DEFAULT_TIMEZONE;
+    const local = nowInTz(tz);
+    if (local.hour < BETA_QUIET_START || local.hour >= BETA_QUIET_END) continue;
+
+    const count = pool.query(
+      'SELECT COUNT(*) AS n FROM reminder_log WHERE user_id = ? AND reminder_kind = ?',
+      [c.id, BETA_KIND],
+    ).rows[0].n;
+
+    let due;
+    if (count === 0) {
+      const anchor = parseUtc(c.created_at);
+      due = Number.isFinite(anchor) && (nowUtc - anchor) >= BETA_FIRST_HOURS * 3600e3;
+    } else {
+      const last = pool.query(
+        'SELECT fired_at_utc FROM reminder_log WHERE user_id = ? AND reminder_kind = ? ORDER BY fired_at_utc DESC LIMIT 1',
+        [c.id, BETA_KIND],
+      ).rows[0];
+      const lastMs = parseUtc(last?.fired_at_utc);
+      due = Number.isFinite(lastMs) && (nowUtc - lastMs) >= BETA_REPEAT_HOURS * 3600e3;
+    }
+    if (!due) continue;
+
+    const convo = pool.query('SELECT id FROM conversations WHERE client_id = ? LIMIT 1', [c.id]).rows[0];
+    if (!convo) continue;
+
+    // Idempotency: UNIQUE(user, kind, date) caps it at one send per day.
+    try {
+      pool.query(
+        'INSERT INTO reminder_log (user_id, reminder_kind, fired_local_date, payload_json) VALUES (?, ?, ?, ?)',
+        [c.id, BETA_KIND, local.ymd, JSON.stringify({ nudge: count + 1 })],
+      );
+    } catch (err) {
+      if (/UNIQUE/i.test(err.message || '')) continue;
+      throw err;
+    }
+
+    pool.query(
+      "INSERT INTO messages (conversation_id, sender_id, content, message_type) VALUES (?, ?, ?, 'text')",
+      [convo.id, BETA_SENDER_ID, betaMessage(betaFirstName(c.name), count === 0)],
+    );
+    console.log(`[beta] checklist nudge #${count + 1} -> user ${c.id}`);
+  }
+}
+
 export function startReminderJobRunner() {
   // First run fires 5s after boot to catch any minute we just missed
   // while the server was restarting. Then every POLL_INTERVAL_MS.
-  setTimeout(runReminderTick, 5000);
-  setInterval(runReminderTick, POLL_INTERVAL_MS);
+  const tick = () => { runReminderTick(); runBetaChecklistTick(); };
+  setTimeout(tick, 5000);
+  setInterval(tick, POLL_INTERVAL_MS);
 }

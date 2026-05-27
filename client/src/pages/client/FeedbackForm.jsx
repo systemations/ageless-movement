@@ -105,6 +105,20 @@ export default function FeedbackForm() {
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Share your experience - Dan may feature it to help others.</div>
           </button>
         </div>
+
+        <a
+          href="/beta-guide.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, padding: '12px 14px',
+            borderRadius: 12, border: '1px solid var(--divider)', background: 'transparent',
+            color: 'var(--text-secondary)', fontSize: 13, textDecoration: 'none',
+          }}
+        >
+          <span style={{ fontSize: 16 }}>📄</span>
+          <span>Prefer desktop? Download the Beta Guide (PDF)</span>
+        </a>
       </div>
     );
   }

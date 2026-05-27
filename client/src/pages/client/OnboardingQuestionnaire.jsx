@@ -744,11 +744,16 @@ function MacroPill({ label, grams, color }) {
 // ── styles ──────────────────────────────────────────────────────────────
 
 const page = {
-  minHeight: '100vh',
+  // 100dvh tracks the *visible* viewport on mobile browsers (excludes the
+  // address/nav bar). Top-align the content so the Continue button sits right
+  // under the question instead of being pushed to the very bottom (where the
+  // dynamic Safari toolbar forces a scroll on the web app).
+  minHeight: '100dvh',
   background: 'radial-gradient(ellipse at top, #132235 0%, #0A1428 55%, #060D1A 100%)',
   color: '#fff',
-  padding: '24px 22px 28px',
+  padding: '24px 22px calc(40px + env(safe-area-inset-bottom, 0px))',
   display: 'flex',
+  alignItems: 'flex-start',
   justifyContent: 'center',
 };
 
@@ -757,7 +762,6 @@ const inner = {
   maxWidth: 440,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 'calc(100vh - 52px)',
 };
 
 const header = {
@@ -796,7 +800,7 @@ const signInLinkBtn = {
   cursor: 'pointer',
 };
 
-const body = { flex: 1 };
+const body = {};
 
 const titleStyle = {
   fontSize: 24,

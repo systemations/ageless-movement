@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole, requireCoachOwnsClient, requireCoachOwnsClientBody, checkCoachOwnsClient, parseUserAgent } from '../middleware/auth.js';
+import { isBetaMode, setSetting } from '../lib/settings.js';
 
 const router = Router();
 
@@ -1485,6 +1486,17 @@ router.post('/workouts/:workoutId/overrides/clear', authenticateToken, requireRo
     console.error('Overrides clear error:', err);
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// Global beta mode: controls whether the beta-checklist reminder DMs go out.
+// Coach flips this off when beta testing ends.
+router.get('/beta-mode', authenticateToken, requireRole('coach'), (req, res) => {
+  res.json({ beta_mode: isBetaMode() });
+});
+
+router.patch('/beta-mode', authenticateToken, requireRole('coach'), (req, res) => {
+  setSetting('beta_mode', req.body?.enabled ? '1' : '0');
+  res.json({ beta_mode: isBetaMode() });
 });
 
 export default router;

@@ -144,14 +144,6 @@ const CHECKLIST_TASKS = [
     cta_route: '/progress',
   },
   {
-    key: 'community_welcome',
-    title: 'Welcome yourself in the Active Clients group',
-    description: 'Drop a hello in the community chat so we know who you are.',
-    cta_label: 'Open Messages',
-    cta_route: '/messages',
-    manual: true,
-  },
-  {
     key: 'first_checkin',
     title: 'Submit your first check-in',
     description: 'Front, side, back photos. Captures your visual baseline.',

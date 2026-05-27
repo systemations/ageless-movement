@@ -199,8 +199,9 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
     <div style={{
       display: 'flex', flexDirection: 'column',
       // Embedded use (hideBackButton=true) fills its parent container; stand-alone
-      // uses the whole viewport like before.
-      height: hideBackButton ? '100%' : '100vh',
+      // uses the dynamic viewport height (dvh) so the input bar isn't hidden
+      // behind the mobile browser's bottom toolbar (100vh ignores it).
+      height: hideBackButton ? '100%' : '100dvh',
       background: 'var(--bg-primary)', minHeight: 0,
     }}>
       {/* Header - omit the big avatar-coloured back button when we're embedded,
@@ -492,7 +493,8 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
       ) : (
         <div style={{
           display: 'flex', gap: 8,
-          padding: hideBackButton ? '10px 12px' : '8px 16px 24px',
+          // Pad the bottom past the iOS home indicator / browser gesture bar.
+          padding: hideBackButton ? '10px 12px' : '8px 16px calc(16px + env(safe-area-inset-bottom))',
           borderTop: '1px solid var(--divider)',
           flexShrink: 0, background: 'var(--bg-primary)',
         }}>

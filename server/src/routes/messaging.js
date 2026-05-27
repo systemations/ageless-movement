@@ -17,10 +17,10 @@ const router = Router();
 // ────────────────────────────────────────────────────────────────────────
 
 function ensureGroupConversations(userId) {
+  // Only the Feedback group is maintained for the beta. The other community
+  // groups (Weekly Wins / Active Clients / Q&A) were retired; don't recreate
+  // them here or they'd reappear on the next messages open.
   const groups = [
-    { title: 'Weekly Wins', icon: '🏆', icon_bg: '#FFF3CD' },
-    { title: 'Active Clients', icon: '👤', icon_bg: '#D1ECF1' },
-    { title: 'Q&A for the Community', icon: '❓', icon_bg: '#FFE0B2' },
     { title: 'Feedback & Testimonials', icon: '⭐', icon_bg: '#C8E6C9' },
   ];
 

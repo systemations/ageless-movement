@@ -239,7 +239,7 @@ function IssueCard({ issue, onTap, onLog }) {
 // male / wider-hip female); skeleton geometry comes from the joint
 // region coords with gender adjustments.
 
-const SHADOW_FILL = 'rgba(255,255,255,0.04)';
+const SHADOW_FILL = 'var(--pain-silhouette)';
 
 // Subtle body shadow behind the skeleton. Drawn as separate paths
 // (head / torso / arms / legs) so each shape stays clean.

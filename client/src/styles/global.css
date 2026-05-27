@@ -18,8 +18,14 @@
   --accent-hover: #E88A1F;
   --accent-active: #D47A10;
   --accent-mint: #85FFBA;
+  /* Mint used as TEXT/ink. In dark mode the bright mint reads fine; light mode
+     overrides this to a deeper green (the bright mint fails contrast on white). */
+  --accent-mint-ink: #85FFBA;
   --mint-read: #6FA88B;
   --accent-orange: #FF9C33;
+  /* Faint body silhouette behind the pain-logging skeleton. Light fill on the
+     dark card; light mode overrides to a faint dark fill so it stays visible. */
+  --pain-silhouette: rgba(255,255,255,0.05);
   --text-primary: #FFFFFF;
   --text-secondary: #9AA8BB;
   --text-tertiary: #6B7B93;
@@ -46,7 +52,10 @@
   --accent-hover: #E88A1F;
   --accent-active: #D47A10;
   --accent-mint: #85FFBA;
+  /* Deep green for mint-as-text: the bright mint is unreadable on white. */
+  --accent-mint-ink: #0E8A4F;
   --mint-read: #6FA88B;
+  --pain-silhouette: rgba(0,0,0,0.10);
   /* Darker variant of the brand orange - #FF9C33 fails WCAG against
      white cards (contrast ~2.6). Deeper shade keeps the identity while
      making text readable, e.g. the calorie target on Home. */

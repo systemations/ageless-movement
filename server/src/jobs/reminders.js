@@ -60,12 +60,21 @@ function betaMessage(firstName, isFirst) {
 // title/body: rendered into the in-app notification when fired.
 const SCHEDULE = {
   weekly_checkin: {
-    weekday: 1,                     // Monday
-    hour: 9, minute: 0,
+    weekday: 7,                     // Sunday
+    hour: 10, minute: 0,
     title: 'Time for your weekly check-in',
     body: 'Take 2 minutes to log how the week went so we can see your trend.',
     cta_label: 'Open check-in',
     cta_url: '/progress',
+    // Skip the Sunday nudge if they've already checked in since the previous
+    // Sunday (i.e. they checked in early - the reminder resets to next week).
+    skipIf: (userId) => {
+      const row = pool.query(
+        "SELECT 1 FROM checkins WHERE user_id = ? AND date >= date('now', 'weekday 0', '-7 days') LIMIT 1",
+        [userId],
+      ).rows[0];
+      return !!row;
+    },
   },
   supplement_reminder: {
     weekday: '*',
@@ -169,6 +178,7 @@ export function runReminderTick() {
       if (!prefs[kind]) continue;
       if (schedule.weekday !== '*' && schedule.weekday !== now.weekday) continue;
       if (!withinFireWindow(now, schedule)) continue;
+      if (schedule.skipIf && schedule.skipIf(p.user_id)) continue;
       try {
         deliver(p.user_id, kind, schedule, now.ymd);
       } catch (err) {

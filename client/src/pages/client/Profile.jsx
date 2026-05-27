@@ -240,18 +240,21 @@ export default function Profile({ onBack }) {
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Connected Apps</h1>
         </div>
-        {[{ name: 'Apple Health', icon: '❤️', connected: false }, { name: 'Apple Watch', icon: '⌚', connected: false }, { name: 'Google Fit', icon: '💚', connected: false }].map(app => (
-          <div key={app.name} className="card-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>
+          Automatic syncing of steps, heart rate and workouts is on the way. These will connect once the app launches on iOS and Android.
+        </p>
+        {[{ name: 'Apple Health', icon: '❤️' }, { name: 'Apple Watch', icon: '⌚' }, { name: 'Google Fit', icon: '💚' }, { name: 'Garmin', icon: '⌚' }, { name: 'Fitbit', icon: '⌚' }].map(app => (
+          <div key={app.name} className="card-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, opacity: 0.7 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 24 }}>{app.icon}</span>
               <div>
                 <p style={{ fontSize: 15, fontWeight: 500 }}>{app.name}</p>
-                <p style={{ fontSize: 12, color: app.connected ? 'var(--success)' : 'var(--text-tertiary)' }}>{app.connected ? 'Connected' : 'Not connected'}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Coming soon</p>
               </div>
             </div>
-            <button style={{ background: app.connected ? 'var(--bg-card)' : 'var(--accent-mint)', border: 'none', borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: app.connected ? 'var(--text-secondary)' : '#000' }}>
-              {app.connected ? 'Disconnect' : 'Connect'}
-            </button>
+            <span style={{ background: 'var(--bg-card)', borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+              Coming soon
+            </span>
           </div>
         ))}
       </div>

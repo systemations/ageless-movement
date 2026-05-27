@@ -74,6 +74,8 @@ export default function Home() {
   const [athleteFeatures, setAthleteFeatures] = useState(homeCache.athleteFeatures);
   const [hasEnhancedToday, setHasEnhancedToday] = useState(homeCache.hasEnhancedToday);
   const [notifications, setNotifications] = useState([]);
+  const [showStepInput, setShowStepInput] = useState(false);
+  const [stepInput, setStepInput] = useState('');
   // Reminder preferences. Default-ON so existing surfaces keep rendering
   // until the user explicitly toggles something off in Profile -> Reminders.
   // Read on mount; refetch when window regains focus so toggle changes
@@ -458,6 +460,27 @@ export default function Home() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Manual step entry (temporary until native step tracking on the app build).
+  const saveSteps = async () => {
+    const n = parseInt(stepInput, 10);
+    if (!Number.isFinite(n) || n < 0) { setStepInput(''); setShowStepInput(false); return; }
+    try {
+      const res = await fetch('/api/dashboard/steps', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps: n }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDashboard(prev => ({ ...prev, steps: data.total }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setStepInput('');
+    setShowStepInput(false);
   };
 
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -1334,44 +1357,63 @@ export default function Home() {
         <h2>Workouts</h2>
       </div>
 
-      {/* Hero Workout Card */}
-      <div
-        className="card"
-        onClick={() => todayWorkout?.id && navigate(`/explore?workout=${todayWorkout.id}`)}
-        style={{
-          padding: 0, overflow: 'hidden', position: 'relative',
-          background: 'var(--bg-card)',
-          cursor: todayWorkout?.id ? 'pointer' : 'default',
-        }}
-      >
-        <WorkoutThumb
-          title={todayWorkout?.title || '#1 Full Body Mobility'}
-          thumbnailUrl={todayWorkout?.image_url}
-          aspectRatio="1/1"
-          borderRadius={0}
-          titleFontSize={28}
-        />
-        <div style={{ padding: '14px 20px 18px', color: 'var(--text-primary)' }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
-            {todayWorkout?.title || '#1 Full Body Mobility'}
-          </h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-            {todayWorkout
-              ? `${todayWorkout.duration_mins} mins · ${todayWorkout.body_parts}`
-              : '25 mins · Full Body'}
-          </p>
-          {todayWorkout?.intensity && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, marginTop: 8,
-              display: 'inline-block',
-              background: todayWorkout.intensity === 'High' ? 'rgba(255,69,58,0.2)' : 'rgba(61,255,210,0.15)',
-              color: todayWorkout.intensity === 'High' ? '#FF453A' : 'var(--accent-mint)',
-            }}>
-              {todayWorkout.intensity}
-            </span>
-          )}
+      {/* Hero Workout Card -- only a real workout. When nothing is planned for
+          today (no active program block, e.g. a fresh free signup) we show an
+          empty-state prompt instead of a placeholder so it can't look like a
+          fake assigned workout. */}
+      {todayWorkout ? (
+        <div
+          className="card"
+          onClick={() => todayWorkout.id && navigate(`/explore?workout=${todayWorkout.id}`)}
+          style={{
+            padding: 0, overflow: 'hidden', position: 'relative',
+            background: 'var(--bg-card)',
+            cursor: todayWorkout.id ? 'pointer' : 'default',
+          }}
+        >
+          <WorkoutThumb
+            title={todayWorkout.title}
+            thumbnailUrl={todayWorkout.image_url}
+            aspectRatio="1/1"
+            borderRadius={0}
+            titleFontSize={28}
+          />
+          <div style={{ padding: '14px 20px 18px', color: 'var(--text-primary)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
+              {todayWorkout.title}
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+              {todayWorkout.duration_mins} mins · {todayWorkout.body_parts}
+            </p>
+            {todayWorkout.intensity && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, marginTop: 8,
+                display: 'inline-block',
+                background: todayWorkout.intensity === 'High' ? 'rgba(255,69,58,0.2)' : 'rgba(61,255,210,0.15)',
+                color: todayWorkout.intensity === 'High' ? '#FF453A' : 'var(--accent-mint-ink)',
+              }}>
+                {todayWorkout.intensity}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      ) : dashboard ? (
+        <div
+          className="card"
+          onClick={() => navigate('/explore')}
+          style={{ cursor: 'pointer', textAlign: 'center', padding: '28px 20px' }}
+        >
+          <div style={{ fontSize: 30, marginBottom: 8 }}>🧘</div>
+          <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>No workout planned for today</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            Browse the library to start a program or pick a session.
+          </p>
+        </div>
+      ) : (
+        // Dashboard not loaded yet (first cold load): neutral skeleton so the
+        // empty state doesn't flash in before the real workout resolves.
+        <div className="card" style={{ height: 132, opacity: 0.5 }} />
+      )}
       </>}
       {/* end of {!hasEnhancedToday} block. Nutrition cards + meal plan
           below always render - they were previously buried inside the
@@ -1486,9 +1528,37 @@ export default function Home() {
           <div style={{ height: 4, background: 'var(--divider)', borderRadius: 2, marginTop: 8 }}>
             <div style={{ height: '100%', width: `${Math.min(100, (stepsAmount / (profile.step_target || 6000)) * 100)}%`, background: 'var(--steps-pink)', borderRadius: 2, transition: 'width 0.3s' }} />
           </div>
-          <p style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
-            {Math.round((stepsAmount / (profile.step_target || 6000)) * 100)}% of daily goal
-          </p>
+          {showStepInput ? (
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <input
+                type="number"
+                inputMode="numeric"
+                autoFocus
+                value={stepInput}
+                onChange={e => setStepInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveSteps()}
+                placeholder="Steps today"
+                style={{
+                  flex: 1, minWidth: 0, background: 'var(--bg-input)', border: '1px solid var(--divider)',
+                  borderRadius: 8, padding: '6px 8px', color: 'var(--text-primary)', fontSize: 12,
+                }}
+              />
+              <button onClick={saveSteps} style={{
+                background: 'var(--steps-pink)', border: 'none', borderRadius: 8, padding: '6px 10px',
+                color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}>Save</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowStepInput(true)}
+              style={{
+                marginTop: 8, background: 'rgba(255,107,157,0.15)', border: 'none', borderRadius: 8,
+                padding: '6px 0', width: '100%', color: 'var(--steps-pink)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              + Log steps
+            </button>
+          )}
         </div>
       </div>
 

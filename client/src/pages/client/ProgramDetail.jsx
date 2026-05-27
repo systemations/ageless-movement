@@ -133,6 +133,19 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout, onLo
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{program.description}</p>
       </div>
 
+      {/* Start CTA - sits right under the description (in flow) rather than
+          pinned to the bottom, which sat awkwardly on the web app. */}
+      {!enrollment && (
+        <button
+          className="btn-primary"
+          onClick={() => handleEnroll(false)}
+          disabled={enrolling}
+          style={{ marginBottom: 20 }}
+        >
+          {enrolling ? 'Adding...' : 'Add to Schedule'}
+        </button>
+      )}
+
       {/* Enrollment status */}
       {enrollment && (
         <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -213,19 +226,6 @@ export default function ProgramDetail({ programId, onBack, onSelectWorkout, onLo
           ))}
         </div>
       ))}
-
-      {/* Add to Schedule */}
-      {!enrollment && (
-        <div style={{
-          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-          background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
-        }}>
-          <button className="btn-primary" onClick={() => handleEnroll(false)} disabled={enrolling}>
-            {enrolling ? 'Adding...' : 'Add to Schedule'}
-          </button>
-        </div>
-      )}
 
       {/* Replace-program confirmation modal */}
       {confirmReplace && (

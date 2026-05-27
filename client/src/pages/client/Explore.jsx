@@ -301,7 +301,7 @@ export default function Explore() {
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
             background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
-            color: activeTab === tab ? 'var(--accent-mint)' : 'var(--text-secondary)',
+            color: activeTab === tab ? 'var(--accent-mint-ink)' : 'var(--text-secondary)',
             border: 'none',
           }}>{tab}</button>
         ))}

@@ -109,6 +109,30 @@ const categoryColors = {
   Nutrition: '#30D158',
 };
 
+// Weekly check-in is due each Sunday. Counts down to the upcoming Sunday;
+// once they check in during the week, it rolls forward to the next Sunday.
+// Returns a friendly label like "Due today" / "Due in 3 days".
+function nextCheckinLabel(checkins) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysToSun = (7 - today.getDay()) % 7; // 0 if today is Sunday
+  let upcoming = new Date(today);
+  upcoming.setDate(today.getDate() + daysToSun); // the next Sunday (today if Sunday)
+  const windowStart = new Date(upcoming);
+  windowStart.setDate(upcoming.getDate() - 7); // the previous Sunday
+  // If they already checked in during this Sun-to-Sun window, the upcoming
+  // Sunday is done - roll the due date to the following Sunday.
+  const latest = (checkins || [])
+    .map(c => (c.date ? new Date(c.date) : null))
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0];
+  if (latest && latest > windowStart) upcoming.setDate(upcoming.getDate() + 7);
+  const days = Math.round((upcoming - today) / 86400000);
+  if (days <= 0) return 'Due today';
+  if (days === 1) return 'Due tomorrow';
+  return `Due in ${days} days`;
+}
+
 export default function Progress() {
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -194,6 +218,8 @@ export default function Progress() {
   }, []);
 
   const photoCheckins = myCheckins.filter(c => c.photo_front_url || c.photo_side_url || c.photo_back_url);
+  const checkinDueLabel = nextCheckinLabel(myCheckins);
+  const [viewCheckin, setViewCheckin] = useState(null); // single check-in photo viewer
 
   const toggleCompareSelection = (checkinId) => {
     setCompareSelection(prev => {
@@ -296,6 +322,7 @@ export default function Progress() {
   if (showPain) return <PainLogging onBack={() => setShowPain(false)} />;
   if (showExerciseProgress) return <ExerciseProgress exerciseId={showExerciseProgress} onBack={() => setShowExerciseProgress(null)} />;
   if (compareView) return <PhotoCompareView view={compareView} onBack={() => { setCompareView(null); setCompareMode(false); setCompareSelection([]); }} />;
+  if (viewCheckin) return <PhotoSingleView checkin={viewCheckin} onBack={() => setViewCheckin(null)} />;
 
   return (
     <div className="page-content">
@@ -337,9 +364,9 @@ export default function Progress() {
                   return (
                     <div
                       key={c.id}
-                      onClick={() => compareMode && toggleCompareSelection(c.id)}
+                      onClick={() => compareMode ? toggleCompareSelection(c.id) : setViewCheckin(c)}
                       style={{
-                        minWidth: 110, cursor: compareMode ? 'pointer' : 'default',
+                        minWidth: 110, cursor: 'pointer',
                         borderRadius: 12, overflow: 'hidden', position: 'relative',
                         border: selected ? '2px solid var(--accent-mint)' : '2px solid transparent',
                       }}
@@ -379,12 +406,12 @@ export default function Progress() {
           {/* Check-in Prompt */}
           <CollapsibleSection
             title="Check Ins"
-            subtitle="Due in 2 days"
+            subtitle={checkinDueLabel}
             accent="#4A8AB8"
           >
             <div className="card" onClick={() => setShowCheckin(true)} style={{ textAlign: 'center', cursor: 'pointer' }}>
               <p style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Check in Now</p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Due in 2 days</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{checkinDueLabel}</p>
             </div>
           </CollapsibleSection>
 
@@ -1066,6 +1093,41 @@ function MovementAssessmentsCard({ summary, onOpenCourse }) {
         >{ctaLabel}</button>
       </div>
     </>
+  );
+}
+
+// Single check-in viewer: shows every angle that was photographed (front /
+// side / back) stacked, so a client can review all three, not just the front.
+function PhotoSingleView({ checkin, onBack }) {
+  const angles = [
+    { key: 'photo_front_url', label: 'Front' },
+    { key: 'photo_side_url', label: 'Side' },
+    { key: 'photo_back_url', label: 'Back' },
+  ].filter(a => checkin[a.key]);
+  const fmt = (d) => new Date(d).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--divider)' }}>
+        <button onClick={onBack} style={{
+          width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700 }}>{fmt(checkin.date)}</h2>
+          {checkin.weight != null && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{checkin.weight} kg</p>}
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {angles.map(a => (
+          <div key={a.key}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>{a.label}</p>
+            <img src={checkin[a.key]} alt={a.label} style={{ width: '100%', borderRadius: 12, display: 'block', background: 'var(--bg-card)' }} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -236,4 +236,22 @@ router.post('/water', authenticateToken, async (req, res) => {
   }
 });
 
+// Manual step entry (stopgap until native HealthKit/Health Connect on the
+// Capacitor build). Unlike water, steps are SET to today's total (the user
+// reads it off their phone), so we replace today's value rather than add.
+router.post('/steps', authenticateToken, async (req, res) => {
+  try {
+    const n = parseInt(req.body?.steps, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 200000) {
+      return res.status(400).json({ error: 'Enter a valid step count.' });
+    }
+    const today = new Date().toISOString().split('T')[0];
+    pool.query('DELETE FROM step_logs WHERE user_id = ? AND date = ?', [req.user.id, today]);
+    if (n > 0) pool.query('INSERT INTO step_logs (user_id, date, steps) VALUES (?, ?, ?)', [req.user.id, today, n]);
+    res.json({ total: n });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;

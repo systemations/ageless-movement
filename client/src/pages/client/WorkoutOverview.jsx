@@ -378,6 +378,20 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
         </div>
       </div>
 
+      {/* Start CTA - in flow right under the description (was pinned to the
+          bottom, which sat awkwardly on the web app). */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        {previewMode ? (
+          <button className="btn-primary" onClick={() => setShowSchedule(true)} style={{ fontSize: 17, flex: 1 }}>
+            Add to Schedule
+          </button>
+        ) : (
+          <button className="btn-primary" onClick={() => setPlaying(true)} style={{ fontSize: 17, flex: 1 }}>
+            Start
+          </button>
+        )}
+      </div>
+
       {/* Exercise List (skipped for follow-along workouts) */}
       {!isFollowAlong && groups.map((group, gi) => {
         const blockColor = getBlockColor(group.type);
@@ -605,26 +619,6 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
           }}
         />
       )}
-
-      {/* Bottom action buttons - pinned above the nav.
-          In previewMode (opened from the calendar to decide on scheduling),
-          the primary CTA is "Add to Schedule". Otherwise it's "Start". */}
-      <div style={{
-        position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-        maxWidth: 480, width: 'calc(100% - 32px)', padding: '12px 0',
-        background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)',
-        display: 'flex', gap: 10,
-      }}>
-        {previewMode ? (
-          <button className="btn-primary" onClick={() => setShowSchedule(true)} style={{ fontSize: 17, flex: 1 }}>
-            Add to Schedule
-          </button>
-        ) : (
-          <button className="btn-primary" onClick={() => setPlaying(true)} style={{ fontSize: 17, flex: 1 }}>
-            Start
-          </button>
-        )}
-      </div>
 
       {/* Add to Schedule bottom sheet */}
       {showSchedule && (

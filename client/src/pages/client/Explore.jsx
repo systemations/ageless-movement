@@ -398,7 +398,7 @@ export default function Explore() {
                 <div key={section.id} style={{ marginBottom: 24 }}>
                   <div className="section-header">
                     <h2 style={{ fontSize: 16 }}>
-                      {section.title}{itemCount > 1 ? ' >' : ''}
+                      {section.title}
                     </h2>
                   </div>
                   <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
@@ -448,7 +448,7 @@ export default function Explore() {
                 <div key={section.id} style={{ marginBottom: 24 }}>
                   <div className="section-header">
                     <h2 style={{ fontSize: 16 }}>
-                      {section.title}{itemCount > 1 ? ' >' : ''}
+                      {section.title}
                     </h2>
                   </div>
                   {itemCount === 0 ? (

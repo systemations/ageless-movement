@@ -468,7 +468,8 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
           Used for "Feedback & Testimonials" and any announcement-style group. */}
       {convo && convo.chat_enabled === 0 ? (
         <div style={{
-          padding: hideBackButton ? '14px 12px' : '14px 16px 28px',
+          // Clear the floating bottom-nav pill so the feedback link is tappable.
+          padding: hideBackButton ? '14px 12px' : '14px 16px calc(88px + env(safe-area-inset-bottom))',
           borderTop: '1px solid var(--divider)',
           flexShrink: 0, background: 'var(--bg-primary)',
         }}>
@@ -493,8 +494,9 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
       ) : (
         <div style={{
           display: 'flex', gap: 8,
-          // Pad the bottom past the iOS home indicator / browser gesture bar.
-          padding: hideBackButton ? '10px 12px' : '8px 16px calc(16px + env(safe-area-inset-bottom))',
+          // Clear the floating bottom-nav pill (fixed ~12px from the bottom)
+          // + the iOS home indicator, so the input isn't hidden behind it.
+          padding: hideBackButton ? '10px 12px' : '8px 16px calc(84px + env(safe-area-inset-bottom))',
           borderTop: '1px solid var(--divider)',
           flexShrink: 0, background: 'var(--bg-primary)',
         }}>

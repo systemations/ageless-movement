@@ -32,6 +32,7 @@ import { startReminderJobRunner } from './jobs/reminders.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
 import { seedPaymentPlans } from './db/seed-payment-plans.js';
 import { sweepEmDashes } from './db/migrate-em-dash-sweep.js';
+import { runMigrations } from './db/migrations.js';
 
 dotenv.config();
 
@@ -169,4 +170,7 @@ app.listen(PORT, () => {
   seedAssessmentLessons();
   seedPaymentPlans();
   sweepEmDashes();
+  // Run-once content/schema migrations — the non-destructive way to ship
+  // content to an already-populated prod DB (vs. a seed reseed that wipes it).
+  runMigrations();
 });

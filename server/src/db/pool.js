@@ -44,15 +44,32 @@ if (fs.existsSync(seedPath)) {
     fs.writeFileSync(seedVersionPath, SEED_VERSION);
     console.log(`[db] fresh disk — seeded from bundled snapshot (${SEED_VERSION})`);
   } else if (installedVersion !== SEED_VERSION) {
-    const backupPath = `${dbPath}.pre-seed-${Date.now()}`;
-    fs.copyFileSync(dbPath, backupPath);
-    for (const suffix of ['', '-wal', '-shm']) {
-      const f = dbPath + suffix;
-      if (fs.existsSync(f)) fs.rmSync(f);
+    // SAFEGUARD: the version-bump refresh OVERWRITES the live DB, which wipes
+    // all user data. Only ever do that on a pre-beta DB whose only accounts
+    // are the seed coaches. If any real client account exists, REFUSE — once
+    // people are in, content must ship via idempotent migrations/seeders that
+    // preserve user rows, never a reseed.
+    let realClients = 0;
+    try {
+      const probe = new Database(dbPath, { readonly: true });
+      realClients = probe.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'client'").get().c;
+      probe.close();
+    } catch {
+      realClients = -1; // unreadable — treat as "has data", don't risk a wipe
     }
-    fs.copyFileSync(seedPath, dbPath);
-    fs.writeFileSync(seedVersionPath, SEED_VERSION);
-    console.log(`[db] content refresh ${installedVersion || '(none)'} → ${SEED_VERSION}; backed up old DB to ${path.basename(backupPath)}`);
+    if (realClients === 0) {
+      const backupPath = `${dbPath}.pre-seed-${Date.now()}`;
+      fs.copyFileSync(dbPath, backupPath);
+      for (const suffix of ['', '-wal', '-shm']) {
+        const f = dbPath + suffix;
+        if (fs.existsSync(f)) fs.rmSync(f);
+      }
+      fs.copyFileSync(seedPath, dbPath);
+      fs.writeFileSync(seedVersionPath, SEED_VERSION);
+      console.log(`[db] content refresh ${installedVersion || '(none)'} → ${SEED_VERSION}; backed up old DB to ${path.basename(backupPath)}`);
+    } else {
+      console.warn(`[db] SEED_VERSION changed (${installedVersion} → ${SEED_VERSION}) but ${realClients < 0 ? 'the DB is unreadable' : realClients + ' client account(s) exist'} — REFUSING to reseed (it would wipe user data). Ship content via a migration instead.`);
+    }
   }
 }
 

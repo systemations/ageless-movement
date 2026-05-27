@@ -401,7 +401,7 @@ export default function Progress() {
   if (showROM) return <ROMTracking onBack={() => setShowROM(false)} />;
   if (showPain) return <PainLogging onBack={() => setShowPain(false)} />;
   if (showExerciseProgress) return <ExerciseProgress exerciseId={showExerciseProgress} onBack={() => setShowExerciseProgress(null)} />;
-  if (compareView) return <PhotoCompareView view={compareView} onBack={() => { setCompareView(null); setCompareMode(false); setCompareSelection([]); }} />;
+  if (compareView) return <PhotoCompareView view={compareView} checkins={photoCheckins} onBack={() => { setCompareView(null); setCompareMode(false); setCompareSelection([]); }} />;
   if (viewCheckin) return <PhotoSingleView checkin={viewCheckin} onBack={() => setViewCheckin(null)} />;
 
   return (
@@ -1191,14 +1191,23 @@ function PhotoSingleView({ checkin, onBack }) {
   );
 }
 
-function PhotoCompareView({ view, onBack }) {
-  const angles = [
-    { key: 'photo_front_url', label: 'Front' },
-    { key: 'photo_side_url', label: 'Side' },
-    { key: 'photo_back_url', label: 'Back' },
-  ].filter(a => view.left[a.key] && view.right[a.key]);
-  const [angle, setAngle] = useState(angles[0]?.key || 'photo_front_url');
+function PhotoCompareView({ view, checkins = [], onBack }) {
   const fmt = (d) => new Date(d).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Default to the passed pair (oldest vs newest), but let the user swap either
+  // side to any other check-in - e.g. comparing a 6-week-challenge before/after.
+  const [left, setLeft] = useState(view.left);
+  const [right, setRight] = useState(view.right);
+  const [picking, setPicking] = useState(null); // 'left' | 'right' | null
+
+  const angles = PHOTO_ANGLES.filter(a => left[a.key] && right[a.key]);
+  const [angle, setAngle] = useState(angles[0]?.key || 'photo_front_url');
+  const activeAngle = angles.find(a => a.key === angle) ? angle : (angles[0]?.key || 'photo_front_url');
+
+  const choose = (c) => {
+    if (picking === 'left') setLeft(c);
+    else if (picking === 'right') setRight(c);
+    setPicking(null);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--bg-primary)' }}>
@@ -1215,7 +1224,7 @@ function PhotoCompareView({ view, onBack }) {
       {angles.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-            These check-ins don't share a common angle. Try two check-ins where the same angle was photographed.
+            These two check-ins don't share a common angle. Tap a date below to pick a check-in with the same angle.
           </p>
         </div>
       ) : (
@@ -1228,8 +1237,8 @@ function PhotoCompareView({ view, onBack }) {
                   onClick={() => setAngle(a.key)}
                   style={{
                     padding: '6px 14px', borderRadius: 16, border: 'none',
-                    background: angle === a.key ? 'var(--accent-mint)' : 'var(--bg-card)',
-                    color: angle === a.key ? '#000' : 'var(--text-primary)',
+                    background: activeAngle === a.key ? 'var(--accent-mint)' : 'var(--bg-card)',
+                    color: activeAngle === a.key ? '#000' : 'var(--text-primary)',
                     fontSize: 12, fontWeight: 700, cursor: 'pointer',
                   }}
                 >{a.label}</button>
@@ -1237,45 +1246,88 @@ function PhotoCompareView({ view, onBack }) {
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, height: '62vh' }}>
-            {[{ side: view.left, label: fmt(view.left.date), weight: view.left.weight },
-              { side: view.right, label: fmt(view.right.date), weight: view.right.weight }].map((col, i) => (
+            {[{ side: left }, { side: right }].map((col, i) => (
               <div key={i} style={{ position: 'relative', background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
-                <img src={col.side[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={col.side[activeAngle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{
                   position: 'absolute', bottom: 0, left: 0, right: 0,
                   padding: '10px 12px',
                   background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
                   color: '#fff',
                 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700 }}>{col.label}</p>
-                  {col.weight != null && <p style={{ fontSize: 11, opacity: 0.8 }}>{col.weight} kg</p>}
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>{fmt(col.side.date)}</p>
+                  {col.side.weight != null && <p style={{ fontSize: 11, opacity: 0.8 }}>{col.side.weight} kg</p>}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Weight delta + date chips */}
-          {view.left.weight != null && view.right.weight != null && (
-            <div style={{ padding: '12px 16px' }}>
-              <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          {/* Weight delta */}
+          {left.weight != null && right.weight != null && (
+            <div style={{ padding: '12px 16px 0' }}>
+              <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Weight</span>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>{view.left.weight} kg</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: view.right.weight >= view.left.weight ? 'var(--accent)' : 'var(--accent-mint-ink)' }}>
-                  {view.right.weight >= view.left.weight ? '+' : ''}{(view.right.weight - view.left.weight).toFixed(1)}
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{left.weight} kg</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: right.weight >= left.weight ? 'var(--accent)' : 'var(--accent-mint-ink)' }}>
+                  {right.weight >= left.weight ? '+' : ''}{(right.weight - left.weight).toFixed(1)}
                 </span>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>{view.right.weight} kg</span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{right.weight} kg</span>
               </div>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px' }}>
-            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-              <span>📅</span>{fmt(view.left.date)}
-            </div>
-            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-              <span>📅</span>{fmt(view.right.date)}
-            </div>
+
+          {/* Tappable date chips - change which check-in each side compares */}
+          <div style={{ display: 'flex', gap: 10, padding: '12px 16px 20px' }}>
+            {[{ side: left, which: 'left' }, { side: right, which: 'right' }].map(({ side, which }) => (
+              <button key={which} onClick={() => setPicking(which)} className="card" style={{
+                flex: 1, textAlign: 'left', border: '1px solid var(--divider)', cursor: 'pointer',
+                background: 'var(--bg-card)', color: 'var(--text-primary)',
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {which === 'left' ? 'Before' : 'After'} · tap to change
+                </p>
+                <p style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>📅 {fmt(side.date)}</p>
+              </button>
+            ))}
           </div>
         </>
+      )}
+
+      {/* Check-in picker bottom sheet */}
+      {picking && (
+        <div onClick={() => setPicking(null)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
+          display: 'flex', alignItems: 'flex-end',
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: '100%', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-primary)',
+            borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: '16px 16px calc(20px + env(safe-area-inset-bottom,0px))',
+          }}>
+            <p style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
+              Choose the {picking === 'left' ? '"before"' : '"after"'} check-in
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[...checkins].sort((a, b) => new Date(b.date) - new Date(a.date)).map(c => {
+                const thumb = c.photo_front_url || c.photo_side_url || c.photo_back_url;
+                const isCurrent = (picking === 'left' ? left.id : right.id) === c.id;
+                return (
+                  <button key={c.id} onClick={() => choose(c)} className="card" style={{
+                    display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
+                    border: isCurrent ? '2px solid var(--accent-mint)' : '1px solid var(--divider)',
+                    background: 'var(--bg-card)', color: 'var(--text-primary)',
+                  }}>
+                    <img src={thumb} alt="" style={{ width: 44, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700 }}>{fmt(c.date)}</p>
+                      {c.weight != null && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{c.weight} kg</p>}
+                    </div>
+                    {isCurrent && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-mint-ink)' }}>Selected</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

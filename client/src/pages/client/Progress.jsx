@@ -244,6 +244,9 @@ export default function Progress() {
       .catch(() => {});
   };
   const [myCheckins, setMyCheckins] = useState([]);
+  // Bumped after a check-in is submitted so the page refetches and the new
+  // check-in (photos, sleep, stress, weight) shows without a full reload.
+  const [reloadKey, setReloadKey] = useState(0);
   const [compareMode, setCompareMode] = useState(false);
   const [compareSelection, setCompareSelection] = useState([]); // [checkinId, checkinId]
   const [compareView, setCompareView] = useState(null); // { left, right }
@@ -273,7 +276,7 @@ export default function Progress() {
       .then(r => r.ok ? r.json() : null)
       .then(d => setStatsSummary(d))
       .catch(() => { /* non-blocking */ });
-  }, [token]);
+  }, [token, reloadKey]);
 
   useEffect(() => {
     fetch('/api/explore/progress/exercises', {
@@ -289,7 +292,7 @@ export default function Progress() {
       .then(r => r.json())
       .then(d => setMyCheckins(d.checkins || []))
       .catch(console.error);
-  }, []);
+  }, [reloadKey]);
 
   const photoCheckins = myCheckins.filter(c => c.photo_front_url || c.photo_side_url || c.photo_back_url);
   const sortedPhotos = [...photoCheckins].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -394,7 +397,7 @@ export default function Progress() {
     fetchGoals();
   };
 
-  if (showCheckin) return <CheckinForm onClose={() => setShowCheckin(false)} onSuccess={() => setShowCheckin(false)} />;
+  if (showCheckin) return <CheckinForm onClose={() => setShowCheckin(false)} onSuccess={() => { setShowCheckin(false); setReloadKey(k => k + 1); }} />;
   if (showROM) return <ROMTracking onBack={() => setShowROM(false)} />;
   if (showPain) return <PainLogging onBack={() => setShowPain(false)} />;
   if (showExerciseProgress) return <ExerciseProgress exerciseId={showExerciseProgress} onBack={() => setShowExerciseProgress(null)} />;
@@ -1023,6 +1026,8 @@ function StatsRow({ stats }) {
   if (c?.body_fat != null)       cards.push({ label: 'Body Fat',   value: `${c.body_fat}`, suffix: ' %', sub: 'Latest check-in' });
   if (c?.recovery_score != null) cards.push({ label: 'Recovery',   value: `${c.recovery_score}`, suffix: ' / 10', sub: 'Latest check-in' });
   if (c?.sleep_hours != null)    cards.push({ label: 'Sleep',      value: `${c.sleep_hours}`, suffix: ' h', sub: 'Latest check-in' });
+  if (c?.stress_level != null)   cards.push({ label: 'Stress',     value: `${c.stress_level}`, suffix: ' / 10', sub: 'Latest check-in' });
+  if (c?.waist != null)          cards.push({ label: 'Waist',      value: `${c.waist}`, suffix: ' cm', sub: 'Latest check-in' });
   if (w.water_ml_avg != null)    cards.push({ label: 'Water',      value: `${(w.water_ml_avg / 1000).toFixed(1)}`, suffix: ` / ${(t.water_ml || 0) / 1000}L`, sub: '7-day avg' });
   if (w.steps_avg != null)       cards.push({ label: 'Steps',      value: `${w.steps_avg.toLocaleString()}`, suffix: t.steps ? ` / ${t.steps.toLocaleString()}` : '', sub: '7-day avg' });
   if (w.calories_avg != null)    cards.push({ label: 'Calories',   value: `${w.calories_avg.toLocaleString()}`, suffix: t.calories ? ` / ${t.calories.toLocaleString()}` : '', sub: '7-day avg' });

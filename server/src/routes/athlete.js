@@ -651,7 +651,7 @@ router.get('/stats-summary', authenticateToken, (req, res) => {
       [userId],
     ).rows[0] || {};
     const latestCheckin = pool.query(
-      `SELECT date, weight, body_fat, recovery_score, sleep_hours
+      `SELECT date, weight, body_fat, recovery_score, sleep_hours, stress_level, waist
          FROM checkins
         WHERE user_id = ?
         ORDER BY date DESC, id DESC

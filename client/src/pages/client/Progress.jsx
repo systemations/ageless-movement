@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CheckinForm from './CheckinForm';
@@ -133,6 +133,80 @@ function nextCheckinLabel(checkins) {
   return `Due in ${days} days`;
 }
 
+// Human-friendly gap between two check-in dates, e.g. "in 21 months" / "in 3 weeks".
+function elapsedLabel(fromDate, toDate) {
+  const ms = new Date(toDate) - new Date(fromDate);
+  const days = Math.round(ms / 86400000);
+  if (days < 14) return `in ${Math.max(1, days)} day${days === 1 ? '' : 's'}`;
+  if (days < 60) return `in ${Math.round(days / 7)} weeks`;
+  const months = Math.round(days / 30.44);
+  if (months < 24) return `in ${months} month${months === 1 ? '' : 's'}`;
+  return `in ${(days / 365.25).toFixed(1)} years`;
+}
+
+const PHOTO_ANGLES = [
+  { key: 'photo_front_url', label: 'Front' },
+  { key: 'photo_side_url', label: 'Side' },
+  { key: 'photo_back_url', label: 'Back' },
+];
+
+const fmtShort = (d) => new Date(d).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// FitBudd-style before/after card: oldest vs newest side by side, swipe to
+// change angle. Dates in the corners, elapsed-time pill in the middle.
+function BeforeAfterCard({ oldest, newest, onOpen }) {
+  const angles = PHOTO_ANGLES.filter(a => oldest[a.key] && newest[a.key]);
+  const [idx, setIdx] = useState(0);
+  const touchX = useRef(null);
+  if (angles.length === 0) return null;
+  const angle = angles[Math.min(idx, angles.length - 1)];
+  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e) => {
+    if (touchX.current == null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    if (dx < -40 && idx < angles.length - 1) setIdx(idx + 1);
+    if (dx > 40 && idx > 0) setIdx(idx - 1);
+    touchX.current = null;
+  };
+  const Half = ({ checkin, date, align }) => (
+    <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+      <img src={checkin[angle.key]} alt="" style={{ width: '100%', height: 300, objectFit: 'cover', display: 'block' }} />
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 12px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+        color: '#fff', fontSize: 13, fontWeight: 700, textAlign: align,
+      }}>
+        <div style={{ fontSize: 20, fontWeight: 800 }}>{new Date(date).getDate()}</div>
+        {new Date(date).toLocaleDateString('en-IE', { month: 'short', year: 'numeric' })}
+      </div>
+    </div>
+  );
+  return (
+    <div onClick={onOpen} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+      style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
+      <div style={{ display: 'flex', gap: 2, position: 'relative' }}>
+        <Half checkin={oldest} date={oldest.date} align="left" />
+        <Half checkin={newest} date={newest.date} align="right" />
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 12, fontWeight: 700,
+          padding: '5px 12px', borderRadius: 16, whiteSpace: 'nowrap',
+        }}>{elapsedLabel(oldest.date, newest.date)}</div>
+      </div>
+      {angles.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '10px 0' }}>
+          {angles.map((a, i) => (
+            <span key={a.key} style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: i === idx ? 'var(--accent-mint)' : 'var(--divider)',
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Progress() {
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -218,6 +292,9 @@ export default function Progress() {
   }, []);
 
   const photoCheckins = myCheckins.filter(c => c.photo_front_url || c.photo_side_url || c.photo_back_url);
+  const sortedPhotos = [...photoCheckins].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const oldestPhoto = sortedPhotos[0];
+  const newestPhoto = sortedPhotos[sortedPhotos.length - 1];
   const checkinDueLabel = nextCheckinLabel(myCheckins);
   const [viewCheckin, setViewCheckin] = useState(null); // single check-in photo viewer
 
@@ -338,15 +415,12 @@ export default function Progress() {
               are gone now per Dan 2026-05-06 (the strip says it). */}
           <CollapsibleSection
             title="Progress Photos"
-            subtitle={photoCheckins.length === 0 ? 'No progress photos yet' : `${photoCheckins.length} on file - swipe to compare`}
-            accent="#2BB5A3"
-            action={
-              photoCheckins.length >= 2 && !compareMode ? (
-                <button onClick={() => { setCompareMode(true); setCompareSelection([]); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>Compare</button>
-              ) : compareMode ? (
-                <button onClick={() => { setCompareMode(false); setCompareSelection([]); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8 }}>Cancel</button>
-              ) : null
+            subtitle={
+              photoCheckins.length === 0 ? 'No progress photos yet'
+              : photoCheckins.length === 1 ? 'Add another check-in to see your before & after'
+              : 'Your before & after'
             }
+            accent="#2BB5A3"
           >
             {photoCheckins.length === 0 ? (
               <div className="card" style={{ textAlign: 'center', padding: 32 }}>
@@ -356,50 +430,29 @@ export default function Progress() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No progress photos yet</p>
                 <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>Complete a check-in to add photos</p>
               </div>
-            ) : (
-              <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px' }}>
-                {photoCheckins.map(c => {
-                  const thumb = c.photo_front_url || c.photo_side_url || c.photo_back_url;
-                  const selected = compareSelection.includes(c.id);
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => compareMode ? toggleCompareSelection(c.id) : setViewCheckin(c)}
-                      style={{
-                        minWidth: 110, cursor: 'pointer',
-                        borderRadius: 12, overflow: 'hidden', position: 'relative',
-                        border: selected ? '2px solid var(--accent-mint)' : '2px solid transparent',
-                      }}
-                    >
-                      <img src={thumb} alt="" style={{ width: 110, height: 140, objectFit: 'cover', display: 'block' }} />
-                      <div style={{
-                        position: 'absolute', bottom: 0, left: 0, right: 0,
-                        padding: '6px 8px',
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
-                        color: '#fff', fontSize: 11, fontWeight: 700,
-                      }}>{new Date(c.date).toLocaleDateString('en-IE', { day: '2-digit', month: 'short' })}</div>
-                      {selected && (
-                        <div style={{
-                          position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
-                          background: 'var(--accent-mint)', color: '#000',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 800,
-                        }}>{compareSelection.indexOf(c.id) + 1}</div>
-                      )}
+            ) : photoCheckins.length === 1 ? (
+              // One check-in: show its angles side by side, with a prompt to
+              // add another so the before/after comparison can unlock.
+              <div onClick={() => setViewCheckin(sortedPhotos[0])} style={{ cursor: 'pointer' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {PHOTO_ANGLES.filter(a => sortedPhotos[0][a.key]).map(a => (
+                    <div key={a.key} style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, textAlign: 'center' }}>{a.label}</p>
+                      <img src={sortedPhotos[0][a.key]} alt={a.label} style={{ width: '100%', borderRadius: 10, display: 'block', background: 'var(--bg-card)' }} />
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 12 }}>
+                  Complete another check-in to unlock your before & after.
+                </p>
               </div>
-            )}
-            {compareMode && (
-              <button
-                className="btn-primary"
-                onClick={openComparison}
-                disabled={compareSelection.length !== 2}
-                style={{ fontSize: 14, opacity: compareSelection.length === 2 ? 1 : 0.5, marginTop: 12 }}
-              >
-                {compareSelection.length === 2 ? 'Show side-by-side' : `Pick ${2 - compareSelection.length} more photo${2 - compareSelection.length === 1 ? '' : 's'}`}
-              </button>
+            ) : (
+              <>
+                <BeforeAfterCard oldest={oldestPhoto} newest={newestPhoto} onOpen={openBeforeAfter} />
+                <button className="btn-primary" onClick={openBeforeAfter} style={{ fontSize: 14, marginTop: 12 }}>
+                  Compare
+                </button>
+              </>
             )}
           </CollapsibleSection>
 
@@ -1143,7 +1196,7 @@ function PhotoCompareView({ view, onBack }) {
   const fmt = (d) => new Date(d).toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--bg-primary)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--divider)' }}>
         <button onClick={onBack} style={{
           width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
@@ -1178,7 +1231,7 @@ function PhotoCompareView({ view, onBack }) {
               ))}
             </div>
           )}
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, minHeight: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, height: '62vh' }}>
             {[{ side: view.left, label: fmt(view.left.date), weight: view.left.weight },
               { side: view.right, label: fmt(view.right.date), weight: view.right.weight }].map((col, i) => (
               <div key={i} style={{ position: 'relative', background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' }}>
@@ -1194,6 +1247,28 @@ function PhotoCompareView({ view, onBack }) {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Weight delta + date chips */}
+          {view.left.weight != null && view.right.weight != null && (
+            <div style={{ padding: '12px 16px' }}>
+              <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Weight</span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{view.left.weight} kg</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: view.right.weight >= view.left.weight ? 'var(--accent)' : 'var(--accent-mint-ink)' }}>
+                  {view.right.weight >= view.left.weight ? '+' : ''}{(view.right.weight - view.left.weight).toFixed(1)}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{view.right.weight} kg</span>
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px' }}>
+            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <span>📅</span>{fmt(view.left.date)}
+            </div>
+            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <span>📅</span>{fmt(view.right.date)}
+            </div>
           </div>
         </>
       )}

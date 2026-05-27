@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import CropModal from '../../components/CropModal';
 
 const questions = [
   'How do you feel / overall well being',
@@ -19,13 +20,25 @@ export default function CheckinForm({ onClose, onSuccess }) {
   });
   const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
+  // Crop step: selecting a photo opens the cropper; the cropped 3:4 file is
+  // what gets stored + uploaded, so all three photos line up.
+  const [cropFor, setCropFor] = useState(null);      // 'front' | 'side' | 'back'
+  const [cropSrc, setCropSrc] = useState(null);
 
   const handlePhotoChange = (position, e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotos({ ...photos, [position]: file });
-      setPhotoPreviews({ ...photoPreviews, [position]: URL.createObjectURL(file) });
+      setCropSrc(URL.createObjectURL(file));
+      setCropFor(position);
     }
+    e.target.value = '';  // allow re-selecting the same file later
+  };
+
+  const handleCropped = (file) => {
+    setPhotos(p => ({ ...p, [cropFor]: file }));
+    setPhotoPreviews(pv => ({ ...pv, [cropFor]: URL.createObjectURL(file) }));
+    setCropFor(null);
+    setCropSrc(null);
   };
 
   // Upload a single image to /api/upload and return the server URL,
@@ -83,6 +96,13 @@ export default function CheckinForm({ onClose, onSuccess }) {
 
   return (
     <div className="page-content" style={{ paddingBottom: 120 }}>
+      {cropFor && cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          onCancel={() => { setCropFor(null); setCropSrc(null); }}
+          onCropped={handleCropped}
+        />
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <button onClick={onClose} style={{

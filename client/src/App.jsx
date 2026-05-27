@@ -196,16 +196,21 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // Reset scroll on every route change. The actual scroll container is
-  // .page-content (overflow-y: auto in global.css), not the window - 
-  // pages were keeping the previous page's scroll offset and landing
-  // users mid-page after navigating. Window scroll is a belt-and-braces
-  // fallback for routes that don't use .page-content.
+  // Reset scroll on every navigation so a new page always opens at the top.
+  // Watches search too (opening a workout/program is a ?query change on the
+  // same path), resets every scroll candidate (window, scrollingElement and
+  // ALL .page-content containers), and runs again next frame to catch content
+  // that mounts after its data finishes loading.
   useEffect(() => {
-    const pageContent = document.querySelector('.page-content');
-    if (pageContent) pageContent.scrollTop = 0;
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    const reset = () => {
+      window.scrollTo(0, 0);
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      document.querySelectorAll('.page-content').forEach(el => { el.scrollTop = 0; });
+    };
+    reset();
+    const raf = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(raf);
+  }, [location.pathname, location.search]);
 
   if (loading) {
     return (

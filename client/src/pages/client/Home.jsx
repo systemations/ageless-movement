@@ -1574,7 +1574,8 @@ export default function Home() {
         { icon: '📅', label: 'Book Session', path: '/events?book=1' },
         { icon: '🔖', label: 'Favourites', path: '/favourites' },
         { icon: '🏃', label: 'Log Other Workout', path: '/log-workout' },
-        { icon: '📥', label: 'Downloaded Workouts', path: '/explore' },
+        // 'Downloaded Workouts' hidden until the App Store build - offline
+        // downloads need the native (Capacitor) filesystem, not available on web.
       ].map(({ icon, label, path }) => (
         <div key={label} onClick={() => navigate(path)} className="card-sm" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer'

@@ -22,11 +22,10 @@ function isWorkoutLocked({ clientLevel, programTierLevel, isFreePreview, weekNum
 // Get all on-demand content for explore tab (dynamic sections with tier filtering)
 router.get('/content', authenticateToken, async (req, res) => {
   try {
-    // Get client's tier level
-    const profile = pool.query('SELECT tier_id FROM client_profiles WHERE user_id = ?', [req.user.id]);
-    const clientTierId = profile.rows[0]?.tier_id || 1;
-    const clientTier = pool.query('SELECT level FROM tiers WHERE id = ?', [clientTierId]);
-    const clientLevel = clientTier.rows[0]?.level || 0;
+    // Client's tier level (via the shared helper so coach-bypass and the
+    // beta_mode "unlock everything" flag apply here too, not just on the
+    // play/enroll guards).
+    const clientLevel = clientTierLevel(req.user.id);
 
     // Get all visible sections where client's tier level >= section's min tier level
     const sections = pool.query(`

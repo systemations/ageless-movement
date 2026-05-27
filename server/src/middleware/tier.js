@@ -1,10 +1,15 @@
 import pool from '../db/pool.js';
+import { isBetaMode } from '../lib/settings.js';
 
 // Resolve the tier level for a given user id. Coaches always return
 // Infinity so they bypass every guard while previewing content.
+// During beta (beta_mode flag on) EVERYONE returns Infinity, so the whole
+// app is unlocked for testers; flip beta_mode off at launch and the normal
+// tier gating (first session free, rest locked) returns with no code change.
 export function clientTierLevel(userId) {
   const role = pool.query('SELECT role FROM users WHERE id = ?', [userId]).rows[0]?.role;
   if (role === 'coach') return Infinity;
+  if (isBetaMode()) return Infinity;
   const tierId = pool.query('SELECT tier_id FROM client_profiles WHERE user_id = ?', [userId]).rows[0]?.tier_id || 1;
   return pool.query('SELECT level FROM tiers WHERE id = ?', [tierId]).rows[0]?.level || 0;
 }

@@ -59,11 +59,11 @@ export default function FeedbackViewer() {
           background: 'var(--bg-card)', border: '1px solid var(--divider)', borderRadius: 12,
         }}>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700 }}>Beta checklist reminders</p>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>Beta mode</p>
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
               {betaMode
-                ? 'On: testers get a checklist DM (48h, then every 72h) until they send feedback.'
-                : 'Off: no beta reminder DMs are sent.'}
+                ? 'On: all content is unlocked for testers, and they get checklist DMs (48h, then every 72h) until they send feedback. Turn off at launch to restore tier gating (first session free, rest locked).'
+                : 'Off (live): tier gating applies (first session of each program free, rest locked) and no beta reminder DMs are sent.'}
             </p>
           </div>
           <button

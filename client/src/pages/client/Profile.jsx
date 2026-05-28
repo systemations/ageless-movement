@@ -36,6 +36,8 @@ export default function Profile({ onBack }) {
   // already done (no point toggling something that auto-hides).
   const [checklistState, setChecklistState] = useState({ dismissed: false, all_done: true });
   const [password, setPassword] = useState({ current: '', newPw: '', confirm: '' });
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState(null); // { kind: 'error'|'success', text }
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -226,10 +228,35 @@ export default function Profile({ onBack }) {
   }
 
   if (showSubPage === 'password') {
+    const submitPassword = async () => {
+      setPasswordMsg(null);
+      const { current, newPw, confirm } = password;
+      if (!current || !newPw || !confirm) return setPasswordMsg({ kind: 'error', text: 'All fields are required.' });
+      if (newPw.length < 8) return setPasswordMsg({ kind: 'error', text: 'New password must be at least 8 characters.' });
+      if (newPw !== confirm) return setPasswordMsg({ kind: 'error', text: 'New password and confirmation do not match.' });
+      setPasswordBusy(true);
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password: current, new_password: newPw }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setPasswordMsg({ kind: 'error', text: data.error || 'Could not update password.' });
+        } else {
+          setPassword({ current: '', newPw: '', confirm: '' });
+          setPasswordMsg({ kind: 'success', text: 'Password updated.' });
+        }
+      } catch (err) {
+        setPasswordMsg({ kind: 'error', text: 'Network error. Try again.' });
+      }
+      setPasswordBusy(false);
+    };
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setShowSubPage(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+          <button onClick={() => { setShowSubPage(null); setPasswordMsg(null); }} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <h1 style={{ fontSize: 18, fontWeight: 700 }}>Change Password</h1>
@@ -237,7 +264,18 @@ export default function Profile({ onBack }) {
         <div className="input-group"><label>Current Password</label><input type="password" className="input-field" value={password.current} onChange={e => setPassword({...password, current: e.target.value})} /></div>
         <div className="input-group"><label>New Password</label><input type="password" className="input-field" value={password.newPw} onChange={e => setPassword({...password, newPw: e.target.value})} /></div>
         <div className="input-group"><label>Confirm Password</label><input type="password" className="input-field" value={password.confirm} onChange={e => setPassword({...password, confirm: e.target.value})} /></div>
-        <button className="btn-primary" onClick={() => { alert('Password updated!'); setShowSubPage(null); }}>Update Password</button>
+        {passwordMsg && (
+          <p style={{
+            fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 12,
+            color: passwordMsg.kind === 'error' ? 'var(--error)' : 'var(--accent-mint-ink, #0E8A4F)',
+          }}>{passwordMsg.text}</p>
+        )}
+        <button
+          className="btn-primary"
+          onClick={submitPassword}
+          disabled={passwordBusy}
+          style={{ opacity: passwordBusy ? 0.5 : 1 }}
+        >{passwordBusy ? 'Updating...' : 'Update Password'}</button>
       </div>
     );
   }

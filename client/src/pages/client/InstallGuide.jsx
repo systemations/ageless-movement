@@ -130,18 +130,27 @@ function IosChromeSteps() {
   );
 }
 
-// Desktop fallback - mostly a redirect to do it on phone, but Chrome desktop
-// supports PWA install too, so we mention that.
+// Desktop fallback - this whole feature is for phones, so just point them
+// there. Shows the live URL so they can type it into their phone browser.
 function DesktopSteps() {
+  const url = typeof window !== 'undefined' ? window.location.origin : '';
   return (
     <>
-      <Heading platform="Desktop" />
+      <Heading platform="Your phone" />
       <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 22 }}>
-        You're on a computer. The install experience is built for phones, so the easiest path is to open this page
-        on your phone and follow the steps there. If you want to install on desktop too:
+        Ageless Movement is built to live on your phone's home screen. To set that up, you'll need to log in
+        from your phone's browser first - this step doesn't apply to your computer.
       </p>
-      <Step n={1} title="Look for the install icon in your address bar" body="In Chrome / Edge / Brave it's a small computer-with-down-arrow icon on the right of the URL bar." />
-      <Step n={2} title="Click Install" body="Confirm the popup. Ageless Movement opens in its own window like a native app." />
+      <Step n={1} title="Open your phone's browser" body={<>On iPhone use <strong>Safari</strong> (Apple only lets Safari install web apps to the home screen, not Chrome). On Android, Chrome is fine.</>} />
+      <Step n={2} title="Go to this address" body={<>
+        <code style={{
+          display: 'inline-block', padding: '4px 10px', borderRadius: 6, marginTop: 4,
+          background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13,
+          border: '1px solid var(--divider)',
+        }}>{url || 'agelessmovement.com'}</code>
+      </>} />
+      <Step n={3} title="Log in" body="Use the same email and password you signed up with on this computer." />
+      <Step n={4} title="Follow the install steps that appear" body="This same page on your phone will show the right Safari / Chrome instructions for your device." done />
     </>
   );
 }

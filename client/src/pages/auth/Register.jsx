@@ -37,7 +37,8 @@ export default function Register() {
     try {
       // Slim register: account-only, no questionnaire payload. The
       // routing guard will land them on /onboarding next.
-      const data = await register(email, password, name, role, null);
+      // Trim + lowercase to defend against iOS autocap / trailing spaces.
+      const data = await register(email.trim().toLowerCase(), password, name, role, null);
       // Clean up any stale anonymous-funnel leftovers
       try { localStorage.removeItem('am_onboarding_answers'); } catch {}
 
@@ -89,6 +90,10 @@ export default function Register() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              inputMode="email"
               style={input}
             />
           </div>

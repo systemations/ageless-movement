@@ -19,7 +19,10 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const data = await login(email, password);
+      // iOS Safari adds invisible non-breaking spaces / autocapitalised
+      // letters into email fields. Trim + lowercase before submit so the
+      // user's typing intent matches what the server stored.
+      const data = await login(email.trim().toLowerCase(), password);
       if (data.user.role === 'coach') {
         // Wide screens land on the admin dashboard, narrow on mobile coach home
         const isNarrow = window.matchMedia('(max-width: 768px)').matches;
@@ -57,6 +60,10 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              inputMode="email"
               style={input}
             />
           </div>

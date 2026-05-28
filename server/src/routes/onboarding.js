@@ -130,6 +130,17 @@ router.post('/finalize', authenticateToken, async (req, res) => {
 
 const CHECKLIST_TASKS = [
   {
+    // Surfaced first so a new client installs the PWA before doing anything
+    // else - dramatically better retention vs leaving them on a browser tab.
+    // Manual because there's no reliable server-side signal for standalone mode.
+    key: 'install_app',
+    title: 'Add Ageless Movement to your home screen',
+    description: 'One-tap launch, full-screen, no browser bars. Works on iPhone + Android.',
+    cta_label: 'Show me how',
+    cta_route: '/install',
+    manual: true,
+  },
+  {
     key: 'assessment_course',
     title: 'Complete the AMS Getting Started course',
     description: 'Walk through the assessment lessons + take the level quiz.',
@@ -156,17 +167,6 @@ const CHECKLIST_TASKS = [
     description: 'Quick intro so the support channel is open from day one.',
     cta_label: 'Open Messages',
     cta_route: '/messages',
-  },
-  {
-    // No reliable server-side signal that someone installed the PWA (display-mode
-    // is client-only) - so manual=true, the client marks it done after walking
-    // through the steps on /install.
-    key: 'install_app',
-    title: 'Add Ageless Movement to your home screen',
-    description: 'One-tap launch, full-screen, no browser bars. Works on iPhone + Android.',
-    cta_label: 'Show me how',
-    cta_route: '/install',
-    manual: true,
   },
 ];
 

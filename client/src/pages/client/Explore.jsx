@@ -213,6 +213,7 @@ export default function Explore() {
         onBack={() => setSeeAllSection(null)}
         onOpenProgram={(id) => { setSeeAllSection(null); setSelectedProgram(id); }}
         onOpenWorkout={(id) => { setSeeAllSection(null); setSelectedWorkout(id); }}
+        onOpenMealPlan={(id) => { setSeeAllSection(null); setSelectedMealPlanId(id); }}
         onLocked={(item) => openTiersModal(item)}
       />
     );
@@ -681,10 +682,22 @@ export default function Explore() {
       {activeTab === 'Nutrition' && (
         <>
           {/* Meal Schedules carousel */}
-          {mealSchedules.length > 0 && (
+          {mealSchedules.length > 0 && (() => {
+            const mealSection = { id: 'meal-schedules', title: 'Meal Schedules', content_type: 'meal_plan', items: mealSchedules };
+            const tappable = mealSchedules.length > 4;
+            return (
             <div style={{ marginBottom: 24 }}>
               <div className="section-header" style={{ marginTop: 0 }}>
-                <h2 style={{ fontSize: 16 }}>Meal Schedules</h2>
+                <h2
+                  style={{ fontSize: 16, cursor: tappable ? 'pointer' : 'default' }}
+                  onClick={() => { if (tappable) setSeeAllSection(mealSection); }}
+                >Meal Schedules</h2>
+                {tappable && (
+                  <button
+                    onClick={() => setSeeAllSection(mealSection)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >See all</button>
+                )}
               </div>
               <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
                 {mealSchedules.map(sched => (
@@ -722,7 +735,8 @@ export default function Explore() {
                 ))}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Dynamic nutrition sections (recipes, etc.) */}
           {nutritionSections.map(section => {
@@ -734,10 +748,20 @@ export default function Explore() {
 
             // Recipe carousel
             if (sectionType === 'recipe') {
+              const tappable = (section.items?.length || 0) > 4;
               return (
                 <div key={section.id} style={{ marginBottom: 24 }}>
                   <div className="section-header" style={{ marginTop: 0 }}>
-                    <h2 style={{ fontSize: 16 }}>{section.title}</h2>
+                    <h2
+                      style={{ fontSize: 16, cursor: tappable ? 'pointer' : 'default' }}
+                      onClick={() => { if (tappable) setSeeAllSection(section); }}
+                    >{section.title}</h2>
+                    {tappable && (
+                      <button
+                        onClick={() => setSeeAllSection(section)}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >See all</button>
+                    )}
                   </div>
                   <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }}>
                     {section.items.map(item => (
@@ -918,9 +942,35 @@ function SearchResults({ results, onOpen }) {
 // title / "See all" link. Renders every item in the group as a wrapping
 // grid (vs the inline horizontal carousel). Reuses WorkoutThumb + the same
 // tap-through targets (program detail / workout overview).
-function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked }) {
-  const isProgram = section.content_type === 'program'
-    || (section.items?.[0]?.item_type === 'program');
+function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onOpenMealPlan, onLocked }) {
+  // Section can be a workout-side carousel (programs/workouts) or a nutrition
+  // carousel (meal schedules / recipe picks). Tap target + sub-text vary by
+  // type; the grid layout itself stays consistent.
+  const type = section.content_type || section.items?.[0]?.item_type;
+  const isProgram = type === 'program';
+  const isMealPlan = type === 'meal_plan';
+  const isRecipe = type === 'recipe';
+
+  const handleClick = (item) => {
+    if (item.item_locked || item.locked) return onLocked(item);
+    if (isProgram) return onOpenProgram(item.item_id);
+    if (isMealPlan) return onOpenMealPlan(item.id);
+    // Recipe Picks today have no per-card detail navigation - tap is a no-op.
+    if (isRecipe) return;
+    return onOpenWorkout(item.item_id);
+  };
+
+  const subText = (item) => {
+    if (isProgram) return `${item.duration_weeks || ''} weeks · ${item.workouts_per_week || ''} workouts/wk`;
+    if (isMealPlan) {
+      const dur = `${item.duration_weeks ? item.duration_weeks + 'w' : ''}${item.duration_days ? ' ' + item.duration_days + ' days' : ''}`.trim();
+      const kcal = (item.calorie_target_min && item.calorie_target_max) ? `${item.calorie_target_min}-${item.calorie_target_max} kcal` : '';
+      return [dur, kcal].filter(Boolean).join(' · ');
+    }
+    if (isRecipe) return [item.calories ? `${item.calories} cal` : '', item.category].filter(Boolean).join(' · ');
+    return `${item.duration ? item.duration + ' mins' : ''}${item.body_parts ? ' · ' + item.body_parts : ''}`;
+  };
+
   return (
     <div className="page-content" style={{ paddingBottom: 100 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -936,10 +986,8 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked })
         {(section.items || []).map((item) => (
           <div
             key={item.id}
-            onClick={() => isProgram
-              ? onOpenProgram(item.item_id)
-              : (item.item_locked ? onLocked(item) : onOpenWorkout(item.item_id))}
-            style={{ cursor: 'pointer' }}
+            onClick={() => handleClick(item)}
+            style={{ cursor: isRecipe ? 'default' : 'pointer' }}
           >
             <div style={{ width: '100%', position: 'relative', borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
               <WorkoutThumb
@@ -949,14 +997,10 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onLocked })
                 borderRadius={12}
                 titleFontSize={14}
               />
-              {item.item_locked && !isProgram && <LockOverlay tierName={item.tier_name} compact />}
+              {(item.item_locked || item.locked) && <LockOverlay tierName={item.tier_name} compact />}
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>{item.title}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-              {isProgram
-                ? `${item.duration_weeks || ''} weeks · ${item.workouts_per_week || ''} workouts/wk`
-                : `${item.duration ? item.duration + ' mins' : ''}${item.body_parts ? ' · ' + item.body_parts : ''}`}
-            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{subText(item)}</p>
           </div>
         ))}
       </div>

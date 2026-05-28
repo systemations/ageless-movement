@@ -134,15 +134,31 @@ export default function FavouritesPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
-            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-          </svg>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>No {activeTab.toLowerCase()} favourited</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Tap the heart icon on {activeTab.toLowerCase()} to save them here</p>
-        </div>
-      ) : (
+      {(() => {
+        // Browse jump - sends the user to the matching Explore tab so they
+        // can find items to favourite. Primary CTA on empty state, subtle
+        // link below the list when populated.
+        const exploreTab = activeTab === 'Workouts' ? 'Workouts' : 'Nutrition';
+        const browseLabel = activeTab === 'Workouts' ? 'workouts' : 'recipes';
+        if (filtered.length === 0) {
+          return (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>
+                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+              </svg>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>No {browseLabel} favourited</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Tap the heart icon on {browseLabel} to save them here</p>
+              <button
+                onClick={() => navigate(`/explore?tab=${exploreTab}`)}
+                className="btn-primary"
+                style={{ display: 'inline-block', padding: '12px 24px', fontSize: 14 }}
+              >
+                Browse {browseLabel}
+              </button>
+            </div>
+          );
+        }
+        return (<>{
         filtered.map((fav) => {
           const key = `${fav.item_type}-${fav.item_id}`;
           const busy = busyId === key;
@@ -195,8 +211,18 @@ export default function FavouritesPage() {
             </button>
             <FavButton itemType={fav.item_type} itemId={fav.item_id} itemTitle={fav.item_title} itemMeta={fav.item_meta} />
           </div>
-        );})
-      )}
+        );})}
+        <div style={{ textAlign: 'center', padding: '20px 0 8px' }}>
+          <button
+            onClick={() => navigate(`/explore?tab=${exploreTab}`)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--accent)',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 6,
+            }}
+          >Browse more {browseLabel} →</button>
+        </div>
+        </>);
+      })()}
 
       {/* Meal-type picker for recipes */}
       {recipePicker && (

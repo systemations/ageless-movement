@@ -48,7 +48,10 @@ export default function Explore() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('Workouts');
+  // ?tab=Workouts|Nutrition lets other pages deep-link into a specific tab
+  // (e.g. Favourites' "Browse recipes" jumps straight to Nutrition).
+  const initialTab = tabs.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'Workouts';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);

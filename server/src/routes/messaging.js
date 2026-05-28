@@ -121,6 +121,35 @@ function ensureClientTeamInboxes(currentUserId) {
 }
 
 // ────────────────────────────────────────────────────────────────────────
+// Unread badge - lightweight aggregate for the bottom-nav dot. Returns the
+// number of conversations the user is a member of that have at least one
+// unread message. We count conversations (not messages) so the badge means
+// "you have X chats waiting" rather than "you have 50 lines of backlog".
+// ────────────────────────────────────────────────────────────────────────
+router.get('/unread-count', authenticateToken, (req, res) => {
+  try {
+    const row = pool.query(`
+      SELECT COUNT(*) AS c FROM conversation_members cm
+      JOIN conversations c ON c.id = cm.conversation_id
+      WHERE cm.user_id = ?
+        AND EXISTS (
+          SELECT 1 FROM messages m
+          WHERE m.conversation_id = c.id
+            AND m.sender_id != ?
+            AND m.created_at > COALESCE(
+              (SELECT last_read_at FROM conversation_reads WHERE conversation_id = c.id AND user_id = ?),
+              '1970-01-01'
+            )
+        )
+    `, [req.user.id, req.user.id, req.user.id]).rows[0];
+    res.json({ count: row?.c || 0 });
+  } catch (err) {
+    console.error('Unread count error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────
 // Conversations list
 // ────────────────────────────────────────────────────────────────────────
 router.get('/conversations', authenticateToken, async (req, res) => {

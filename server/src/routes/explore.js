@@ -700,8 +700,11 @@ router.get('/progress/exercises/:exerciseId', authenticateToken, (req, res) => {
 // Browse all exercises with search + filter
 router.get('/exercises', authenticateToken, (req, res) => {
   try {
-    const { search, body_part, equipment } = req.query;
-    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0";
+    const { search, body_part, equipment, type, limit } = req.query;
+    // exercise_type is now in the SELECT so callers (BuildWorkout picker)
+    // can sort/group by it client-side - e.g. recommend Mobility moves at
+    // the top of a Warmup block.
+    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, exercise_type, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0";
     const params = [];
 
     if (search) {
@@ -716,8 +719,16 @@ router.get('/exercises', authenticateToken, (req, res) => {
       sql += ' AND equipment LIKE ?';
       params.push(`%${equipment}%`);
     }
+    if (type) {
+      sql += ' AND exercise_type = ?';
+      params.push(type);
+    }
 
     sql += ' ORDER BY name';
+    if (limit) {
+      const n = Math.min(Math.max(parseInt(limit, 10) || 0, 0), 100);
+      if (n > 0) sql += ` LIMIT ${n}`;
+    }
     const result = pool.query(sql, params);
     res.json({ exercises: result.rows });
   } catch (err) {

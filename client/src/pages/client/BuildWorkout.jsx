@@ -314,6 +314,7 @@ export default function BuildWorkout() {
         <ExercisePicker
           token={token}
           multi={blocks[picker]?.type !== 'Straight Set'}
+          blockType={blocks[picker]?.type}
           onConfirm={addExercises}
           onClose={() => setPicker(null)}
         />
@@ -378,10 +379,16 @@ function BlockSettings({ block, onChange }) {
   return <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>{fields}</div>;
 }
 
-function ExercisePicker({ token, multi, onConfirm, onClose }) {
+function ExercisePicker({ token, multi, blockType, onConfirm, onClose }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
+  const [recommended, setRecommended] = useState([]); // type-matched picks pinned to top
   const [selected, setSelected] = useState([]); // ex objects (multi mode)
+
+  // Block-type to recommended exercise_type. Warmup gets Mobility moves;
+  // other formats fall through to no recommendations (just show the search).
+  const recommendedType = blockType === 'Warmup' ? 'Mobility' : null;
+
   useEffect(() => {
     const t = setTimeout(() => {
       const params = q.trim() ? `?search=${encodeURIComponent(q.trim())}` : '';
@@ -393,14 +400,34 @@ function ExercisePicker({ token, multi, onConfirm, onClose }) {
     return () => clearTimeout(t);
   }, [q, token]);
 
+  // Load the recommended picks once on open (only when there's a type to
+  // recommend for). Two are enough - more starts to compete with the search.
+  useEffect(() => {
+    if (!recommendedType) return;
+    fetch(`/api/explore/exercises?type=${encodeURIComponent(recommendedType)}&limit=2`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : { exercises: [] })
+      .then(d => setRecommended(d.exercises || []))
+      .catch(() => setRecommended([]));
+  }, [recommendedType, token]);
+
   const isSel = (id) => selected.some(s => s.id === id);
   const tap = (ex) => {
     if (!multi) { onConfirm([ex]); return; } // straight set: add one + drop off
     setSelected(prev => isSel(ex.id) ? prev.filter(s => s.id !== ex.id) : [...prev, ex]);
   };
-  // Selected pinned to the top, then the unselected search results.
+  // Selected pinned to the top, then recommendations (warmup blocks only,
+  // and only when the user hasn't typed a search), then the unselected
+  // search results. Recommendations are tagged so we can render a chip.
   const selIds = new Set(selected.map(s => s.id));
-  const list = multi ? [...selected, ...results.filter(r => !selIds.has(r.id))] : results;
+  const showRecs = recommended.length > 0 && !q.trim();
+  const recIds = new Set(recommended.map(r => r.id));
+  const taggedRecs = recommended.map(r => ({ ...r, _recommended: true }));
+  const restResults = results.filter(r => !selIds.has(r.id) && !recIds.has(r.id));
+  const list = multi
+    ? [...selected, ...(showRecs ? taggedRecs.filter(r => !selIds.has(r.id)) : []), ...restResults]
+    : (showRecs ? [...taggedRecs, ...restResults] : results);
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
@@ -429,7 +456,16 @@ function ExercisePicker({ token, multi, onConfirm, onClose }) {
                   {ex.thumbnail_url && <img src={ex.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.name}</p>
+                    {ex._recommended && (
+                      <span style={{
+                        flexShrink: 0, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
+                        background: 'rgba(61,255,210,0.15)', color: 'var(--accent-mint-ink, #0E8A4F)',
+                        letterSpacing: 0.4, textTransform: 'uppercase',
+                      }}>Recommended</span>
+                    )}
+                  </div>
                   {ex.body_part && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{ex.body_part}</p>}
                 </div>
                 {sel

@@ -64,6 +64,7 @@ import Messages from './pages/client/Messages';
 import Progress from './pages/client/Progress';
 import FeedbackForm from './pages/client/FeedbackForm';
 import BuildWorkout from './pages/client/BuildWorkout';
+import InstallGuide from './pages/client/InstallGuide';
 import Challenges from './pages/client/Challenges';
 import BenchmarkDetail from './pages/client/BenchmarkDetail';
 import OnboardingQuestionnaire from './pages/client/OnboardingQuestionnaire';
@@ -275,6 +276,7 @@ function AppRoutes() {
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackForm /></ProtectedRoute>} />
         <Route path="/build-workout" element={<ProtectedRoute><BuildWorkout /></ProtectedRoute>} />
+        <Route path="/install" element={<ProtectedRoute><InstallGuide /></ProtectedRoute>} />
         <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
         <Route path="/challenges/:slug" element={<ProtectedRoute><BenchmarkDetail /></ProtectedRoute>} />
         <Route path="/nutrition" element={<ProtectedRoute><NutritionHub /></ProtectedRoute>} />

@@ -157,6 +157,17 @@ const CHECKLIST_TASKS = [
     cta_label: 'Open Messages',
     cta_route: '/messages',
   },
+  {
+    // No reliable server-side signal that someone installed the PWA (display-mode
+    // is client-only) - so manual=true, the client marks it done after walking
+    // through the steps on /install.
+    key: 'install_app',
+    title: 'Add Ageless Movement to your home screen',
+    description: 'One-tap launch, full-screen, no browser bars. Works on iPhone + Android.',
+    cta_label: 'Show me how',
+    cta_route: '/install',
+    manual: true,
+  },
 ];
 
 // Live signal lookups used by /checklist. Each returns a boolean.

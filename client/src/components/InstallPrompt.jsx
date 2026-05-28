@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Small banner that appears once per user, encouraging them to install the
 // PWA to their home screen. Two surfaces:
@@ -24,6 +25,7 @@ function isInStandalone() {
 }
 
 export default function InstallPrompt() {
+  const navigate = useNavigate();
   const [event, setEvent] = useState(null);   // BeforeInstallPromptEvent (Android only)
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
@@ -95,10 +97,17 @@ export default function InstallPrompt() {
             </svg>
           </span> Share button in Safari, then <strong>Add to Home Screen</strong> for one-tap access.
         </p>
-        <button onClick={dismiss} style={{
-          width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--divider)',
-          background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        }}>Got it</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => { dismiss(); navigate('/install'); }}
+            className="btn-primary"
+            style={{ flex: 1, padding: '10px 0', fontSize: 13 }}
+          >Show me how</button>
+          <button onClick={dismiss} style={{
+            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--divider)',
+            background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}>Got it</button>
+        </div>
       </Banner>
     );
   }

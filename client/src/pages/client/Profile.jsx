@@ -357,6 +357,7 @@ export default function Profile({ onBack }) {
           { icon: '🔔', label: 'Reminders', action: () => setShowSubPage('reminders') },
           { icon: '⌚', label: 'Connected Apps', action: () => setShowSubPage('connected') },
           { icon: '🔄', label: 'Unit System', action: () => setShowSubPage('units') },
+          { icon: '📱', label: 'Install on Your Phone', action: () => navigate('/install') },
         ].map(({ icon, label, action }, i, arr) => (
           <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',

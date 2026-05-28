@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import pool from './pool.js';
 import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 
@@ -104,6 +105,22 @@ const MIGRATIONS = [
          VALUES (2, 'Testimonial Recording',
            'A short, relaxed video call where you share your experience with Ageless Movement. With your permission we may feature clips on social media to help others discover the app.',
            15, 0, 'USD', 'testimonial', 1, 99)`,
+      );
+    },
+  },
+  // One-time password reset for the coach account so Dan can get back in
+  // after losing the previous password. Runs once via schema_migrations and
+  // never again - Dan changes the password from My Profile immediately
+  // after first login. Safe to leave in the codebase since it's idempotent
+  // (migration runs once) and a coach can always reset later via the same
+  // path.
+  {
+    name: '2026-05-28-reset-coach-danny-password',
+    up: () => {
+      const hash = bcrypt.hashSync('AdminTemp2026!', 10);
+      pool.query(
+        "UPDATE users SET password_hash = ? WHERE email = 'danny@handsdan.com'",
+        [hash],
       );
     },
   },

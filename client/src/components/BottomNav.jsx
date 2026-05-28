@@ -51,8 +51,17 @@ export default function BottomNav() {
     fetchUnread();
     const id = setInterval(fetchUnread, UNREAD_POLL_MS);
     const onFocus = () => fetchUnread();
+    // MessageThread fires this after marking a conversation read so the
+    // badge clears immediately instead of waiting for the next 30s poll.
+    const onRead = () => fetchUnread();
     window.addEventListener('focus', onFocus);
-    return () => { alive = false; clearInterval(id); window.removeEventListener('focus', onFocus); };
+    window.addEventListener('am:messages-read', onRead);
+    return () => {
+      alive = false;
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('am:messages-read', onRead);
+    };
   }, [token, location.pathname]);
 
   // Reflect unread in the tab title so a backgrounded tab still shows it

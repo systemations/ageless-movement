@@ -180,7 +180,11 @@ input, textarea, select {
    page content here so nothing sits under the indicator. */
 @media (display-mode: standalone) {
   .bottom-nav {
-    bottom: calc(12px + var(--safe-area-bottom));
+    /* Hug the home indicator more tightly in PWA mode. The 34px safe-area
+       inset on iPhone 16 already gives plenty of breathing room; adding
+       another 12px made the pill look like it was floating high. 4px
+       keeps it visually distinct from the indicator without a chasm. */
+    bottom: calc(4px + var(--safe-area-bottom));
   }
   .page-content {
     padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);

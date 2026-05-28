@@ -780,6 +780,9 @@ export default function Explore() {
                           marginBottom: 6, position: 'relative',
                         }}>
                           {item.item_locked && <LockOverlay compact />}
+                          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 6, right: 6 }}>
+                            <FavButton itemType="recipe" itemId={item.item_id} itemTitle={item.title} itemMeta={[item.calories ? item.calories + ' cal' : '', item.category].filter(Boolean).join(' · ')} />
+                          </div>
                         </div>
                         <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>{item.title}</p>
                         <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -998,6 +1001,11 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onOpenMealP
                 titleFontSize={14}
               />
               {(item.item_locked || item.locked) && <LockOverlay tierName={item.tier_name} compact />}
+              {isRecipe && (
+                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 6, right: 6 }}>
+                  <FavButton itemType="recipe" itemId={item.item_id} itemTitle={item.title} itemMeta={[item.calories ? item.calories + ' cal' : '', item.category].filter(Boolean).join(' · ')} />
+                </div>
+              )}
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>{item.title}</p>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{subText(item)}</p>

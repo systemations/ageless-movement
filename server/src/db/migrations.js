@@ -138,6 +138,19 @@ const MIGRATIONS = [
       );
     },
   },
+  // Same one-time reset pattern for the dan@systemations.ai account so Dan
+  // can log in via that email. Case-insensitive match in case the email is
+  // stored with different casing. Silent no-op where the email doesn't exist.
+  {
+    name: '2026-05-28-reset-dan-systemations-password',
+    up: () => {
+      const hash = bcrypt.hashSync('Australia2026', 10);
+      pool.query(
+        "UPDATE users SET password_hash = ? WHERE LOWER(email) = LOWER(?)",
+        [hash, 'Dan@systemations.ai'],
+      );
+    },
+  },
   // Backfill the default Home "Today's Tasks" for clients who registered
   // via /api/auth/register before the default-tasks seed shipped. Only
   // touches clients with zero existing tasks - anyone the coach already

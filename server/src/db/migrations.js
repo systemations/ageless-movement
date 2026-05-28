@@ -151,6 +151,55 @@ const MIGRATIONS = [
       );
     },
   },
+  // Populate Joonas's coach profile (Strength / Mobility / Joint Health) on
+  // the live deployment. Idempotent: only fills empty/null fields so a
+  // future manual edit by Dan or Joonas isn't clobbered.
+  {
+    name: '2026-05-28-populate-joonas-coach-profile',
+    up: () => {
+      const user = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = LOWER(?)",
+        ['joonastics@gmail.com'],
+      ).rows[0];
+      if (!user) return; // not on this DB (e.g. dev seed)
+      const exists = pool.query('SELECT id FROM coach_profiles WHERE user_id = ?', [user.id]).rows[0];
+      if (!exists) {
+        pool.query('INSERT INTO coach_profiles (user_id) VALUES (?)', [user.id]);
+      }
+      // COALESCE so any field already set by a coach edit stays. NULL/empty
+      // fields get the values below.
+      pool.query(
+        `UPDATE coach_profiles SET
+           headline = COALESCE(NULLIF(headline,''), ?),
+           tagline = COALESCE(NULLIF(tagline,''), ?),
+           specialties = COALESCE(NULLIF(specialties,''), ?),
+           years_experience = COALESCE(years_experience, ?),
+           origin_story = COALESCE(NULLIF(origin_story,''), ?),
+           pull_quote = COALESCE(NULLIF(pull_quote,''), ?),
+           help_bullets = COALESCE(NULLIF(help_bullets,''), ?),
+           accent_color = COALESCE(NULLIF(accent_color,''), ?),
+           is_public = COALESCE(is_public, 1)
+         WHERE user_id = ?`,
+        [
+          'Strength, Mobility & Joint Health Coach',
+          'Joonas loves helping people achieve more mobility and build resilient joints so they can stay active and do the things they love with less pain and more freedom.',
+          'Mobility, Strength, Joint Health, Adult Gymnastics',
+          4,
+          'Joonas began coaching mobility and adult gymnastics strength training in Sydney, Australia 4 years ago. His fitness journey began with a passion for getting stronger and building more muscle, but after countless injuries stopping him from continuing to lift and pursue martial arts, he began delving into methods of training that would leave him feeling good rather than just looking good. Once he started to see results with more functional movement and mobility training, Joonas felt driven to help others overcome the same struggles of beating stiffness and joint pain.',
+          "I knew there was something missing from my workouts but for a long time I wasn't sure what. I was getting stronger and building more muscle with calisthenics and weights, but my body still felt stiff and unagile. I also didn't have a way to manage constant joint pain and niggles which would stop me from not only working out, but pursuing new passions like martial arts, running and swimming. Luckily I found the world of mobility training which allows us to expand ranges of motion (so we can move more) while strengthening our joints specifically at the same time, making us less susceptible to injuries.",
+          JSON.stringify([
+            'Increase your ranges of motion, helping you to move in more ways',
+            'Reduce tightness and stiffness',
+            'Rehabilitate injuries and come back stronger',
+            'Reduce the risk and severity of future injuries',
+            'Prepare your joints for an active lifestyle',
+          ]),
+          '#85FFBA',
+          user.id,
+        ],
+      );
+    },
+  },
   // The 24h post-signup "Ready to unlock more?" nudge fired for testers
   // before we gated it on beta_mode. Remove the stale notifications so
   // they don't keep popping up for beta users.

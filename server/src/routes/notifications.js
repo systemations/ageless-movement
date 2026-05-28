@@ -123,12 +123,20 @@ router.post('/:id/dismiss', authenticateToken, (req, res) => {
 // daily_checkin completion: writes the habit_entries row and marks completed.
 router.post('/:id/complete-checkin', authenticateToken, (req, res) => {
   try {
-    const { sleep_hours, alcohol_units, meditation_minutes, notes } = req.body || {};
+    const { sleep_hours, alcohol_units, meditation_minutes, notes, occurrence_date } = req.body || {};
     const n = pool.query('SELECT kind, recurrence FROM in_app_notifications WHERE id = ?', [req.params.id]).rows[0];
     if (!n) return res.status(404).json({ error: 'Not found' });
     if (n.kind !== 'daily_checkin') return res.status(400).json({ error: 'Not a daily check-in' });
 
-    const today = todayIso();
+    // Use the occurrence_date the client gave us (it was issued by /active
+    // for that user's local day). Falling back to UTC todayIso() made the
+    // popup reappear after submission whenever the client's local day
+    // differed from UTC - e.g. early morning AU = previous day UTC, so the
+    // completion mark landed on yesterday and today's occurrence stayed
+    // unmarked. /dismiss already does this; keeping the two endpoints in sync.
+    const localDate = (typeof occurrence_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(occurrence_date))
+      ? occurrence_date
+      : todayIso();
     pool.query(
       `INSERT INTO habit_entries (user_id, date, sleep_hours, alcohol_units, meditation_minutes, notes)
        VALUES (?, ?, ?, ?, ?, ?)
@@ -138,14 +146,14 @@ router.post('/:id/complete-checkin', authenticateToken, (req, res) => {
          meditation_minutes = excluded.meditation_minutes,
          notes = excluded.notes`,
       [
-        req.user.id, today,
+        req.user.id, localDate,
         sleep_hours != null ? Number(sleep_hours) : null,
         alcohol_units != null ? Number(alcohol_units) : null,
         meditation_minutes != null ? Number(meditation_minutes) : null,
         typeof notes === 'string' ? notes.trim().slice(0, 500) : null,
       ],
     );
-    const occ = n.recurrence === 'none' ? null : today;
+    const occ = n.recurrence === 'none' ? null : localDate;
     markRead(req.params.id, req.user.id, occ, 'completed_at');
     res.json({ ok: true });
   } catch (err) {

@@ -181,10 +181,13 @@ export default function Home() {
   const completeCheckin = async (n, payload) => {
     setNotifications(prev => prev.filter(x => x.id !== n.id));
     try {
+      // Pass back the same occurrence_date /active gave us so the server
+      // marks the right day's completion (otherwise UTC-vs-local mismatch
+      // makes the popup reappear shortly after submit).
       await fetch(`/api/notifications/${n.id}/complete-checkin`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, occurrence_date: n.occurrence_date }),
       });
     } catch (err) { console.error(err); }
   };

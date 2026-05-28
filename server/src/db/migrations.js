@@ -124,6 +124,20 @@ const MIGRATIONS = [
       );
     },
   },
+  // Same one-time reset for Coach Joonas (joonastics@gmail.com) so he can
+  // log in on desktop. Idempotent via schema_migrations; Joonas changes the
+  // password from My Profile immediately after first login. Silent no-op
+  // on any DB where the email doesn't exist (e.g. dev seed).
+  {
+    name: '2026-05-28-reset-coach-joonas-password',
+    up: () => {
+      const hash = bcrypt.hashSync('JoonasTemp2026!', 10);
+      pool.query(
+        "UPDATE users SET password_hash = ? WHERE email = 'joonastics@gmail.com'",
+        [hash],
+      );
+    },
+  },
   // Backfill the default Home "Today's Tasks" for clients who registered
   // via /api/auth/register before the default-tasks seed shipped. Only
   // touches clients with zero existing tasks - anyone the coach already

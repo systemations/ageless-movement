@@ -406,6 +406,28 @@ router.post('/conversations/:id/read', authenticateToken, (req, res) => {
   }
 });
 
+// Mark every conversation the user is a member of as fully read, in one
+// shot. Useful for coaches with a long inbox tail of client threads.
+router.post('/read-all', authenticateToken, (req, res) => {
+  try {
+    const convos = pool.query(
+      'SELECT conversation_id FROM conversation_members WHERE user_id = ?',
+      [req.user.id],
+    ).rows;
+    for (const { conversation_id } of convos) {
+      const latest = pool.query(
+        'SELECT id, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1',
+        [conversation_id],
+      ).rows[0];
+      upsertRead(conversation_id, req.user.id, latest?.id ?? null, latest?.created_at ?? null);
+    }
+    res.json({ ok: true, marked: convos.length });
+  } catch (err) {
+    console.error('Mark all read error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Mark conversation as unread. If `message_id` is provided, unread starts
 // from that message (so everything from that point on appears unread
 // again). Without it, we unread everything by resetting to epoch.

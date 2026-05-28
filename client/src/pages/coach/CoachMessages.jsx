@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { SearchIcon } from '../../components/Icons';
 import MessageThread from '../client/MessageThread';
+import MarkAllRead from '../../components/MarkAllRead';
 
 // Tier visuals - reused so the colour on the Messages avatar ring matches
 // the pill in the Clients table and everywhere else a tier is shown.
@@ -78,7 +79,10 @@ export default function CoachMessages() {
             </p>
           )}
         </div>
-        <button className="header-icon"><SearchIcon /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <MarkAllRead token={token} onDone={fetchConversations} />
+          <button className="header-icon"><SearchIcon /></button>
+        </div>
       </div>
 
       {/* Scope tabs */}

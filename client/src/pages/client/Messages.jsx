@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MessageThread from './MessageThread';
+import MarkAllRead from '../../components/MarkAllRead';
 
 // On the client side, the "team inbox" (conversations.client_id set, client
 // is the client themselves) is re-labelled so it doesn't look like the
@@ -105,6 +106,7 @@ export default function Messages() {
           <span style={{ fontSize: 20 }}>👤</span>
         </div>
         <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>Direct Messages</h1>
+        <MarkAllRead token={token} onDone={fetchConversations} />
       </div>
 
       {/* Direct Messages */}

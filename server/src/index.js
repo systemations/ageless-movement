@@ -149,9 +149,22 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve static files from React build in production
+// Serve static files from React build in production. Vite hashes bundle
+// filenames (index-XXXXXXXX.js) so we can cache /assets/* aggressively;
+// the HTML shell must stay no-cache so a deploy is picked up immediately.
 const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
-app.use(express.static(clientBuildPath));
+app.use(express.static(clientBuildPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.includes('/assets/')) {
+      // Hashed file - safe to cache for a year (and tell the browser it's
+      // immutable so it never even revalidates).
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('index.html')) {
+      // Shell must always be fresh so a new deploy reaches the user.
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
 
 // SPA fallback - serve index.html for any non-API route. API 404s get a
 // real JSON response so callers don't hang.
@@ -159,6 +172,9 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Not found', path: req.path });
   }
+  // Shell must stay fresh - if we let the CDN/browser cache index.html
+  // a new deploy's hashed bundle URLs won't reach the user.
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 

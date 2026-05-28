@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Component, useEffect } from 'react';
+import { Component, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Error boundary that prevents a blank screen when a route component throws.
@@ -63,8 +63,8 @@ import Explore from './pages/client/Explore';
 import Messages from './pages/client/Messages';
 import Progress from './pages/client/Progress';
 import FeedbackForm from './pages/client/FeedbackForm';
-import BuildWorkout from './pages/client/BuildWorkout';
-import InstallGuide from './pages/client/InstallGuide';
+const BuildWorkout = lazy(() => import('./pages/client/BuildWorkout'));
+const InstallGuide = lazy(() => import('./pages/client/InstallGuide'));
 import Challenges from './pages/client/Challenges';
 import BenchmarkDetail from './pages/client/BenchmarkDetail';
 import OnboardingQuestionnaire from './pages/client/OnboardingQuestionnaire';
@@ -74,16 +74,19 @@ import NutritionHub from './pages/client/NutritionHub';
 import Profile from './pages/client/Profile';
 import LogOtherWorkout from './pages/client/LogOtherWorkout';
 import WorkoutPlanner from './pages/client/WorkoutPlanner';
-import CoachMobileHome from './pages/coach/CoachHome';
-import CoachMessages from './pages/coach/CoachMessages';
-import CoachGroups from './pages/coach/CoachGroups';
-import CoachCheckins from './pages/coach/CoachCheckins';
-import CoachLive from './pages/coach/CoachLive';
-import CoachMore from './pages/coach/CoachMore';
+// Coach + admin pages are lazy-loaded so the ~700kB of coach-only code
+// (huge admin ClientProfile + WorkoutBuilder + ContentManager) isn't shipped
+// to clients. Same for a couple of heavy client pages used post-onboarding.
+const CoachMobileHome = lazy(() => import('./pages/coach/CoachHome'));
+const CoachMessages = lazy(() => import('./pages/coach/CoachMessages'));
+const CoachGroups = lazy(() => import('./pages/coach/CoachGroups'));
+const CoachCheckins = lazy(() => import('./pages/coach/CoachCheckins'));
+const CoachLive = lazy(() => import('./pages/coach/CoachLive'));
+const CoachMore = lazy(() => import('./pages/coach/CoachMore'));
 import { FavouritesProvider } from './context/FavouritesContext';
 import { ThemeProvider } from './context/ThemeContext';
 import FavouritesPage from './pages/client/FavouritesPage';
-import AdminLayout from './pages/admin/AdminLayout';
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 
 // Banner shown above client routes when a coach has paused or archived the account.
 // Status lives on profile.status (loaded in AuthContext via /auth/me).
@@ -246,6 +249,14 @@ function AppRoutes() {
   return (
     <div className="app-shell">
       <RouteErrorBoundary key={location.pathname}>
+      {/* Suspense fallback covers the brief gap while a lazy-loaded route
+          chunk downloads. Minimal centered spinner - matches the loading
+          screen so users don't see a jarring blank. */}
+      <Suspense fallback={
+        <div className="loading-screen" style={{ minHeight: '60vh' }}>
+          <div className="spinner" />
+        </div>
+      }>
       <Routes>
         {/* Auth */}
         <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Welcome />} />
@@ -299,6 +310,7 @@ function AppRoutes() {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to={user ? defaultRoute : '/welcome'} replace />} />
       </Routes>
+      </Suspense>
       </RouteErrorBoundary>
 
       {user

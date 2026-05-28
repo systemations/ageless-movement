@@ -7,7 +7,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <!-- Dedicated 180x180 opaque variant. iOS expects this exact size and
+         doesn't handle transparency well in home-screen icons - leaves the
+         corners blank or fills with a system colour that doesn't match. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Ageless Movement</title>
   </head>

@@ -200,17 +200,29 @@ function AppRoutes() {
   // Reset scroll on every navigation so a new page always opens at the top.
   // Watches search too (opening a workout/program is a ?query change on the
   // same path), resets every scroll candidate (window, scrollingElement and
-  // ALL .page-content containers), and runs again next frame to catch content
-  // that mounts after its data finishes loading.
+  // ALL .page-content containers). Runs at sync, next frame, and 150/500ms
+  // because some pages fetch data after mount and only render their content
+  // after the promise resolves - without the delayed passes those pages can
+  // land mid-scroll (the previous page's offset retained while the new one
+  // is empty, then content grows under it).
   useEffect(() => {
     const reset = () => {
       window.scrollTo(0, 0);
+      // In this app the body is the actual scroll container (the .page-content
+      // child fits its parent), so scrollingElement.scrollTop alone doesn't
+      // snap the page. Reset body explicitly + every page-content + the html
+      // root so it works regardless of which element the browser treats as
+      // the viewport scroller.
       if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
       document.querySelectorAll('.page-content').forEach(el => { el.scrollTop = 0; });
     };
     reset();
     const raf = requestAnimationFrame(reset);
-    return () => cancelAnimationFrame(raf);
+    const t1 = setTimeout(reset, 150);
+    const t2 = setTimeout(reset, 500);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); };
   }, [location.pathname, location.search]);
 
   if (loading) {

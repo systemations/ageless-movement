@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ClientProfile from './ClientProfile';
+import { parseDbDate, formatRelative as sharedFormatRelative } from '../../lib/dates';
 
 // ClientManager - coach admin Clients view. FitBudd-inspired clean table
 // with compliance columns + Kahunas-style at-risk / on-track pill. Clicking
@@ -404,19 +405,11 @@ export default function ClientManager({ openClientId, onClearOpen }) {
 
 function formatRelative(s) {
   if (!s) return <span style={{ color: 'var(--text-tertiary)' }}>Never</span>;
-  const ms = Date.now() - new Date(s).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days}d ago`;
-  return new Date(s).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+  return sharedFormatRelative(s);
 }
 
 function daysSinceDate(s) {
   if (!s) return 9999;
-  return Math.floor((Date.now() - new Date(s).getTime()) / 86400000);
+  const d = parseDbDate(s);
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 9999;
 }

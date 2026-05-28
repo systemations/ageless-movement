@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ChevronRight } from '../../components/Icons';
 import ContentManager from './ContentManager';
+import { parseDbDate } from '../../lib/dates';
 
 const actionIcons = {
   workout_completed: '🏋️',
@@ -67,14 +68,15 @@ export default function CoachMore() {
   };
 
   const formatTime = (dateStr) => {
-    const d = new Date(dateStr);
+    const d = parseDbDate(dateStr);
+    if (!d) return '';
     const now = new Date();
     const mins = Math.floor((now - d) / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h ago`;
-    return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   };
 
   // Content Manager view

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { parseDbDate } from '../../lib/dates';
 
 // Coach mobile Home dashboard. Mirrors the desktop admin CoachHome but
 // mobile-sized: a greeting, 4 KPI tiles in a 2x2 grid, then priority
@@ -254,13 +255,14 @@ function getGreeting() {
 
 function formatShortDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseDbDate(dateStr);
+  if (!d) return '';
   const today = new Date();
   const diff = Math.floor((today - d) / 86400000);
   if (diff === 0) return 'today';
   if (diff === 1) return 'yesterday';
   if (diff < 7) return `${diff}d ago`;
-  return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 function formatShortTime(dateStr) {

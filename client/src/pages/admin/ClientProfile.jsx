@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import MessageThread from '../client/MessageThread';
+import { parseDbDate } from '../../lib/dates';
 import WorkoutBuilder from './WorkoutBuilder';
 
 // ClientProfile - tabbed workspace shown when a coach clicks a client from
@@ -3456,7 +3457,8 @@ const iconBtn = {
 // ─── Utilities ──────────────────────────────────────────────────────────
 function daysSince(dateStr) {
   if (!dateStr) return 999;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const d = parseDbDate(dateStr);
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 999;
 }
 function formatDate(s) {
   if (!s) return '';

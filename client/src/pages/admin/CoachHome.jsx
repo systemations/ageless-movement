@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { parseDbDate } from '../../lib/dates';
 
 // Coach Home - landing dashboard for the admin area.
 // KPI tiles + at-risk clients + priority inbox + upcoming events + 30d check-in sparkline.
@@ -419,7 +420,9 @@ function formatDate(s) {
 
 function formatRelative(s) {
   if (!s) return 'never';
-  const days = Math.floor((Date.now() - new Date(s).getTime()) / 86400000);
+  const d = parseDbDate(s);
+  if (!d) return 'never';
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
   if (days === 0) return 'today';
   if (days === 1) return 'yesterday';
   if (days < 30) return `${days}d ago`;

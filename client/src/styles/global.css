@@ -126,16 +126,20 @@ input, textarea, select {
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
+  /* The Dynamic Island / notch inset is applied ONCE here so every page
+     - .page-content based or a custom full-bleed layout - inherits the
+     same top offset. Browser mode returns 0, no shift. Fixed-position
+     elements (BottomNav, modals using inset:0) ignore parent padding
+     so they're unaffected. */
+  padding-top: var(--safe-area-top);
 }
 
 .page-content {
   flex: 1;
-  /* Top padding adds the Dynamic Island / notch inset (only resolves to
-     a non-zero value in PWA standalone). Bottom padding clears the
-     floating bottom nav; the standalone media query below adds the home
-     indicator inset on top. In Safari browser the toolbar would otherwise
-     contribute a phantom inset, hence keeping it out of the default. */
-  padding: calc(16px + var(--safe-area-top)) 16px calc(var(--nav-height) + 16px);
+  /* No safe-area-inset-top here - it's on .app-shell. Bottom padding
+     clears the floating bottom nav; the standalone media query below
+     adds the home indicator inset on top of that. */
+  padding: 16px 16px calc(var(--nav-height) + 16px);
   overflow-y: auto;
 }
 

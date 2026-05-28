@@ -214,11 +214,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
           since the parent workspace already has a header with the client name. */}
       {!hideBackButton && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          // Add the iOS standalone status-bar / Dynamic Island inset to the top
-          // so the back button + title don't sit behind the notch. Browser
-          // returns 0, no change there.
-          padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px',
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
           borderBottom: '1px solid var(--divider)', flexShrink: 0,
         }}>
           <button onClick={onBack} style={{

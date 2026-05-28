@@ -49,6 +49,7 @@ class RouteErrorBoundary extends Component {
   }
 }
 import BottomNav from './components/BottomNav';
+import InstallPrompt from './components/InstallPrompt';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Welcome from './pages/auth/Welcome';
@@ -308,6 +309,7 @@ function AppRoutes() {
         && location.pathname !== '/login'
         && location.pathname !== '/register'
         && <BottomNav />}
+      {user && <InstallPrompt />}
     </div>
   );
 }

@@ -149,12 +149,17 @@ input, textarea, select {
    the pill edge against the navy. */
 .bottom-nav {
   position: fixed;
-  /* Mobile Safari (browser, not standalone) keeps env(safe-area-inset-bottom)
-     reporting the toolbar's footprint even after the toolbar collapses on
-     scroll - leaving the nav floating ~80px too high. Default to a small
-     fixed offset; the safe-area-inset-bottom only kicks in in standalone
-     (PWA) mode where the home indicator IS the bottom-most chrome. */
-  bottom: 12px;
+  /* max() handles both surfaces:
+       - Installed PWA (display-mode: standalone) -> env returns ~34px on
+         iPhone 16, nav floats just above the home indicator.
+       - Safari browser -> env tracks the URL bar's footprint, nav stays
+         clear of the toolbar.
+       - Anywhere env returns 0 (Chrome desktop, Android browser without a
+         bottom-fixed bar) -> falls back to a tight 8px so the pill still
+         has breathing room from the screen edge.
+     Trading the old "phantom toolbar height after collapse" off vs the
+     bigger problem of the nav floating mid-screen on iPhone Safari. */
+  bottom: max(env(safe-area-inset-bottom, 0px), 8px);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px);
@@ -178,17 +183,12 @@ input, textarea, select {
    toolbar isn't in play - the only thing at the bottom is the home
    indicator. Restore the safe-area-inset offset + bottom-padding for
    page content here so nothing sits under the indicator. */
-@media (display-mode: standalone) {
-  .bottom-nav {
-    /* Hug the home indicator more tightly in PWA mode. The 34px safe-area
-       inset on iPhone 16 already gives plenty of breathing room; adding
-       another 12px made the pill look like it was floating high. 4px
-       keeps it visually distinct from the indicator without a chasm. */
-    bottom: calc(4px + var(--safe-area-bottom));
-  }
-  .page-content {
-    padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
-  }
+/* page-content needs to clear the floating nav + whatever the env bottom
+   inset is (home indicator in PWA, URL bar in Safari). max() mirrors the
+   .bottom-nav positioning so the content's bottom padding always matches
+   what the nav actually occupies. */
+.page-content {
+  padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom, 0px), 8px) + 16px);
 }
 
 .nav-item {

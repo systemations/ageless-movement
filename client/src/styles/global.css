@@ -40,6 +40,11 @@
   --steps-pink: #FF6B9D;
   --nav-height: 80px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* iOS PWA in standalone mode renders content UNDER the status bar / Dynamic
+     Island (status-bar-style=black-translucent). Without this padding the
+     first heading on every page lives behind the notch on iPhone 14/15/16.
+     Browser tabs / non-standalone return 0 here, so it's a no-op outside PWA. */
+  --safe-area-top: env(safe-area-inset-top, 0px);
 }
 
 /* ===== LIGHT THEME ===== */
@@ -113,7 +118,11 @@ input, textarea, select {
 .app-shell {
   display: flex;
   flex-direction: column;
+  /* dvh accounts for the visible viewport on iOS PWA - 100vh includes
+     phantom Safari chrome height even when hidden, which makes content
+     overflow / scroll oddly when installed to home screen. */
   min-height: 100vh;
+  min-height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
@@ -121,8 +130,10 @@ input, textarea, select {
 
 .page-content {
   flex: 1;
-  padding: 16px;
-  padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
+  /* Top padding adds the Dynamic Island / notch inset so the first heading
+     doesn't sit behind the status bar in PWA mode. Bottom padding clears
+     the floating bottom nav + home indicator inset. */
+  padding: calc(16px + var(--safe-area-top)) 16px calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
   overflow-y: auto;
 }
 

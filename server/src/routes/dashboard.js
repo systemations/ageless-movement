@@ -11,8 +11,16 @@ router.get('/', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const today = new Date().toISOString().split('T')[0];
 
-    // Profile
-    const profileResult = pool.query('SELECT * FROM client_profiles WHERE user_id = ?', [userId]);
+    // Profile - JOIN tiers so the client side can show the membership name
+    // even on the free tier (otherwise the Profile membership card looked
+    // empty for every new signup).
+    const profileResult = pool.query(
+      `SELECT cp.*, t.name AS tier_name, t.level AS tier_level, t.price_label AS tier_price_label
+       FROM client_profiles cp
+       LEFT JOIN tiers t ON t.id = cp.tier_id
+       WHERE cp.user_id = ?`,
+      [userId],
+    );
     const profile = profileResult.rows[0] || {};
 
     // Active program

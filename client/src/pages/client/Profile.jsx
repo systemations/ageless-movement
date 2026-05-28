@@ -621,14 +621,29 @@ function ActivePlanCard({ profile }) {
   const renewalLabel = next ? renewalStatus(next) : null;
 
   if (!title && !cycle && !next) {
+    // No paid plan yet - fall back to showing the client's tier (Free /
+    // Starter / Prime / Elite) so the membership card is never blank.
+    // Every new signup has tier_id=1 (Free) so this path always renders.
+    const tierName = profile?.tier_name || 'Free';
+    const isFree = (profile?.tier_level || 0) === 0;
     return (
-      <div className="card" style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 0.5, marginBottom: 4 }}>
-          MEMBERSHIP
-        </p>
-        <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-          No plan on file yet. Your coach will set this up.
-        </p>
+      <div className="card" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: 0.5 }}>MEMBERSHIP</p>
+          <p style={{ fontSize: 16, fontWeight: 700 }}>
+            {isFree ? `${tierName} trial` : tierName}
+          </p>
+          {profile?.tier_price_label && !isFree && (
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{profile.tier_price_label}</p>
+          )}
+        </div>
+        {isFree && (
+          <span style={{
+            fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 12,
+            background: 'rgba(61,255,210,0.15)', color: 'var(--accent-mint-ink, #0E8A4F)',
+            letterSpacing: 0.4, flexShrink: 0,
+          }}>ACTIVE</span>
+        )}
       </div>
     );
   }

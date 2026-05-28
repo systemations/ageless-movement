@@ -1,4 +1,5 @@
 import pool from './pool.js';
+import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 
 // Run-once content/schema migrations, applied on every boot. This is how
 // content reaches an ALREADY-POPULATED production DB without the destructive
@@ -104,6 +105,28 @@ const MIGRATIONS = [
            'A short, relaxed video call where you share your experience with Ageless Movement. With your permission we may feature clips on social media to help others discover the app.',
            15, 0, 'USD', 'testimonial', 1, 99)`,
       );
+    },
+  },
+  // Backfill the default Home "Today's Tasks" for clients who registered
+  // via /api/auth/register before the default-tasks seed shipped. Only
+  // touches clients with zero existing tasks - anyone the coach already
+  // assigned tasks to (or who added their own) is left alone.
+  {
+    name: '2026-05-28-backfill-default-client-tasks',
+    up: () => {
+      const clients = pool.query(
+        "SELECT id FROM users WHERE role = 'client'",
+      ).rows;
+      for (const { id } of clients) {
+        const c = pool.query('SELECT COUNT(*) AS c FROM tasks WHERE client_id = ?', [id]).rows[0].c;
+        if (c > 0) continue;
+        for (const label of DEFAULT_CLIENT_TASKS) {
+          pool.query(
+            'INSERT INTO tasks (coach_id, client_id, label, recurring) VALUES (NULL, ?, ?, 1)',
+            [id, label],
+          );
+        }
+      }
     },
   },
   // Re-date the existing demo events into the future and make them free so beta

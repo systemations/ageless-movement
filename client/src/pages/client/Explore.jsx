@@ -75,6 +75,7 @@ export default function Explore() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [recipeSearchSeed, setRecipeSearchSeed] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   // Debounced search fetch. Clears results when the box is emptied.
   useEffect(() => {
@@ -313,34 +314,47 @@ export default function Explore() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700 }}>Ageless Movement On-Demand</h1>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <button className="header-icon"><BookmarkIcon /></button>
-          <button className="header-icon"><SearchIcon /></button>
-        </div>
+        {/* Search toggle - searches all content (workouts + nutrition) */}
+        <button
+          onClick={() => { const next = !showSearch; setShowSearch(next); if (!next) setSearchTerm(''); }}
+          aria-label="Search"
+          style={{
+            background: 'none', border: 'none', padding: 6, cursor: 'pointer', display: 'flex', flexShrink: 0,
+            color: showSearch ? 'var(--accent)' : 'var(--text-primary)',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Search bar - searches workouts, programs, courses, exercises, recipes */}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search workouts, programs, recipes..."
-          style={{
-            width: '100%', padding: '12px 38px 12px 38px', borderRadius: 12,
-            background: 'var(--bg-card)', border: '1px solid var(--divider)',
-            color: 'var(--text-primary)', fontSize: 14, outline: 'none',
-          }}
-        />
-        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}>
-          <SearchIcon />
-        </span>
-        {searchTerm && (
-          <button onClick={() => setSearchTerm('')} style={{
-            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-            background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 18, cursor: 'pointer', padding: 6,
-          }}>×</button>
-        )}
-      </div>
+      {/* Search bar - revealed by the search icon. Searches workouts, programs,
+          courses, exercises, recipes. */}
+      {showSearch && (
+        <div style={{ position: 'relative', marginBottom: 16 }}>
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoFocus
+            placeholder="Search workouts, programs, recipes..."
+            style={{
+              width: '100%', padding: '12px 38px 12px 38px', borderRadius: 12,
+              background: 'var(--bg-card)', border: '1px solid var(--divider)',
+              color: 'var(--text-primary)', fontSize: 14, outline: 'none',
+            }}
+          />
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}>
+            <SearchIcon />
+          </span>
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 18, cursor: 'pointer', padding: 6,
+            }}>×</button>
+          )}
+        </div>
+      )}
 
       {searchResults ? (
         <SearchResults results={searchResults} onOpen={openSearchResult} />
@@ -363,6 +377,23 @@ export default function Explore() {
 
       {activeTab === 'Workouts' && (
         <>
+          {/* Build-your-own entry - scoped to the Workouts tab so it reads
+              clearly (no "build a workout" CTA over Nutrition). */}
+          <button onClick={() => navigate('/build-workout')} className="card" style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            border: '1px solid var(--divider)', background: 'var(--bg-card)', color: 'var(--text-primary)',
+            textAlign: 'left', marginBottom: 20,
+          }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 15, fontWeight: 700 }}>Build a workout</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Create your own from the exercise library</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+
           {/* ===== DYNAMIC SECTIONS ===== */}
           {fitnessSections.map((section) => {
             // Prefer the explicit content_type set by the coach; fall back to item inspection.

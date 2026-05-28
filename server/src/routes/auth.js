@@ -8,6 +8,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { config } from '../lib/config.js';
 import { finalizeOnboarding } from '../lib/onboarding.js';
 import { queuePostSignupTasks } from '../jobs/post-signup-tasks.js';
+import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 
 // Slow down brute-force login / register attempts. Keyed by IP - a
 // dedicated attacker can rotate IPs but this blocks the common case of
@@ -85,6 +86,16 @@ router.post('/register', registerLimiter, async (req, res) => {
     // Queue the deferred welcome DM + 24h plans nudge. Wrapped so any
     // scheduler failure never blocks the register response.
     try { queuePostSignupTasks(user.id); } catch (e) { console.error('queuePostSignupTasks failed:', e); }
+
+    // Pre-populate the Home "Today's Tasks" card with sensible defaults so
+    // the surface isn't empty when a new client lands. coach_id NULL marks
+    // them as client-managed (same convention as dashboard.js POST /tasks);
+    // the client can delete any they don't want.
+    try {
+      for (const label of DEFAULT_CLIENT_TASKS) {
+        await pool.query('INSERT INTO tasks (coach_id, client_id, label, recurring) VALUES (NULL, $1, $2, 1)', [user.id, label]);
+      }
+    } catch (e) { console.error('Default tasks seed failed:', e); }
 
     // Legacy path: answers came in the same request, finalise inline.
     let allocation = null;

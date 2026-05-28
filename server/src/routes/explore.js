@@ -221,7 +221,7 @@ router.get('/search', authenticateToken, (req, res) => {
     }
     const like = `%${q}%`;
     const workouts = pool.query(
-      "SELECT id, title, body_parts, image_url FROM workouts WHERE COALESCE(visible,1)=1 AND title LIKE ? ORDER BY title LIMIT 8",
+      "SELECT id, title, body_parts, image_url FROM workouts WHERE COALESCE(visible,1)=1 AND owner_user_id IS NULL AND title LIKE ? ORDER BY title LIMIT 8",
       [like],
     ).rows;
     const programs = pool.query(
@@ -386,6 +386,15 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
     const workout = pool.query('SELECT w.*, t.level as tier_level FROM workouts w LEFT JOIN tiers t ON t.id = w.tier_id WHERE w.id = ?', [req.params.id]);
     if (workout.rows.length === 0) return res.status(404).json({ error: 'Workout not found' });
 
+    // A client-built workout is private to its owner. Coaches may view their
+    // own clients' workouts (handled separately); any other viewer gets 404.
+    const ownerId = workout.rows[0].owner_user_id;
+    if (ownerId != null && ownerId !== req.user.id) {
+      const coachOwns = req.user.role === 'coach' &&
+        pool.query('SELECT 1 FROM users WHERE id = ? AND coach_id = ?', [ownerId, req.user.id]).rows.length > 0;
+      if (!coachOwns) return res.status(404).json({ error: 'Workout not found' });
+    }
+
     // Access rules:
     //   - is_free_preview → always accessible.
     //   - Enrolled in the program → accessible (assigned content).
@@ -395,10 +404,13 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
     //     deep-link can't bypass the in-program lock.
     const programId = workout.rows[0].program_id;
     const isFreePreview = !!workout.rows[0].is_free_preview;
+    // Client-built workouts (owner_user_id set) are always accessible to their
+    // owner regardless of tier. Phase-2 workout builder.
+    const ownsWorkout = workout.rows[0].owner_user_id === req.user.id;
     const enrolled = programId
       ? pool.query('SELECT 1 FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, programId]).rows.length > 0
       : false;
-    if (!isFreePreview && !enrolled) {
+    if (!ownsWorkout && !isFreePreview && !enrolled) {
       if (!programId) {
         const guard = enforceTier(req.user.id, workout.rows[0].tier_level);
         if (!guard.ok) {

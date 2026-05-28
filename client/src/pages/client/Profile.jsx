@@ -31,6 +31,10 @@ export default function Profile({ onBack }) {
     supplement_reminder: true,
   });
   const [remindersLoaded, setRemindersLoaded] = useState(false);
+  // Get Started checklist state - lets clients re-enable the Home card
+  // after they X'd it out. Hidden in the reminders list once everything's
+  // already done (no point toggling something that auto-hides).
+  const [checklistState, setChecklistState] = useState({ dismissed: false, all_done: true });
   const [password, setPassword] = useState({ current: '', newPw: '', confirm: '' });
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -88,6 +92,12 @@ export default function Profile({ onBack }) {
       } catch (err) { console.error(err); }
     };
     fetchPrefs();
+    // Onboarding checklist - to decide whether the "Get Started checklist"
+    // toggle is meaningful (only when there are still incomplete steps).
+    fetch('/api/onboarding/checklist', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setChecklistState({ dismissed: !!d.dismissed, all_done: !!d.all_done }))
+      .catch(() => {});
   }, []);
 
   // Sub-pages
@@ -105,7 +115,26 @@ export default function Profile({ onBack }) {
   }
 
   if (showSubPage === 'reminders') {
+    // ON (toggle lit) means the surface is visible. For the synthetic
+    // get-started key that maps to dismissed=false; everything else maps
+    // to reminder_preferences[key]=true.
+    const isOn = (key) => key === '__get_started__'
+      ? !checklistState.dismissed
+      : !!reminders[key];
+
     const toggleReminder = async (key) => {
+      if (key === '__get_started__') {
+        const dismissed = !checklistState.dismissed; // flip
+        setChecklistState(prev => ({ ...prev, dismissed }));
+        try {
+          await fetch('/api/onboarding/checklist/dismiss', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dismissed }),
+          });
+        } catch (err) { console.error('Failed to update checklist visibility:', err); }
+        return;
+      }
       const updated = { ...reminders, [key]: !reminders[key] };
       setReminders(updated);
       try {
@@ -137,6 +166,10 @@ export default function Profile({ onBack }) {
           { key: 'weekly_checkin',     label: 'Weekly Check-in',     desc: 'Sunday 10am notification to submit progress photos', icon: '📊' },
           { key: 'supplement_reminder',label: 'Supplement Reminder', desc: 'Daily reminder to take your supplements', icon: '💊' },
           { key: 'workout_reminder',   label: 'Workout Reminders',   desc: 'Allow your coach to send a nudge on workout days', icon: '🏋️' },
+          // Synthetic "reminder" - lives on client_profiles.onboarding_checklist_dismissed_at
+          // rather than reminder_preferences JSON, so it gets its own toggle handler below.
+          // Hidden when the checklist is already fully done (auto-hides anyway).
+          ...(!checklistState.all_done ? [{ key: '__get_started__', label: 'Get Started Checklist', desc: 'Show the 5-step setup card on Home', icon: '🚀' }] : []),
         ].map(({ key, label, desc, icon }) => (
           <div key={key} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -151,12 +184,12 @@ export default function Profile({ onBack }) {
             </div>
             <button onClick={() => toggleReminder(key)} style={{
               width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative',
-              background: reminders[key] ? 'var(--accent-mint)' : 'var(--divider)', transition: 'background 0.2s',
+              background: isOn(key) ? 'var(--accent-mint)' : 'var(--divider)', transition: 'background 0.2s',
               flexShrink: 0, marginLeft: 12,
             }}>
               <div style={{
                 width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                position: 'absolute', top: 2, left: reminders[key] ? 22 : 2, transition: 'left 0.2s',
+                position: 'absolute', top: 2, left: isOn(key) ? 22 : 2, transition: 'left 0.2s',
               }} />
             </button>
           </div>

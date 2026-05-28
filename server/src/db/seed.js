@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, '..', '..', 'data', 'ageless.db');
@@ -151,11 +152,7 @@ const seedData = () => {
 
     // Tasks
     const insertTask = db.prepare('INSERT INTO tasks (coach_id, client_id, label) VALUES (?, ?, ?)');
-    insertTask.run(2, u.id, '10 min morning mobility');
-    insertTask.run(2, u.id, 'Drink 3L water');
-    insertTask.run(2, u.id, '8 hours sleep');
-    insertTask.run(2, u.id, 'Log all meals');
-    insertTask.run(2, u.id, '15 min walk');
+    for (const label of DEFAULT_CLIENT_TASKS) insertTask.run(2, u.id, label);
 
     // Some nutrition logs for today
     const today = new Date().toISOString().split('T')[0];

@@ -26,6 +26,7 @@ import painRoutes from './routes/pain.js';
 import goalsRoutes from './routes/goals.js';
 import paymentPlansRoutes from './routes/payment-plans.js';
 import feedbackRoutes from './routes/feedback.js';
+import myWorkoutsRoutes from './routes/my-workouts.js';
 import { config } from './lib/config.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { startReminderJobRunner } from './jobs/reminders.js';
@@ -142,6 +143,7 @@ app.use('/api/pain', painRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/plans', paymentPlansRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/my-workouts', myWorkoutsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

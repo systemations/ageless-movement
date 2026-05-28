@@ -101,7 +101,16 @@ export default function FavouritesPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>Favourites</h1>
-        <div style={{ width: 36 }} />
+        <button
+          onClick={() => navigate('/build-workout')}
+          aria-label="Build a workout"
+          style={{
+            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -138,6 +147,19 @@ export default function FavouritesPage() {
               </p>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fav.item_meta || fav.item_type}</p>
             </div>
+            {fav.owner_user_id != null && (
+              <button
+                onClick={() => navigate(`/build-workout?edit=${fav.item_id}`)}
+                aria-label="Edit workout"
+                style={{
+                  padding: '6px 10px', borderRadius: 16, border: '1px solid var(--divider)',
+                  background: 'transparent', color: 'var(--text-secondary)',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={() => fav.item_type === 'recipe' ? setRecipePicker(fav) : addWorkoutToToday(fav)}
               disabled={busy}

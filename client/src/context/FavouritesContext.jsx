@@ -49,7 +49,7 @@ export function FavouritesProvider({ children }) {
   const getFavsByType = (type) => favourites.filter(f => f.item_type === type);
 
   return (
-    <FavouritesContext.Provider value={{ favourites, isFavourited, toggleFavourite, getFavsByType }}>
+    <FavouritesContext.Provider value={{ favourites, isFavourited, toggleFavourite, getFavsByType, refresh: fetchFavourites }}>
       {children}
     </FavouritesContext.Provider>
   );

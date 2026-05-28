@@ -152,7 +152,9 @@ export default function Home() {
       });
       if (!r.ok) return;
       const j = await r.json();
-      setOnboardingDone(!!j.all_done);
+      // Dismissing the card also unlocks Today's Tasks - if the client opted
+      // out of the checklist, don't keep their daily task slot hidden.
+      setOnboardingDone(!!j.all_done || !!j.dismissed);
     } catch (e) { /* swallow */ }
   };
 
@@ -587,7 +589,7 @@ export default function Home() {
       {/* Onboarding checklist - sits in the prominent Daily Tasks slot
           for new clients. Auto-hides as soon as all 5 first-actions
           are complete so it doesn't crowd Home for established users. */}
-      <OnboardingChecklistCard token={token} />
+      <OnboardingChecklistCard token={token} onStatusChange={fetchOnboardingStatus} />
 
       {/* Daily Tasks - hidden until the onboarding checklist is fully
           complete. Two competing checklists at the top of Home would
@@ -988,6 +990,18 @@ export default function Home() {
                 Log Other Workout
               </button>
             </div>
+            <button
+              onClick={() => { setSelectedDay(null); navigate('/build-workout'); }}
+              style={{
+                width: '100%', marginTop: 8, padding: '12px 0', borderRadius: 12,
+                border: '1px dashed var(--divider)', background: 'transparent',
+                color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Build a workout
+            </button>
 
             {/* Rest day toggle */}
             <div
@@ -1702,10 +1716,12 @@ function ChallengesCard({ token, onOpen }) {
 // submitted, message sent) plus one manual task (community welcome).
 // Auto-hides once all 5 are done so it doesn't clutter Home for
 // established clients.
-function OnboardingChecklistCard({ token }) {
+function OnboardingChecklistCard({ token, onStatusChange }) {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [marking, setMarking] = useState(null);
+  const [confirmingDismiss, setConfirmingDismiss] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
 
   const fetchChecklist = () => {
     fetch('/api/onboarding/checklist', { headers: { Authorization: `Bearer ${token}` } })
@@ -1724,7 +1740,20 @@ function OnboardingChecklistCard({ token }) {
     setMarking(null);
   };
 
-  if (!data || data.all_done) return null;
+  const confirmDismiss = async () => {
+    setDismissing(true);
+    await fetch('/api/onboarding/checklist/dismiss', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    setDismissing(false);
+    setConfirmingDismiss(false);
+    fetchChecklist();
+    // Let Home re-fetch its onboarding status so Today's Tasks unhides
+    // immediately. Without this it stays hidden until the next reload.
+    if (onStatusChange) onStatusChange();
+  };
+
+  if (!data || data.all_done || data.dismissed) return null;
 
   const pct = Math.round((data.done / data.total) * 100);
 
@@ -1748,11 +1777,66 @@ function OnboardingChecklistCard({ token }) {
               {data.done} of {data.total} complete · {pct}%
             </p>
           </div>
+          <button
+            onClick={() => setConfirmingDismiss(true)}
+            aria-label="Dismiss get started checklist"
+            style={{
+              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+              fontSize: 20, lineHeight: 1, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >×</button>
         </div>
         <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.3s' }} />
         </div>
       </div>
+      {confirmingDismiss && (
+        <div
+          onClick={() => !dismissing && setConfirmingDismiss(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: 16, padding: 22,
+              maxWidth: 360, width: '100%', border: '1px solid var(--divider)',
+            }}
+          >
+            <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Skip the Get Started checklist?</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 18 }}>
+              These five steps are the most efficient way to set up your training. You can always pick them up later
+              from your settings, but skipping now means you'll be working without a baseline, goals, or your coach's
+              support channel open.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmingDismiss(false)}
+                disabled={dismissing}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 10, border: 'none',
+                  background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                }}
+              >Keep checklist</button>
+              <button
+                onClick={confirmDismiss}
+                disabled={dismissing}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  border: '1px solid var(--divider)', background: 'transparent',
+                  color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600,
+                  cursor: dismissing ? 'default' : 'pointer', opacity: dismissing ? 0.5 : 1,
+                }}
+              >{dismissing ? 'Hiding...' : 'Skip anyway'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '4px 0' }}>
         {data.tasks.map(t => (
           <div

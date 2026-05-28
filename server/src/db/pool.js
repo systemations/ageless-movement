@@ -155,6 +155,8 @@ db.exec(`
     image_url TEXT,
     video_url TEXT,
     status TEXT DEFAULT 'draft',
+    owner_user_id INTEGER REFERENCES users(id),
+    block_settings TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -878,6 +880,10 @@ const alterStatements = [
   "ALTER TABLE client_profiles ADD COLUMN status TEXT DEFAULT 'active'",
   "ALTER TABLE client_profiles ADD COLUMN status_changed_at TEXT",
   "ALTER TABLE client_profiles ADD COLUMN status_note TEXT",
+  // Lets a client X out the Home onboarding checklist after a confirmation.
+  // NULL = not dismissed (show as normal); set = hidden. Stored as a
+  // timestamp so we can decide later whether to re-show after some time.
+  "ALTER TABLE client_profiles ADD COLUMN onboarding_checklist_dismissed_at TEXT",
   "ALTER TABLE workouts ADD COLUMN video_url TEXT",
   // Interval/phase prescription for cardio and complex strength blocks.
   // JSON array of {label, duration_secs, intensity, zone, notes} objects.
@@ -906,6 +912,15 @@ const alterStatements = [
   // Used for the free-signup onboarding (Day 1 of Ground Zero + future
   // lead-magnet programs).
   "ALTER TABLE workouts ADD COLUMN is_free_preview INTEGER DEFAULT 0",
+  // Client-built workouts (phase-2 workout builder). owner_user_id NULL = coach
+  // template (default, unchanged). owner_user_id = <user_id> = a workout the
+  // client built for themselves, private to them and never shown in coach
+  // library lists (which filter owner_user_id IS NULL). program_id stays NULL.
+  // block_settings holds the builder's per-block format JSON (Tabata work/rest,
+  // AMRAP/EMOM total, Circuit rounds, For Time cap, between-block rest) so the
+  // builder can round-trip on edit and the player can run format timers.
+  "ALTER TABLE workouts ADD COLUMN owner_user_id INTEGER",
+  "ALTER TABLE workouts ADD COLUMN block_settings TEXT",
   // Tier the client picked during onboarding (before payment lands). The
   // active tier stays in client_profiles.tier_id; this column records intent
   // so the coach can see "chose Prime, awaiting payment" in the admin.

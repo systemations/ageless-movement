@@ -41,9 +41,11 @@ router.delete('/programs/:id', authenticateToken, requireRole('coach'), (req, re
 // ===== WORKOUTS =====
 router.get('/workouts', authenticateToken, requireRole('coach'), (req, res) => {
   const programId = req.query.program_id;
+  // owner_user_id IS NULL excludes client-built workouts (phase-2 workout
+  // builder) from the coach library; those are private to the client.
   const workouts = programId
-    ? pool.query('SELECT * FROM workouts WHERE program_id = ? ORDER BY week_number, day_number', [programId])
-    : pool.query('SELECT w.*, p.title as program_title FROM workouts w LEFT JOIN programs p ON w.program_id = p.id ORDER BY w.created_at DESC');
+    ? pool.query('SELECT * FROM workouts WHERE program_id = ? AND owner_user_id IS NULL ORDER BY week_number, day_number', [programId])
+    : pool.query('SELECT w.*, p.title as program_title FROM workouts w LEFT JOIN programs p ON w.program_id = p.id WHERE w.owner_user_id IS NULL ORDER BY w.created_at DESC');
   res.json({ workouts: workouts.rows });
 });
 

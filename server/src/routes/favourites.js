@@ -17,7 +17,11 @@ router.get('/', authenticateToken, async (req, res) => {
           WHEN f.item_type = 'course'   THEN (SELECT image_url     FROM courses  WHERE id = f.item_id)
           WHEN f.item_type = 'exercise' THEN (SELECT thumbnail_url FROM exercises WHERE id = f.item_id)
           ELSE NULL
-        END AS image_url
+        END AS image_url,
+        CASE
+          WHEN f.item_type = 'workout' THEN (SELECT owner_user_id FROM workouts WHERE id = f.item_id)
+          ELSE NULL
+        END AS owner_user_id
       FROM favourites f
       WHERE f.user_id = ?
       ORDER BY f.created_at DESC

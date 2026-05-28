@@ -214,9 +214,33 @@ router.get('/checklist', authenticateToken, (req, res) => {
     });
     const total = tasks.length;
     const done = tasks.filter(t => t.completed).length;
-    res.json({ tasks, total, done, all_done: done === total });
+    const dismissedRow = pool.query(
+      'SELECT onboarding_checklist_dismissed_at FROM client_profiles WHERE user_id = ?',
+      [req.user.id],
+    ).rows[0];
+    const dismissed = !!dismissedRow?.onboarding_checklist_dismissed_at;
+    res.json({ tasks, total, done, all_done: done === total, dismissed });
   } catch (err) {
     console.error('checklist error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Toggle the Home checklist's dismissed state. Body { dismissed: bool }.
+// Defaults to true so an old client calling without a body still dismisses.
+// Used by the Home X (dismiss) and the Profile -> Reminders toggle (re-show).
+// We keep task completion rows + timestamps untouched so /checklist still
+// reports progress; only the visibility flag flips.
+router.post('/checklist/dismiss', authenticateToken, (req, res) => {
+  try {
+    const dismissed = req.body?.dismissed === false ? false : true;
+    pool.query(
+      `UPDATE client_profiles SET onboarding_checklist_dismissed_at = ${dismissed ? "datetime('now')" : 'NULL'} WHERE user_id = ?`,
+      [req.user.id],
+    );
+    res.json({ ok: true, dismissed });
+  } catch (err) {
+    console.error('checklist dismiss error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

@@ -1256,6 +1256,90 @@ function HabitCell({ value, suffix }) {
 }
 
 // ═══ Workout ═══════════════════════════════════════════════════════════
+// Read-only view of workouts the client built themselves via the phase-2
+// /build-workout flow. Owned by the client (owner_user_id set), private to
+// them, never in coach library lists - we surface them here purely for
+// coaching context. Click a row to expand the block structure inline.
+function ClientBuiltWorkoutsCard({ clientId }) {
+  const { token } = useAuth();
+  const [list, setList] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [detail, setDetail] = useState({}); // id -> { title, blocks }
+
+  useEffect(() => {
+    if (!clientId) return;
+    fetch(`/api/my-workouts/client/${clientId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { workouts: [] })
+      .then(d => setList(d.workouts || []))
+      .catch(() => setList([]));
+  }, [clientId, token]);
+
+  const toggle = (id) => {
+    if (openId === id) { setOpenId(null); return; }
+    setOpenId(id);
+    if (!detail[id]) {
+      fetch(`/api/my-workouts/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d && setDetail(prev => ({ ...prev, [id]: d })))
+        .catch(() => {});
+    }
+  };
+
+  if (list == null) return null;
+  if (list.length === 0) return null;
+
+  return (
+    <Card title={`Client-built workouts (${list.length})`}>
+      <div style={{ display: 'grid', gap: 6 }}>
+        {list.map(w => {
+          const d = detail[w.id];
+          const open = openId === w.id;
+          return (
+            <div key={w.id} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, borderLeft: '3px solid var(--accent-mint)' }}>
+              <div
+                onClick={() => toggle(w.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>{w.title}</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                    {w.exercise_count} exercise{w.exercise_count === 1 ? '' : 's'} · built {formatDate(w.created_at?.slice(0, 10))}
+                  </p>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 700 }}>{open ? 'Hide' : 'View'}</span>
+              </div>
+              {open && (
+                <div style={{ padding: '0 12px 12px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  {!d ? (
+                    <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '10px 0' }}>Loading...</p>
+                  ) : (d.blocks || []).map((b, bi) => (
+                    <div key={bi} style={{ marginTop: 10 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                        Block {String.fromCharCode(65 + bi)} · {b.type}
+                      </p>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {b.exercises.map((ex, ei) => (
+                          <li key={ei} style={{ marginTop: 2 }}>
+                            {ex.name} · {ex.sets} × {ex.measure === 'time' ? `${ex.time}s` : `${ex.reps} reps`}
+                            {ex.notes ? ` · ${ex.notes}` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 10, color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: 10 }}>
+        Read-only. Workouts this client built themselves via the Build a Workout flow.
+      </p>
+    </Card>
+  );
+}
+
 function WorkoutTab({ data }) {
   const { token } = useAuth();
   const clientId = data.client?.id;
@@ -1351,6 +1435,8 @@ function WorkoutTab({ data }) {
           Tap a workout to personalise it for this client. Changes only affect this client's version.
         </p>
       </Card>
+
+      <ClientBuiltWorkoutsCard clientId={clientId} />
 
       {/* Workout logs history - keep the old table below the assigned list */}
       {data.workoutLogs.length > 0 && (

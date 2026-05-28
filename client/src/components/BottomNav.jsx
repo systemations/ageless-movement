@@ -78,12 +78,15 @@ export default function BottomNav() {
                 <span
                   aria-label={`${unread} unread`}
                   style={{
-                    position: 'absolute', top: -2, right: -4,
-                    minWidth: 8, height: 8, borderRadius: 4,
-                    background: 'var(--accent-mint)',
+                    position: 'absolute', top: -6, right: -10,
+                    minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
+                    background: '#FF453A', color: '#fff',
+                    fontSize: 11, fontWeight: 800,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 0 0 2px var(--bg-primary)',
+                    lineHeight: 1,
                   }}
-                />
+                >{unread > 9 ? '9+' : unread}</span>
               )}
             </span>
             <span>{label}</span>

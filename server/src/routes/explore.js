@@ -236,9 +236,11 @@ router.get('/search', authenticateToken, (req, res) => {
       "SELECT id, name, thumbnail_url, body_part, equipment, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0 AND name LIKE ? ORDER BY name LIMIT 10",
       [like],
     ).rows;
+    // Match title OR category so a client searching "smoothies", "salads",
+    // "breakfast" etc gets the whole category, not just recipes named after it.
     const recipes = pool.query(
-      "SELECT id, title, category, thumbnail_url FROM recipes WHERE title LIKE ? ORDER BY title LIMIT 8",
-      [like],
+      "SELECT id, title, category, thumbnail_url FROM recipes WHERE title LIKE ? OR category LIKE ? ORDER BY title LIMIT 12",
+      [like, like],
     ).rows;
     res.json({ workouts, programs, courses, exercises, recipes });
   } catch (err) {

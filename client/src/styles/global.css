@@ -130,10 +130,12 @@ input, textarea, select {
 
 .page-content {
   flex: 1;
-  /* Top padding adds the Dynamic Island / notch inset so the first heading
-     doesn't sit behind the status bar in PWA mode. Bottom padding clears
-     the floating bottom nav + home indicator inset. */
-  padding: calc(16px + var(--safe-area-top)) 16px calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
+  /* Top padding adds the Dynamic Island / notch inset (only resolves to
+     a non-zero value in PWA standalone). Bottom padding clears the
+     floating bottom nav; the standalone media query below adds the home
+     indicator inset on top. In Safari browser the toolbar would otherwise
+     contribute a phantom inset, hence keeping it out of the default. */
+  padding: calc(16px + var(--safe-area-top)) 16px calc(var(--nav-height) + 16px);
   overflow-y: auto;
 }
 
@@ -143,7 +145,12 @@ input, textarea, select {
    the pill edge against the navy. */
 .bottom-nav {
   position: fixed;
-  bottom: calc(12px + var(--safe-area-bottom));
+  /* Mobile Safari (browser, not standalone) keeps env(safe-area-inset-bottom)
+     reporting the toolbar's footprint even after the toolbar collapses on
+     scroll - leaving the nav floating ~80px too high. Default to a small
+     fixed offset; the safe-area-inset-bottom only kicks in in standalone
+     (PWA) mode where the home indicator IS the bottom-most chrome. */
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px);
@@ -161,6 +168,19 @@ input, textarea, select {
     0 12px 32px rgba(0, 0, 0, 0.42),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   z-index: 100;
+}
+
+/* When installed to the home screen (standalone), Safari's collapsing
+   toolbar isn't in play - the only thing at the bottom is the home
+   indicator. Restore the safe-area-inset offset + bottom-padding for
+   page content here so nothing sits under the indicator. */
+@media (display-mode: standalone) {
+  .bottom-nav {
+    bottom: calc(12px + var(--safe-area-bottom));
+  }
+  .page-content {
+    padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
+  }
 }
 
 .nav-item {

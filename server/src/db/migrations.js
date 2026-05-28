@@ -151,6 +151,17 @@ const MIGRATIONS = [
       );
     },
   },
+  // The 24h post-signup "Ready to unlock more?" nudge fired for testers
+  // before we gated it on beta_mode. Remove the stale notifications so
+  // they don't keep popping up for beta users.
+  {
+    name: '2026-05-28-clear-stale-plans-nudges-beta',
+    up: () => {
+      pool.query(
+        "DELETE FROM in_app_notifications WHERE title = 'Ready to unlock more?' AND cta_url = '/plans'",
+      );
+    },
+  },
   // Backfill the default Home "Today's Tasks" for clients who registered
   // via /api/auth/register before the default-tasks seed shipped. Only
   // touches clients with zero existing tasks - anyone the coach already

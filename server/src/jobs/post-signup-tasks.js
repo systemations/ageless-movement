@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { isBetaMode } from '../lib/settings.js';
 
 // Post-signup task runner. Keeps deferred work outside the request/response
 // cycle so a slow DM insert or notification write never blocks the register
@@ -99,6 +100,11 @@ function runWelcomeDm(task) {
 }
 
 function runPlansNudge(task) {
+  // Beta is free for everyone, so the "Ready to unlock more?" nudge would
+  // just confuse testers. Skip in beta mode; the nudge resumes for new
+  // signups once the coach flips beta_mode off at launch.
+  if (isBetaMode()) return;
+
   const client = pool.query('SELECT id FROM users WHERE id = ?', [task.user_id]).rows[0];
   if (!client) return;
 

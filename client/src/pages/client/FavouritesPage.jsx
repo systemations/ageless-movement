@@ -101,16 +101,37 @@ export default function FavouritesPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: 'center' }}>Favourites</h1>
-        <button
-          onClick={() => navigate('/build-workout')}
-          aria-label="Build a workout"
-          style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
+        {activeTab === 'Workouts' ? (
+          <button
+            onClick={() => navigate('/build-workout')}
+            aria-label="Build a workout"
+            style={{
+              width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', flexShrink: 0,
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        ) : (
+          // Reserve the slot so the title stays centred when the + is hidden.
+          <div style={{ width: 36, flexShrink: 0 }} />
+        )}
+      </div>
+
+      {/* Sub-tabs at the top - mirrors the Explore pattern so the user
+          picks Workouts / Recipes before they see content. */}
+      <div style={{
+        display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
+        padding: 4, maxWidth: 360, width: '100%', margin: '0 auto 20px',
+      }}>
+        {['Workouts', 'Recipes'].map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
+            background: activeTab === tab ? 'rgba(61,255,210,0.15)' : 'transparent',
+            color: activeTab === tab ? 'var(--accent-mint-ink)' : 'var(--text-secondary)',
+            border: 'none', cursor: 'pointer',
+          }}>{tab}</button>
+        ))}
       </div>
 
       {filtered.length === 0 ? (
@@ -229,20 +250,6 @@ export default function FavouritesPage() {
         </div>
       )}
 
-      <div style={{
-        position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 0, background: 'var(--bg-card)', borderRadius: 50,
-        padding: 4, maxWidth: 240, width: 'calc(100% - 32px)',
-      }}>
-        {['Workouts', 'Recipes'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            flex: 1, padding: '10px 0', borderRadius: 50, fontSize: 13, fontWeight: 600,
-            background: activeTab === tab ? 'var(--accent)' : 'transparent',
-            color: activeTab === tab ? '#fff' : 'var(--text-secondary)',
-            border: 'none',
-          }}>{tab}</button>
-        ))}
-      </div>
     </div>
   );
 }

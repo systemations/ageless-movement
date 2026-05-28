@@ -700,11 +700,12 @@ router.get('/progress/exercises/:exerciseId', authenticateToken, (req, res) => {
 // Browse all exercises with search + filter
 router.get('/exercises', authenticateToken, (req, res) => {
   try {
-    const { search, body_part, equipment, type, limit } = req.query;
-    // exercise_type is now in the SELECT so callers (BuildWorkout picker)
-    // can sort/group by it client-side - e.g. recommend Mobility moves at
-    // the top of a Warmup block.
-    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, exercise_type, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0";
+    const { search, body_part, equipment, type, tag, limit } = req.query;
+    // exercise_type + tags are now in the SELECT so callers (BuildWorkout
+    // picker) can sort/group client-side - e.g. recommend tag=warm up at
+    // the top of a Warmup block, then fall back to type=Mobility if the
+    // coach hasn't tagged enough exercises yet.
+    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, exercise_type, tags, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0";
     const params = [];
 
     if (search) {
@@ -722,6 +723,14 @@ router.get('/exercises', authenticateToken, (req, res) => {
     if (type) {
       sql += ' AND exercise_type = ?';
       params.push(type);
+    }
+    if (tag) {
+      // Tags are comma-separated free text. Substring match - good enough
+      // for the small handful of tags we care about ("warm up", "conditioning"
+      // etc) and avoids a join table. If two tags ever overlap as
+      // substrings we switch to a join.
+      sql += ' AND tags LIKE ?';
+      params.push(`%${tag}%`);
     }
 
     sql += ' ORDER BY name';

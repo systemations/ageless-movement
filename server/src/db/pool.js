@@ -714,6 +714,12 @@ const alterStatements = [
   "ALTER TABLE exercises ADD COLUMN tracking_fields TEXT DEFAULT 'Repetitions with Weight'",
   "ALTER TABLE exercises ADD COLUMN per_side TEXT DEFAULT 'None'",
   "ALTER TABLE exercises ADD COLUMN target_area TEXT",
+  // Tag column powers block-type recommendations in the workout builder.
+  // Free-text comma-separated tags, lower-cased ("warm up,beginner,unilateral").
+  // Coach tags exercises in admin; picker queries WHERE tags LIKE '%warm up%'
+  // when the user picks a Warmup block. Extends to any training modality
+  // (Tabata -> "conditioning", Mobility block -> "mobility-flow" etc).
+  "ALTER TABLE exercises ADD COLUMN tags TEXT",
   // Supplements: section/display grouping + sort order + optional notes per supp.
   "ALTER TABLE supplements ADD COLUMN section TEXT",        // e.g. "Upon Waking", "After Breakfast"
   "ALTER TABLE supplements ADD COLUMN section_order INTEGER DEFAULT 0",

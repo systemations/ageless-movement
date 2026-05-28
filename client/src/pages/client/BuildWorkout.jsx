@@ -379,15 +379,26 @@ function BlockSettings({ block, onChange }) {
   return <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>{fields}</div>;
 }
 
+// Block-format -> recommended exercise tag. Coach tags exercises in admin
+// ("warm up", "conditioning", etc); the picker pins matching exercises to
+// the top when this block format is selected. As Dan tags more exercises
+// the recommendations grow without any code change. Tag falls back to a
+// type (exercise_type) when the tag pool is too small / not yet seeded.
+const BLOCK_RECOMMENDATIONS = {
+  Warmup:   { tag: 'warm up',     fallbackType: 'Mobility' },
+  // Future block types - leaving the map open so we just add a line:
+  // Tabata:   { tag: 'conditioning', fallbackType: 'Bodyweight' },
+  // 'For Time': { tag: 'conditioning', fallbackType: 'Bodyweight' },
+  // AMRAP:    { tag: 'conditioning', fallbackType: 'Bodyweight' },
+};
+
 function ExercisePicker({ token, multi, blockType, onConfirm, onClose }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
-  const [recommended, setRecommended] = useState([]); // type-matched picks pinned to top
+  const [recommended, setRecommended] = useState([]); // tag/type-matched picks pinned to top
   const [selected, setSelected] = useState([]); // ex objects (multi mode)
 
-  // Block-type to recommended exercise_type. Warmup gets Mobility moves;
-  // other formats fall through to no recommendations (just show the search).
-  const recommendedType = blockType === 'Warmup' ? 'Mobility' : null;
+  const rec = BLOCK_RECOMMENDATIONS[blockType] || null;
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -400,17 +411,30 @@ function ExercisePicker({ token, multi, blockType, onConfirm, onClose }) {
     return () => clearTimeout(t);
   }, [q, token]);
 
-  // Load the recommended picks once on open (only when there's a type to
-  // recommend for). Two are enough - more starts to compete with the search.
+  // Load tag-matched recommendations first. If the coach hasn't tagged
+  // enough exercises yet, top up from the fallback exercise_type so the
+  // user still sees two recommendations. Runs once on open.
   useEffect(() => {
-    if (!recommendedType) return;
-    fetch(`/api/explore/exercises?type=${encodeURIComponent(recommendedType)}&limit=2`, {
+    if (!rec) return;
+    const fetchJson = (qs) => fetch(`/api/explore/exercises?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : { exercises: [] })
-      .then(d => setRecommended(d.exercises || []))
-      .catch(() => setRecommended([]));
-  }, [recommendedType, token]);
+    }).then(r => r.ok ? r.json() : { exercises: [] }).then(d => d.exercises || []);
+
+    Promise.all([
+      fetchJson(`tag=${encodeURIComponent(rec.tag)}&limit=2`),
+      rec.fallbackType ? fetchJson(`type=${encodeURIComponent(rec.fallbackType)}&limit=4`) : Promise.resolve([]),
+    ]).then(([tagged, fallback]) => {
+      const seen = new Set(tagged.map(e => e.id));
+      const padded = [...tagged];
+      for (const e of fallback) {
+        if (padded.length >= 2) break;
+        if (seen.has(e.id)) continue;
+        padded.push(e);
+        seen.add(e.id);
+      }
+      setRecommended(padded);
+    }).catch(() => setRecommended([]));
+  }, [rec, token]);
 
   const isSel = (id) => selected.some(s => s.id === id);
   const tap = (ex) => {

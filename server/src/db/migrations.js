@@ -151,6 +151,24 @@ const MIGRATIONS = [
       );
     },
   },
+  // Seed the first "warm up" tags on the two existing warmup exercises
+  // (Warm Up + Dynamic Warm Up). Coach will tag more as he records them;
+  // the picker's Warmup-block recommendations read this tag first.
+  // Idempotent: only writes when tags is currently NULL/empty.
+  {
+    name: '2026-05-28-tag-warmup-exercises',
+    up: () => {
+      const ids = pool.query(
+        "SELECT id FROM exercises WHERE name IN ('Warm Up', 'Dynamic Warm Up')",
+      ).rows.map(r => r.id);
+      for (const id of ids) {
+        pool.query(
+          "UPDATE exercises SET tags = 'warm up' WHERE id = ? AND (tags IS NULL OR tags = '')",
+          [id],
+        );
+      }
+    },
+  },
   // Populate Joonas's coach profile (Strength / Mobility / Joint Health) on
   // the live deployment. Idempotent: only fills empty/null fields so a
   // future manual edit by Dan or Joonas isn't clobbered.

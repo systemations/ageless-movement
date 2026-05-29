@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import pool from './pool.js';
 import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
+import { CARLA, NEW_EXERCISES, SESSIONS as CARLA_SESSIONS } from './seed-carla-phase-1.js';
 
 // Run-once content/schema migrations, applied on every boot. This is how
 // content reaches an ALREADY-POPULATED production DB without the destructive
@@ -149,6 +150,125 @@ const MIGRATIONS = [
         "UPDATE users SET password_hash = ? WHERE LOWER(email) = LOWER(?)",
         [hash, 'Dan@systemations.ai'],
       );
+    },
+  },
+  // Import Carla Whyte's "Phase 1" custom program from her FitBudd history.
+  // Creates her client account (temp password "Welcome2026!" - she changes
+  // on first login), ensures the two exercises missing from the AM library
+  // exist, builds the program with 3 sessions, and enrols her. Idempotent
+  // via existence checks at every step so re-runs are safe.
+  {
+    name: '2026-05-29-import-carla-whyte-phase-1',
+    up: () => {
+      // 1. User + client_profile
+      const emailLow = CARLA.email.toLowerCase();
+      let user = pool.query('SELECT id FROM users WHERE LOWER(email) = ?', [emailLow]).rows[0];
+      if (!user) {
+        const hash = bcrypt.hashSync('Welcome2026!', 10);
+        const inserted = pool.query(
+          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, 'client') RETURNING id",
+          [CARLA.email, hash, CARLA.name],
+        ).rows[0];
+        user = { id: inserted.id };
+        pool.query(
+          'INSERT INTO client_profiles (user_id, timezone) VALUES (?, ?)',
+          [user.id, CARLA.timezone],
+        );
+      }
+
+      // 2. Backfill default daily tasks (mirrors what the register endpoint does)
+      const hasTasks = pool.query('SELECT 1 FROM tasks WHERE client_id = ? LIMIT 1', [user.id]).rows[0];
+      if (!hasTasks) {
+        for (const label of DEFAULT_CLIENT_TASKS) {
+          pool.query(
+            'INSERT INTO tasks (coach_id, client_id, label, recurring) VALUES (NULL, ?, ?, 1)',
+            [user.id, label],
+          );
+        }
+      }
+
+      // 3. Ensure the two AM-library gaps exist (NULL demo_video_url until Dan
+      //    attaches a Vimeo clip in admin).
+      const exIdByName = {};
+      for (const ex of NEW_EXERCISES) {
+        const found = pool.query('SELECT id FROM exercises WHERE LOWER(name) = LOWER(?)', [ex.name]).rows[0];
+        if (found) {
+          exIdByName[ex.name] = found.id;
+        } else {
+          const ins = pool.query(
+            "INSERT INTO exercises (name, body_part, exercise_type) VALUES (?, ?, ?) RETURNING id",
+            [ex.name, ex.body_part, ex.exercise_type],
+          ).rows[0];
+          exIdByName[ex.name] = ins.id;
+        }
+      }
+
+      // 4. Program shell - private custom program for Carla. visible=0 keeps
+      //    it out of Explore; only her enrolment surfaces it on Home.
+      let program = pool.query(
+        "SELECT id FROM programs WHERE title = 'Carla Phase 1' LIMIT 1",
+      ).rows[0];
+      if (!program) {
+        const p = pool.query(
+          `INSERT INTO programs (title, description, duration_weeks, workouts_per_week, visible)
+           VALUES (?, ?, ?, ?, 0) RETURNING id`,
+          ['Carla Phase 1', 'Phase 1 carried over from FitBudd. 3 sessions per week.', 12, 3],
+        ).rows[0];
+        program = { id: p.id };
+      }
+
+      // 5. Workouts + their exercises. Skip session if already imported
+      //    (idempotency) - matches by program_id + day_number.
+      for (const sess of CARLA_SESSIONS) {
+        const existing = pool.query(
+          'SELECT id FROM workouts WHERE program_id = ? AND day_number = ? LIMIT 1',
+          [program.id, sess.day_number],
+        ).rows[0];
+        if (existing) continue;
+        const w = pool.query(
+          `INSERT INTO workouts (program_id, week_number, day_number, title, status, visible)
+           VALUES (?, 1, ?, ?, 'published', 1) RETURNING id`,
+          [program.id, sess.day_number, sess.title],
+        ).rows[0];
+
+        let order = 0;
+        for (const ex of sess.exercises) {
+          const exerciseId = ex.exercise_id || exIdByName[ex.name];
+          if (!exerciseId) continue;
+          const we = pool.query(
+            `INSERT INTO workout_exercises
+               (workout_id, exercise_id, order_index, sets, reps, duration_secs, rest_secs)
+             VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+            [
+              w.id, exerciseId, order++,
+              ex.sets || 1,
+              ex.time_based ? null : (ex.reps || '10'),
+              ex.time_based ? ex.duration_secs : null,
+              30,
+            ],
+          ).rows[0];
+          pool.query(
+            `INSERT INTO workout_exercise_meta
+               (workout_exercise_id, time_based, duration_secs, tracking_type)
+             VALUES (?, ?, ?, ?)`,
+            [we.id, ex.time_based ? 1 : 0, ex.time_based ? ex.duration_secs : null, ex.time_based ? 'duration' : 'reps'],
+          );
+        }
+      }
+
+      // 6. Enrol her in the program
+      const enrolled = pool.query(
+        'SELECT id FROM client_programs WHERE user_id = ? AND program_id = ?',
+        [user.id, program.id],
+      ).rows[0];
+      if (!enrolled) {
+        const totalW = pool.query('SELECT COUNT(*) AS c FROM workouts WHERE program_id = ?', [program.id]).rows[0].c;
+        pool.query(
+          `INSERT INTO client_programs (user_id, program_id, current_week, current_day, total_workouts)
+           VALUES (?, ?, 1, 1, ?)`,
+          [user.id, program.id, totalW],
+        );
+      }
     },
   },
   // Seed the first "warm up" tags on the two existing warmup exercises

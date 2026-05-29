@@ -89,10 +89,16 @@ router.get('/features', authenticateToken, (req, res) => {
 router.get('/today', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    // Read user's timezone first so the "today" date is computed in their
-    // local day - otherwise the consumed counter resets at UTC midnight
-    // (10am Sydney, 1am London) instead of at their actual day boundary.
-    const tz = pool.query('SELECT timezone FROM client_profiles WHERE user_id = ?', [userId]).rows[0]?.timezone;
+    // Timezone precedence: ?tz query param (sent by the browser - always
+    // accurate for the currently-logged-in user, works for coaches who
+    // don't have a client_profiles row) > stored client_profiles.timezone
+    // > UTC. Whichever is used drives the "today" the consumed counter
+    // resets against.
+    const queryTz = typeof req.query.tz === 'string' && /^[A-Za-z_+\-/0-9]+$/.test(req.query.tz) && req.query.tz.length < 64
+      ? req.query.tz
+      : null;
+    const storedTz = pool.query('SELECT timezone FROM client_profiles WHERE user_id = ?', [userId]).rows[0]?.timezone;
+    const tz = queryTz || storedTz;
     const localToday = (() => {
       try {
         const fmt = new Intl.DateTimeFormat('en-CA', {

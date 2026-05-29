@@ -64,7 +64,12 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
     if (!token) return;
     const fetchToday = async () => {
       try {
-        const res = await fetch('/api/athlete/today', {
+        // Send the browser's IANA timezone so the server resolves "today"
+        // (consumed counter reset) in the client's local day - works for
+        // both clients and coaches regardless of stored profile tz.
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        const qs = tz ? `?tz=${encodeURIComponent(tz)}` : '';
+        const res = await fetch(`/api/athlete/today${qs}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

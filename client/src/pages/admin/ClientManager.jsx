@@ -320,7 +320,19 @@ export default function ClientManager({ openClientId, onClearOpen }) {
                   }}>{c.name?.charAt(0)}</div>
                 )}
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                    {/* @example.com accounts are demo data Dan seeded for the
+                        leaderboards / UI mockups; keep them visually distinct
+                        so coaches don't mistake them for real clients. */}
+                    {/@example\.com$/i.test(c.email || '') && (
+                      <span style={{
+                        flexShrink: 0, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
+                        background: 'rgba(255,140,0,0.15)', color: 'var(--accent)',
+                        letterSpacing: 0.4, textTransform: 'uppercase',
+                      }}>Example</span>
+                    )}
+                  </div>
                   <p style={{ fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {c.email}
                   </p>

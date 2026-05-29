@@ -200,6 +200,101 @@ const MIGRATIONS = [
       }
     },
   },
+  // Populate streaks + steps for the @example.com seed clients (plus Dan)
+  // so the client-side leaderboards aren't empty. Assigns Dan's carnivore
+  // diet (meal_schedule id 24) + sets his eating_style so Home Targets
+  // recompute to carnivore macros. Idempotent: re-runs leave existing rows
+  // untouched but fill in anything missing.
+  {
+    name: '2026-05-29-seed-leaderboards-and-dan-carnivore',
+    up: () => {
+      const today = new Date();
+      const dateNDaysAgo = (n) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - n);
+        return d.toISOString().slice(0, 10);
+      };
+
+      // Deterministic-but-varied numbers driven off user id so the same
+      // user always lands at the same rank between deploys.
+      const targets = [];
+      const ex = pool.query("SELECT id, name FROM users WHERE email LIKE '%@example.com' AND role = 'client'").rows;
+      for (const u of ex) {
+        const streak  = 2 + (u.id * 7) % 25;     // 2..26
+        const best    = streak + ((u.id * 11) % 30);
+        const baseSteps = 4500 + ((u.id * 137) % 6000); // 4500..10500
+        targets.push({ user: u, streak, best, baseSteps });
+      }
+
+      // Dan - find by email so this works on the live DB; place him in the
+      // upper half of the board so the mockup looks credible.
+      const dan = pool.query(
+        "SELECT id, name FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (dan) {
+        targets.push({ user: dan, streak: 28, best: 42, baseSteps: 11200, isDan: true });
+      }
+
+      for (const t of targets) {
+        // Streaks - upsert. Existing rows update last_activity_date so the
+        // leaderboard reads them as "current".
+        const existing = pool.query('SELECT user_id FROM streaks WHERE user_id = ?', [t.user.id]).rows[0];
+        if (existing) {
+          pool.query(
+            'UPDATE streaks SET current_streak = ?, best_streak = ?, last_activity_date = ? WHERE user_id = ?',
+            [t.streak, t.best, dateNDaysAgo(0), t.user.id],
+          );
+        } else {
+          pool.query(
+            'INSERT INTO streaks (user_id, current_streak, best_streak, last_activity_date) VALUES (?, ?, ?, ?)',
+            [t.user.id, t.streak, t.best, dateNDaysAgo(0)],
+          );
+        }
+
+        // Step logs - 7 days, varying by day. Skip days the user already
+        // has a row for (so a real-user import never gets overwritten).
+        for (let d = 0; d < 7; d++) {
+          const date = dateNDaysAgo(d);
+          const hasRow = pool.query(
+            'SELECT id FROM step_logs WHERE user_id = ? AND date = ?',
+            [t.user.id, date],
+          ).rows[0];
+          if (hasRow) continue;
+          const wiggle = 1 + ((t.user.id + d) * 0.13);
+          const steps = Math.round(t.baseSteps * (0.75 + (wiggle - Math.floor(wiggle)) * 0.5));
+          pool.query(
+            'INSERT INTO step_logs (user_id, date, steps) VALUES (?, ?, ?)',
+            [t.user.id, date, steps],
+          );
+        }
+      }
+
+      // Dan's carnivore allocation
+      if (dan) {
+        const carnivore = pool.query(
+          "SELECT id FROM meal_schedules WHERE LOWER(title) LIKE '%carnivore%' LIMIT 1",
+        ).rows[0];
+        if (carnivore) {
+          const already = pool.query(
+            'SELECT id FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+            [dan.id, carnivore.id],
+          ).rows[0];
+          if (!already) {
+            pool.query(
+              "INSERT INTO client_meal_schedules (user_id, meal_schedule_id, started_at) VALUES (?, ?, datetime('now'))",
+              [dan.id, carnivore.id],
+            );
+          }
+        }
+        // Eating style on the profile so Home Targets recomputes macros to
+        // the carnivore distribution (35/60/5) automatically.
+        pool.query(
+          "UPDATE client_profiles SET eating_style = 'carnivore' WHERE user_id = ?",
+          [dan.id],
+        );
+      }
+    },
+  },
   // Add Wall Wrist Extension Isometric (Vimeo demo by Coach Joonas) to the
   // library. Idempotent on name.
   {

@@ -456,11 +456,30 @@ router.get('/today', authenticateToken, (req, res) => {
       if (mealTemplate.protein_g_target) calorieTargets.protein = mealTemplate.protein_g_target;
     }
 
+    // Today's actual consumption from nutrition_logs - powers the
+    // "consumed / target" display on the Home Targets card.
+    const consumedRow = pool.query(
+      `SELECT
+         COALESCE(SUM(calories), 0) AS calories,
+         COALESCE(SUM(protein), 0)  AS protein,
+         COALESCE(SUM(fat), 0)      AS fat,
+         COALESCE(SUM(carbs), 0)    AS carbs
+       FROM nutrition_logs WHERE user_id = ? AND date = ?`,
+      [req.user.id, date],
+    ).rows[0] || {};
+    const consumedToday = {
+      calories: Math.round(consumedRow.calories || 0),
+      protein:  Math.round(consumedRow.protein  || 0),
+      fat:      Math.round(consumedRow.fat      || 0),
+      carbs:    Math.round(consumedRow.carbs    || 0),
+    };
+
     res.json({
       date,
       day_of_week: dayOfWeek,
       week_number: weekNumber,
       is_training_day: isTrainingDay,
+      consumed_today: consumedToday,
       block: block ? {
         id: block.id,
         name: block.name,

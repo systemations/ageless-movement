@@ -152,6 +152,54 @@ const MIGRATIONS = [
       );
     },
   },
+  // Batch: four new exercises (Joonas demos) + merge two supine/inverted
+  // duplicate rows Dan flagged. "Supine barbell <X>" and "Inverted barbell
+  // <X>" describe the same movement; Supine is canonical because those
+  // rows already have the demo videos.
+  {
+    name: '2026-05-29-exercises-batch-2',
+    up: () => {
+      const addIfMissing = (name, body_part, exercise_type, video) => {
+        const existing = pool.query('SELECT id FROM exercises WHERE LOWER(name) = LOWER(?)', [name]).rows[0];
+        if (existing) {
+          // Backfill the video if the existing row lacks one.
+          const cur = pool.query('SELECT demo_video_url FROM exercises WHERE id = ?', [existing.id]).rows[0];
+          if (!cur?.demo_video_url) {
+            pool.query('UPDATE exercises SET demo_video_url = ? WHERE id = ?', [video, existing.id]);
+          }
+          return existing.id;
+        }
+        return pool.query(
+          'INSERT INTO exercises (name, body_part, exercise_type, demo_video_url) VALUES (?, ?, ?, ?) RETURNING id',
+          [name, body_part, exercise_type, video],
+        ).rows[0].id;
+      };
+
+      addIfMissing('Foam Roller Hack Squat',          'Quadriceps, Gluteus Maximus',     'Strength',  'https://vimeo.com/1190868003');
+      addIfMissing('Ankle Plantarflexion Isometrics', 'Gastrocnemius, Soleus',           'Mobility',  'https://vimeo.com/1190865051');
+      addIfMissing('Bench Hip Flexor Stretch',        'Hip Flexors, Quadriceps',         'Stretching','https://vimeo.com/1088672096');
+      addIfMissing('Elbow Supination Banded',         'Forearm, Biceps',                 'Mobility',  'https://vimeo.com/1058403797');
+
+      // Merge duplicates: redirect any workout_exercises rows, then delete
+      // the dupe row. Scoped lookups by exact name so we only touch the
+      // ones Dan flagged.
+      const merges = [
+        { fromName: 'Inverted Barbell Chin Up', toName: 'Supine Barbell Chin Up' },
+        { fromName: 'Inverted Barbell Pull Up', toName: 'Supine Barbell Pull Up' },
+      ];
+      for (const { fromName, toName } of merges) {
+        const from = pool.query('SELECT id FROM exercises WHERE name = ?', [fromName]).rows[0];
+        const to   = pool.query('SELECT id FROM exercises WHERE name = ?', [toName]).rows[0];
+        if (!from || !to) continue;
+        pool.query('UPDATE workout_exercises SET exercise_id = ? WHERE exercise_id = ?', [to.id, from.id]);
+        // Also catch any per-instance alternates / global alternatives pointing at the dupe.
+        try { pool.query('UPDATE workout_exercise_alternates SET alternative_id = ? WHERE alternative_id = ?', [to.id, from.id]); } catch {}
+        try { pool.query('UPDATE exercise_alternatives SET exercise_id = ? WHERE exercise_id = ?', [to.id, from.id]); } catch {}
+        try { pool.query('UPDATE exercise_alternatives SET alternative_id = ? WHERE alternative_id = ?', [to.id, from.id]); } catch {}
+        pool.query('DELETE FROM exercises WHERE id = ?', [from.id]);
+      }
+    },
+  },
   // Add Wall Wrist Extension Isometric (Vimeo demo by Coach Joonas) to the
   // library. Idempotent on name.
   {

@@ -33,6 +33,13 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
   const [filter, setFilter] = useState('all'); // all | unread | starred
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null); // { conv }
+  // The 340px chat list eats horizontal room a coach needs when editing
+  // the WorkoutBuilder. activeClientTab lets ClientProfile bubble up which
+  // tab the coach is on; we auto-collapse the chat list on Workout and let
+  // a chevron toggle handle the rest.
+  const [activeClientTab, setActiveClientTab] = useState('Overview');
+  const [chatListManualCollapsed, setChatListManualCollapsed] = useState(false);
+  const chatListCollapsed = chatListManualCollapsed || activeClientTab === 'Workout';
   // editing: null | { mode: 'new' } | { mode: 'edit', group }
   const [editing, setEditing] = useState(null);
   // Cache the last fetched group record so the editor has fresh metadata
@@ -97,17 +104,49 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* Slim chevron strip when the chat list is collapsed - one click brings it back. */}
+      {chatListCollapsed && (
+        <button
+          onClick={() => setChatListManualCollapsed(false)}
+          aria-label="Show chat list"
+          style={{
+            width: 22, flexShrink: 0, borderRight: '1px solid var(--divider)',
+            background: 'transparent', cursor: 'pointer', color: 'var(--text-tertiary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      )}
+
       {/* LEFT: chat list */}
       <div style={{
         width: 340, flexShrink: 0, borderRight: '1px solid var(--divider)',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        display: chatListCollapsed ? 'none' : 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
         <div style={{ padding: '18px 18px 10px', borderBottom: '1px solid var(--divider)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h1 style={{ fontSize: 18, fontWeight: 800 }}>
-              {scope === 'group' ? 'Groups' : 'Chats'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>({filtered.length})</span>
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={() => setChatListManualCollapsed(true)}
+                aria-label="Collapse chat list"
+                title="Collapse chat list"
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-tertiary)', padding: 2, display: 'flex',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
+              <h1 style={{ fontSize: 18, fontWeight: 800 }}>
+                {scope === 'group' ? 'Groups' : 'Chats'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>({filtered.length})</span>
+              </h1>
+            </div>
             {scope === 'group' ? (
               <button
                 onClick={() => { setSelected(null); setEditing({ mode: 'new' }); }}
@@ -241,6 +280,7 @@ export default function CoachWorkspace({ initialScope = 'team' }) {
             initialTab="Overview"
             showRail
             onBack={() => setSelected(null)}
+            onTabChange={setActiveClientTab}
           />
         )}
         {!editing && selected && !selected.conv.client?.id && (

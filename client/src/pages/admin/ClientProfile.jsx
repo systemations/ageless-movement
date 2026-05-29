@@ -23,11 +23,13 @@ export default function ClientProfile({
   showRail = false,
   conversationId = null,
   initialTab = 'Overview',
+  onTabChange, // bubble up the active tab so the parent (CoachWorkspace) can react (e.g. collapse the chat list on Workout)
 }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => { if (onTabChange) onTabChange(activeTab); }, [activeTab, onTabChange]);
 
   // When the parent switches client, snap back to the default tab so we
   // don't persist e.g. "Nutrition" for a client we're viewing for the first time.

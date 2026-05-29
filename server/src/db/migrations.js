@@ -200,6 +200,63 @@ const MIGRATIONS = [
       }
     },
   },
+  // Undo the side-effects of the leaderboard seed on Dan's REAL account:
+  // mock step_logs were polluting his daily steps counter (and not
+  // resetting), the welcome DM re-fired because a stale post_signup_tasks
+  // row was still pending, and the carnivore meal schedule allocation
+  // hadn't taken on the live DB. Idempotent on every step.
+  {
+    name: '2026-05-29-fix-dan-mock-data',
+    up: () => {
+      const dan = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (!dan) return;
+
+      // 1. Mock steps: clear last 14 days so Dan starts the day at zero
+      //    and his real logging takes over.
+      pool.query(
+        "DELETE FROM step_logs WHERE user_id = ? AND date >= date('now', '-14 days')",
+        [dan.id],
+      );
+
+      // 2. Carnivore allocation - re-apply (safe if already present).
+      pool.query(
+        "UPDATE client_profiles SET eating_style = 'carnivore' WHERE user_id = ?",
+        [dan.id],
+      );
+      const carnivore = pool.query(
+        "SELECT id FROM meal_schedules WHERE LOWER(title) LIKE '%carnivore%' LIMIT 1",
+      ).rows[0];
+      if (carnivore) {
+        const already = pool.query(
+          'SELECT id FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+          [dan.id, carnivore.id],
+        ).rows[0];
+        if (!already) {
+          pool.query(
+            "INSERT INTO client_meal_schedules (user_id, meal_schedule_id, started_at) VALUES (?, ?, datetime('now'))",
+            [dan.id, carnivore.id],
+          );
+        }
+      }
+
+      // 3. Welcome DM re-fire: mark any pending welcome_dm tasks for Dan
+      //    as sent so the job runner skips them. (Also catches plans_nudge
+      //    if a stale row is hanging around.)
+      pool.query(
+        "UPDATE post_signup_tasks SET sent_at = datetime('now') WHERE user_id = ? AND sent_at IS NULL",
+        [dan.id],
+      );
+
+      // 4. Also clear any in_app_notifications targeted at Dan that are
+      //    likely the re-fired welcome ("Welcome", "welcome" in title).
+      pool.query(
+        "DELETE FROM in_app_notifications WHERE audience = 'user' AND audience_user_id = ? AND LOWER(title) LIKE '%welcome%'",
+        [dan.id],
+      );
+    },
+  },
   // Populate streaks + steps for the @example.com seed clients (plus Dan)
   // so the client-side leaderboards aren't empty. Assigns Dan's carnivore
   // diet (meal_schedule id 24) + sets his eating_style so Home Targets

@@ -433,8 +433,12 @@ router.get('/today', authenticateToken, (req, res) => {
       }
     }
 
-    // Determine if it's a training day or rest day
-    const isTrainingDay = todayWorkouts.some(w => w.session_type === 'gym' || w.session_type === 'circuit');
+    // Any workout scheduled for today (program-suggested or user-added)
+    // makes today a training day. The previous check only matched
+    // workout_type 'gym'/'circuit' which excluded real categories like
+    // strength, mobility, follow_along, cardio - so the Targets card
+    // was permanently stuck on Rest Day for anyone with a real program.
+    const isTrainingDay = todayWorkouts.length > 0;
 
     // Build calorie targets (phase-aware if available)
     let calorieTargets = {

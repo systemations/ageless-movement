@@ -162,8 +162,11 @@ export default function ClientProfile({
         ))}
       </div>
 
-      {/* Tab content - wrap in 2-col grid when we need the always-visible info rail */}
-      {showRail ? (
+      {/* Tab content - wrap in 2-col grid when we need the always-visible info rail.
+          Workout tab opts out because the WorkoutBuilder needs the full width;
+          with the 320px rail in place the block "variableType" pills + add-
+          exercise rows wrap and the layout looks busted on desktop. */}
+      {showRail && activeTab !== 'Workout' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
             {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} railMode />}

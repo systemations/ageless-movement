@@ -152,6 +152,25 @@ const MIGRATIONS = [
       );
     },
   },
+  // Add Wall Wrist Extension Isometric (Vimeo demo by Coach Joonas) to the
+  // library. Idempotent on name.
+  {
+    name: '2026-05-29-add-wall-wrist-extension-isometric',
+    up: () => {
+      const exists = pool.query("SELECT id FROM exercises WHERE LOWER(name) = LOWER('Wall Wrist Extension Isometric')").rows[0];
+      if (exists) return;
+      pool.query(
+        `INSERT INTO exercises (name, body_part, exercise_type, demo_video_url)
+         VALUES (?, ?, ?, ?)`,
+        [
+          'Wall Wrist Extension Isometric',
+          'Wrist Extensors, Forearm',
+          'Mobility',
+          'https://vimeo.com/1190865926',
+        ],
+      );
+    },
+  },
   // Add Wall Glute Stretch as its own exercise (distinct from "Glute Stretch"
   // (394) - the wall provides leverage the floor version doesn't) and remap
   // Carla's Phase 1 Session 1 to use it. Idempotent on name.

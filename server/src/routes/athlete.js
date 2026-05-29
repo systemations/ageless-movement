@@ -89,7 +89,20 @@ router.get('/features', authenticateToken, (req, res) => {
 router.get('/today', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const date = req.query.date || new Date().toISOString().split('T')[0];
+    // Read user's timezone first so the "today" date is computed in their
+    // local day - otherwise the consumed counter resets at UTC midnight
+    // (10am Sydney, 1am London) instead of at their actual day boundary.
+    const tz = pool.query('SELECT timezone FROM client_profiles WHERE user_id = ?', [userId]).rows[0]?.timezone;
+    const localToday = (() => {
+      try {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+          timeZone: tz || 'UTC',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+        });
+        return fmt.format(new Date());
+      } catch { return new Date().toISOString().split('T')[0]; }
+    })();
+    const date = req.query.date || localToday;
     const dayOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date(date + 'T12:00:00').getDay()];
 
     // Get user tier
@@ -440,12 +453,29 @@ router.get('/today', authenticateToken, (req, res) => {
     // was permanently stuck on Rest Day for anyone with a real program.
     const isTrainingDay = todayWorkouts.length > 0;
 
-    // Build calorie targets (phase-aware if available)
+    // Build calorie targets. Precedence (highest wins): manual profile
+    // override > phase calories (Prime+) > meal-day template (Prime+) >
+    // currently-enrolled meal_schedule (covers e.g. Dan on Carnivore Diet
+    // with macros set on the schedule itself, not on the profile).
+    const activeSchedule = pool.query(
+      `SELECT ms.calorie_target_min, ms.calorie_target_max,
+              ms.protein_target, ms.fat_target, ms.carbs_target
+       FROM client_meal_schedules cms
+       JOIN meal_schedules ms ON ms.id = cms.meal_schedule_id
+       WHERE cms.user_id = ?
+       ORDER BY cms.started_at DESC LIMIT 1`,
+      [userId],
+    ).rows[0];
+
+    const scheduleKcal = activeSchedule
+      ? Math.round(((activeSchedule.calorie_target_min || 0) + (activeSchedule.calorie_target_max || 0)) / 2) || null
+      : null;
+
     let calorieTargets = {
-      calories: profile?.calorie_target || 2200,
-      protein: profile?.protein_target || 163,
-      fat: profile?.fat_target || 167,
-      carbs: profile?.carbs_target || 10,
+      calories: profile?.calorie_target || scheduleKcal || 2200,
+      protein:  profile?.protein_target || activeSchedule?.protein_target || 163,
+      fat:      profile?.fat_target     || activeSchedule?.fat_target     || 167,
+      carbs:    profile?.carbs_target   || activeSchedule?.carbs_target   || 10,
     };
     if (phaseCalories && tierLevel >= 2) {
       calorieTargets.calories = isTrainingDay ? phaseCalories.training_day_kcal : phaseCalories.rest_day_kcal;

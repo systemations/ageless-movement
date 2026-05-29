@@ -200,6 +200,26 @@ const MIGRATIONS = [
       }
     },
   },
+  // Final cleanup of the leaderboard seed on Dan's account: drop the mock
+  // 28-day streak so the real workout-log-driven count takes over. (Steps,
+  // welcome DM, and carnivore re-allocation handled by the migration below;
+  // running this AFTER it so a single boot picks up everything.)
+  {
+    name: '2026-05-29-clear-dan-mock-streak',
+    up: () => {
+      const dan = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (!dan) return;
+      // Reset to zero; subsequent workout logs will bump current_streak and
+      // best_streak normally via the explore.js workout-log handler.
+      pool.query(
+        'UPDATE streaks SET current_streak = 0, best_streak = 0, last_activity_date = NULL WHERE user_id = ?',
+        [dan.id],
+      );
+    },
+  },
+
   // Undo the side-effects of the leaderboard seed on Dan's REAL account:
   // mock step_logs were polluting his daily steps counter (and not
   // resetting), the welcome DM re-fired because a stale post_signup_tasks

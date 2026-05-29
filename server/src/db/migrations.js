@@ -152,6 +152,43 @@ const MIGRATIONS = [
       );
     },
   },
+  // Add Wall Glute Stretch as its own exercise (distinct from "Glute Stretch"
+  // (394) - the wall provides leverage the floor version doesn't) and remap
+  // Carla's Phase 1 Session 1 to use it. Idempotent on name.
+  {
+    name: '2026-05-29-add-wall-glute-stretch',
+    up: () => {
+      let row = pool.query("SELECT id FROM exercises WHERE LOWER(name) = LOWER('Wall Glute Stretch')").rows[0];
+      if (!row) {
+        row = pool.query(
+          `INSERT INTO exercises (name, body_part, exercise_type, demo_video_url)
+           VALUES (?, ?, ?, ?) RETURNING id`,
+          [
+            'Wall Glute Stretch',
+            'Gluteus Maximus, Hip Flexors',
+            'Stretching',
+            'https://vimeo.com/1047371883/37e200ea48',
+          ],
+        ).rows[0];
+      }
+      // Move Carla's Phase 1 Session 1 (program by title) Glute-Stretch slot
+      // to the new Wall Glute Stretch row. Match by workout title so we only
+      // touch the one slot that was originally Wall Glute Stretch (Session
+      // 1's order 5 - between Toega and Back Squat in the imported order).
+      const w = pool.query(
+        "SELECT id FROM workouts WHERE title = 'Carla Phase 1 - Session 1'",
+      ).rows[0];
+      if (w) {
+        pool.query(
+          // 394 is Glute Stretch; only Carla's slot landed there as a
+          // placeholder remap. Other programs use 394 legitimately so we
+          // scope the UPDATE to this workout.
+          "UPDATE workout_exercises SET exercise_id = ? WHERE workout_id = ? AND exercise_id = 394",
+          [row.id, w.id],
+        );
+      }
+    },
+  },
   // Carla follow-up: correct her email + replace the two placeholder
   // exercises with the existing AM library equivalents Dan flagged.
   //   Wall Glute Stretch  -> Glute Stretch (id 394)

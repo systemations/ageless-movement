@@ -152,6 +152,43 @@ const MIGRATIONS = [
       );
     },
   },
+  // Carla follow-up: correct her email + replace the two placeholder
+  // exercises with the existing AM library equivalents Dan flagged.
+  //   Wall Glute Stretch  -> Glute Stretch (id 394)
+  //   Inverted Row - Chin Up -> Inverted Barbell Chin Up (id 1263)
+  // Remaps any workout_exercises rows referencing the placeholders, then
+  // deletes the placeholders. Idempotent: only acts when placeholders exist.
+  {
+    name: '2026-05-29-carla-corrections',
+    up: () => {
+      // 1. Email fix
+      const u = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'otteheinz.9@gmail.com'",
+      ).rows[0];
+      if (u) {
+        pool.query(
+          "UPDATE users SET email = 'carlarachelwhyte@hotmail.com' WHERE id = ?",
+          [u.id],
+        );
+      }
+
+      // 2. Remap placeholder exercises -> existing library entries
+      const swaps = [
+        { fromName: 'Wall Glute Stretch',     toId: 394 },
+        { fromName: 'Inverted Row - Chin Up', toId: 1263 },
+      ];
+      for (const { fromName, toId } of swaps) {
+        const ph = pool.query('SELECT id FROM exercises WHERE name = ?', [fromName]).rows[0];
+        const target = pool.query('SELECT id FROM exercises WHERE id = ?', [toId]).rows[0];
+        if (!ph || !target) continue;
+        pool.query(
+          'UPDATE workout_exercises SET exercise_id = ? WHERE exercise_id = ?',
+          [toId, ph.id],
+        );
+        pool.query('DELETE FROM exercises WHERE id = ?', [ph.id]);
+      }
+    },
+  },
   // Import Carla Whyte's "Phase 1" custom program from her FitBudd history.
   // Creates her client account (temp password "Welcome2026!" - she changes
   // on first login), ensures the two exercises missing from the AM library

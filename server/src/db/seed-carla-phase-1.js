@@ -14,16 +14,17 @@
 // weight read as seconds (most stretches/holds in Carla's sessions are
 // 60s); everything else is treated as reps. Weight in kg.
 export const CARLA = {
-  email: 'otteheinz.9@gmail.com',
+  email: 'carlarachelwhyte@hotmail.com',
   name: 'Carla Whyte',
   timezone: 'Europe/London',
 };
 
-// New exercises to upsert into the AM library before referencing them below.
-export const NEW_EXERCISES = [
-  { name: 'Wall Glute Stretch',     body_part: 'Gluteus Maximus, Hip Flexors', exercise_type: 'Stretching' },
-  { name: 'Inverted Row - Chin Up', body_part: 'Latissimus Dorsi, Biceps',     exercise_type: 'Bodyweight' },
-];
+// All exercises in Carla's Phase 1 now map to existing AM library entries -
+// no new rows to insert. The two originally flagged as "missing" were
+// remapped: Wall Glute Stretch -> Glute Stretch (394), Inverted Row -
+// Chin Up -> Inverted Barbell Chin Up (1263). Kept the export for the
+// migration's API stability; future seeds can re-introduce entries here.
+export const NEW_EXERCISES = [];
 
 // Session 1, 2, 3 — each item:
 //   exercise_id  AM exercises.id (already-mapped). null => look up by name.
@@ -42,7 +43,7 @@ export const SESSIONS = [
       { exercise_id: 269, sets: 3, reps: '10',                                  },
       { exercise_id: 282, sets: 3, reps: '6',                                   },
       { exercise_id: 320, sets: 1, duration_secs: 60, time_based: true,         },
-      { name: 'Wall Glute Stretch',  sets: 3, duration_secs: 60, time_based: true },
+      { exercise_id: 394, sets: 3, duration_secs: 60, time_based: true }, // Wall Glute Stretch -> Glute Stretch
       { exercise_id: 41,  sets: 3, reps: '10',                                  },
       { exercise_id: 5,   sets: 1, reps: '5',                                   },
       { exercise_id: 63,  sets: 2, reps: '10',                                  },
@@ -55,7 +56,7 @@ export const SESSIONS = [
     day_number: 2,
     exercises: [
       { exercise_id: 259, sets: 2, duration_secs: 60, time_based: true },
-      { name: 'Inverted Row - Chin Up', sets: 3, reps: '10-15' },
+      { exercise_id: 1263, sets: 3, reps: '10-15' }, // Inverted Row - Chin Up -> Inverted Barbell Chin Up
       { exercise_id: 225, sets: 2, reps: '12' },
       { exercise_id: 361, sets: 1, reps: '1' },
       { exercise_id: 324, sets: 3, reps: '10' },

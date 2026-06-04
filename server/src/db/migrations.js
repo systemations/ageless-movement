@@ -139,6 +139,24 @@ const MIGRATIONS = [
       );
     },
   },
+  // Joonas's live account (joonastics@gmail.com) was created as a CLIENT and
+  // his role was never flipped to coach. The desktop router sends role=coach
+  // to /admin and everyone else to /home, so he kept landing on the client
+  // app with the onboarding checklist instead of the coach admin surface.
+  // This sets role='coach' for that one account. Single-row, by email,
+  // non-destructive (no delete - preserves the account + its coach profile).
+  // Idempotent via schema_migrations; case-insensitive match; silent no-op
+  // on any DB where the email doesn't exist (e.g. the dev seed, which uses
+  // joonas@coach.com instead).
+  {
+    name: '2026-06-04-set-joonas-role-coach',
+    up: () => {
+      pool.query(
+        "UPDATE users SET role = 'coach' WHERE LOWER(email) = LOWER(?)",
+        ['joonastics@gmail.com'],
+      );
+    },
+  },
   // Same one-time reset pattern for the dan@systemations.ai account so Dan
   // can log in via that email. Case-insensitive match in case the email is
   // stored with different casing. Silent no-op where the email doesn't exist.

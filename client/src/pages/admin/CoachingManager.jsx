@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 // Single admin surface for the Meet the Team / 1:1 coaching feature.
@@ -96,14 +97,14 @@ export default function CoachingManager({ variant = 'team' } = {}) {
   };
 
   const handleDelete = async (coachId) => {
-    if (!confirm('Delete this coach? This removes their profile, sessions, and bookings.')) return;
+    if (!(await modal.confirm('Delete this coach? This removes their profile, sessions, and bookings.'))) return;
     const res = await fetch(`/api/coaches/admin/coaches/${coachId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
     if (data.error) {
-      alert(data.error);
+      modal.notify(data.error);
       return;
     }
     if (selectedCoachId === coachId) setSelectedCoachId(user?.id || null);
@@ -720,7 +721,7 @@ function SessionTypesTab({ coachId }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this session type?')) return;
+    if (!(await modal.confirm('Delete this session type?'))) return;
     await fetch(withCoach(`/api/coaches/admin/session-types/${id}`, coachId), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
@@ -1164,7 +1165,7 @@ function ScheduledEventsTab({ coachId }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this event? Registrations will also be removed.')) return;
+    if (!(await modal.confirm('Delete this event? Registrations will also be removed.'))) return;
     await fetch(`/api/coaches/admin/events/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

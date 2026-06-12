@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import MessageThread from '../client/MessageThread';
 import { parseDbDate } from '../../lib/dates';
 import WorkoutBuilder from './WorkoutBuilder';
@@ -531,7 +532,7 @@ function DailyTasksCard({ tasks, clientId, onChange }) {
   };
 
   const deleteTask = async (id) => {
-    if (!window.confirm('Remove this task from the client?')) return;
+    if (!(await modal.confirm('Remove this task from the client?'))) return;
     await fetch(`/api/coach/tasks/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
@@ -1589,7 +1590,7 @@ function SupplementsEditor({ clientId }) {
   };
 
   const del = async (id) => {
-    if (!window.confirm('Delete this supplement?')) return;
+    if (!(await modal.confirm('Delete this supplement?'))) return;
     await fetch(`/api/coach/supplements/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
@@ -2574,7 +2575,7 @@ function NotesTab({ clientId, notes, onChange }) {
   };
 
   const deleteNote = async (id) => {
-    if (!window.confirm('Delete this note?')) return;
+    if (!(await modal.confirm('Delete this note?'))) return;
     await fetch(`/api/coach/notes/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

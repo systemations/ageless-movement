@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import VimeoEmbed from '../../components/VimeoEmbed';
 import ExerciseThumb from '../../components/ExerciseThumb';
 import ExerciseModal from './ExerciseModal';
@@ -88,7 +89,7 @@ export default function ExerciseLibrary() {
   };
 
   const deleteExercise = async (id) => {
-    if (!confirm('Delete this exercise?')) return;
+    if (!(await modal.confirm('Delete this exercise?'))) return;
     await fetch(`/api/content/exercises/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setSelected(null); fetchExercises();
   };

@@ -1,12 +1,48 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight } from '../../components/Icons';
 import { EATING_STYLES, calculateTargets } from '../../lib/nutritionTargets';
 
 export default function Profile({ onBack }) {
   const { user, token, profile, logout } = useAuth();
+
+  // GDPR self-service (SECURITY.md L5): download all my data, or delete my account.
+  const exportMyData = async () => {
+    try {
+      const res = await fetch('/api/gdpr/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'ageless-data-export.json'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { modal.notify('Could not export your data. Please try again.'); }
+  };
+
+  const deleteMyAccount = async () => {
+    const ok = await modal.confirm({
+      title: 'Delete your account?',
+      message: 'This permanently erases your account and all your data (check-ins, logs, messages). This cannot be undone.',
+      confirmLabel: 'Delete account', danger: true,
+    });
+    if (!ok) return;
+    const password = await modal.prompt({ title: 'Confirm deletion', message: 'Enter your password to permanently delete your account.', password: true });
+    if (!password) return;
+    try {
+      const res = await fetch('/api/gdpr/me', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { modal.notify(d.error || 'Could not delete account.'); return; }
+      logout();
+    } catch { modal.notify('Could not delete account. Please try again.'); }
+  };
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [appearance, setAppearance] = useState(theme);
@@ -62,7 +98,7 @@ export default function Profile({ onBack }) {
       setProfileImage(url);
     } catch (err) {
       console.error('Photo upload error:', err);
-      alert('Failed to upload photo');
+      modal.notify('Failed to upload photo');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -435,7 +471,7 @@ export default function Profile({ onBack }) {
       <div className="card" style={{ marginBottom: 12 }}>
         {[
           { icon: '⭐', label: 'Rate App', action: () => setRatingModal({ rating: 0, message: '', submitting: false, submitted: false }) },
-          { icon: '🎁', label: 'Tell a Friend', action: () => { if (navigator.share) navigator.share({ title: 'Ageless Movement', text: 'Check out this mobility coaching app!', url: window.location.origin }); else alert('Share this link: ' + window.location.origin); } },
+          { icon: '🎁', label: 'Tell a Friend', action: () => { if (navigator.share) navigator.share({ title: 'Ageless Movement', text: 'Check out this mobility coaching app!', url: window.location.origin }); else modal.notify('Share this link: ' + window.location.origin); } },
         ].map(({ icon, label, action }, i) => (
           <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -481,6 +517,23 @@ export default function Profile({ onBack }) {
         }}>
           <span style={{ fontSize: 18 }}>↩️</span>
           Logout
+        </button>
+      </div>
+
+      {/* Privacy & data (GDPR) */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <button onClick={exportMyData} style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', width: '100%',
+          background: 'none', border: 'none', borderBottom: '1px solid var(--divider)',
+          color: 'var(--text-primary)', fontSize: 15, fontWeight: 500, cursor: 'pointer',
+        }}>
+          <span style={{ fontSize: 18 }}>⬇️</span> Export my data
+        </button>
+        <button onClick={deleteMyAccount} style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', width: '100%',
+          background: 'none', border: 'none', color: '#FF453A', fontSize: 15, fontWeight: 500, cursor: 'pointer',
+        }}>
+          <span style={{ fontSize: 18 }}>🗑️</span> Delete my account
         </button>
       </div>
 
@@ -1161,7 +1214,7 @@ function NutritionTargetsSection({ profile, token, onSaved }) {
       onSaved?.();
     } catch (err) {
       console.error('Nutrition save error:', err);
-      alert('Failed to save. Try again.');
+      modal.notify('Failed to save. Try again.');
     } finally {
       setSaving(false);
     }

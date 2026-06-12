@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { safeUrl } from '../lib/safeUrl';
 
 // Upsell shown when a client taps a locked program. Deliberately mirrors the
 // first-login plan screen (SuggestionScreen in OnboardingQuestionnaire) so the
@@ -36,10 +37,11 @@ export default function PlansModal({ open, onClose, itemTitle }) {
   const parseFeatures = (raw) => (!raw ? [] : String(raw).split('\n').map(s => s.trim()).filter(Boolean));
 
   const act = (tier) => {
-    if (tier?.cta_url) {
+    const url = safeUrl(tier?.cta_url);
+    if (url) {
       // External checkout / booking link - opens off-platform so the purchase
       // doesn't go through an in-app purchase.
-      window.open(tier.cta_url, '_blank', 'noopener');
+      window.open(url, '_blank', 'noopener');
       return;
     }
     // Fallback when no link is configured yet: drop them into the coach inbox.

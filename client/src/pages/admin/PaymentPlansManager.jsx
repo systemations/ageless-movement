@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 
 const PLATFORM_CHIPS = [
   { value: 'all', label: 'All' },
@@ -143,7 +144,7 @@ export default function PaymentPlansManager() {
     const res = await fetch(url, { method, headers: json, body: JSON.stringify(payload) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(err.error || 'Save failed');
+      modal.notify(err.error || 'Save failed');
       setSaving(false);
       return;
     }
@@ -163,7 +164,7 @@ export default function PaymentPlansManager() {
 
   const remove = async () => {
     if (editing === 'new' || !editing) return;
-    if (!confirm(`Delete "${editing.name}"? Plans with purchases will be deactivated rather than removed.`)) return;
+    if (!(await modal.confirm(`Delete "${editing.name}"? Plans with purchases will be deactivated rather than removed.`))) return;
     await fetch(`/api/plans/admin/${editing.id}`, { method: 'DELETE', headers: auth });
     setEditing(null);
     fetchAll();

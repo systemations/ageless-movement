@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Component, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ModalProvider } from './components/Modal';
 
 // Error boundary that prevents a blank screen when a route component throws.
 // Shows the error message + a Back/Reload pair instead of dying silently.
@@ -52,6 +53,8 @@ import BottomNav from './components/BottomNav';
 import InstallPrompt from './components/InstallPrompt';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Welcome from './pages/auth/Welcome';
 // RolePicker removed - login handles coach-vs-client routing by the role
 // on the account, no need to ask the user which they are.
@@ -266,6 +269,10 @@ function AppRoutes() {
         <Route path="/welcome/role" element={<Navigate to="/onboarding" replace />} />
         <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
+        <Route path="/forgot-password" element={user ? <Navigate to={defaultRoute} replace /> : <ForgotPassword />} />
+        {/* Reset link works regardless of auth state - the token is what
+            authorises it, not a session. */}
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 
@@ -334,7 +341,9 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <FavouritesProvider>
-            <AppRoutes />
+            <ModalProvider>
+              <AppRoutes />
+            </ModalProvider>
           </FavouritesProvider>
         </AuthProvider>
       </ThemeProvider>

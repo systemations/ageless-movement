@@ -84,6 +84,8 @@ export default function Login() {
           <button type="submit" disabled={loading} style={{ ...ctaBtn, opacity: loading ? 0.55 : 1 }}>
             {loading ? 'Signing in...' : 'Sign In →'}
           </button>
+
+          <Link to="/forgot-password" style={forgotLink}>Forgot password?</Link>
         </form>
 
         <p style={newHere}>
@@ -206,6 +208,15 @@ const errorBox = {
   border: '1px solid rgba(255,59,48,0.4)',
   color: '#ff8fa0',
   fontSize: 13,
+};
+
+const forgotLink = {
+  alignSelf: 'center',
+  marginTop: 4,
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'rgba(255,255,255,0.6)',
+  textDecoration: 'none',
 };
 
 const newHere = {

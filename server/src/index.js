@@ -27,9 +27,14 @@ import goalsRoutes from './routes/goals.js';
 import paymentPlansRoutes from './routes/payment-plans.js';
 import feedbackRoutes from './routes/feedback.js';
 import myWorkoutsRoutes from './routes/my-workouts.js';
+import gdprRoutes from './routes/gdpr.js';
+import consentRoutes from './routes/consent.js';
 import { config } from './lib/config.js';
+import { fileCookieValid } from './middleware/auth.js';
+import { accessLog } from './middleware/accessLog.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { startReminderJobRunner } from './jobs/reminders.js';
+import { startBackupJob } from './jobs/backup.js';
 import { seedAssessmentLessons } from './db/seed-assessment-lessons.js';
 import { seedPaymentPlans } from './db/seed-payment-plans.js';
 import { sweepEmDashes } from './db/migrate-em-dash-sweep.js';
@@ -51,8 +56,31 @@ if (config.IS_PROD) app.set('trust proxy', 1);
 // plus hidden X-Powered-By. CSP is left off because we serve a React SPA
 // from the same origin and locking it down needs per-asset nonces; revisit
 // when we move to a strict CSP post-alpha.
+// Content-Security-Policy (SECURITY.md L7). The built SPA has zero inline
+// scripts (all are external bundles), so script-src can stay 'self' with no
+// unsafe-inline. Inline *style attributes* are used throughout the app, so
+// style-src needs 'unsafe-inline'. Images come from same-origin /uploads plus
+// external thumbnails (Vimeo, handsdan.com) → https:. Vimeo/YouTube players
+// are iframes → frame-src. This only enforces in prod, where Express serves
+// the SPA; in dev the app is served by Vite and unaffected.
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      frameSrc: ['https://player.vimeo.com', 'https://www.youtube.com', 'https://youtube.com'],
+      mediaSrc: ["'self'", 'https:', 'blob:'],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+    },
+  },
   crossOriginEmbedderPolicy: false, // Vimeo iframes break with COEP
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow image CDN usage
 }));
@@ -86,7 +114,14 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 // Served from server/data/uploads so it sits on the Render persistent
 // disk. URL path stays /uploads/* - clients and stored URLs don't change.
 const uploadsPath = path.join(__dirname, '..', 'data', 'uploads');
-app.use('/uploads', express.static(uploadsPath));
+// Gate personal uploaded media behind a valid session (SECURITY.md L1). The
+// am_file cookie is set on the first authenticated API call and rides along
+// on same-origin <img> requests, so anonymous URL access is rejected while
+// logged-in users see every image with no client changes.
+app.use('/uploads', (req, res, next) => {
+  if (fileCookieValid(req)) return next();
+  return res.status(403).json({ error: 'Forbidden' });
+}, express.static(uploadsPath));
 
 // Global API rate limiter. Caps any single user (or anonymous IP) at
 // 100 requests/minute across the whole API surface. Real human use
@@ -106,10 +141,14 @@ const apiLimiter = rateLimit({
   // collectively exhaust the bucket. Decode-without-verify is fine
   // for keying - actual trust still runs in authenticateToken.
   keyGenerator: (req, res) => {
-    const auth = req.headers.authorization || '';
-    if (auth.startsWith('Bearer ')) {
+    // Key by user id from the auth cookie (L2) or Bearer header; else by IP.
+    const cookieMatch = (req.headers.cookie || '').match(/(?:^|;\s*)am_auth=([^;]+)/);
+    const raw = cookieMatch
+      ? decodeURIComponent(cookieMatch[1])
+      : (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+    if (raw) {
       try {
-        const claims = jwt.decode(auth.slice(7));
+        const claims = jwt.decode(raw);
         if (claims && claims.id) return `u:${claims.id}`;
       } catch { /* fall through to IP */ }
     }
@@ -121,6 +160,29 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please slow down.' },
 });
 app.use('/api', apiLimiter);
+
+// Access audit log (records authenticated mutations + sensitive reads).
+app.use('/api', accessLog);
+
+// CSRF defence-in-depth (SECURITY.md L2): the auth cookie is SameSite=Lax, so
+// browsers don't attach it to cross-site state-changing requests. In prod we
+// additionally reject mutations whose Origin is present and is neither
+// same-host nor an allowed origin. Dev is exempt (open CORS for tooling).
+if (config.IS_PROD) {
+  app.use('/api', (req, res, next) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      const origin = req.headers.origin;
+      if (origin) {
+        let sameHost = false;
+        try { sameHost = new URL(origin).host === req.headers.host; } catch { /* malformed */ }
+        if (!sameHost && !config.ALLOWED_ORIGINS.includes(origin)) {
+          return res.status(403).json({ error: 'Cross-origin request blocked' });
+        }
+      }
+    }
+    next();
+  });
+}
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -144,6 +206,8 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/plans', paymentPlansRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/my-workouts', myWorkoutsRoutes);
+app.use('/api/gdpr', gdprRoutes);
+app.use('/api/consent', consentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -182,6 +246,7 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startPostSignupJobRunner();
   startReminderJobRunner();
+  startBackupJob();
   // Idempotent content seeders. Each one only writes when its target
   // rows are still empty, so this is safe to run on every start (local
   // dev + Render prod). Adds new content without touching coach edits.

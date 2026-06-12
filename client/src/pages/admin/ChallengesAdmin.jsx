@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { safeUrl } from '../../lib/safeUrl';
 
 const CATEGORY_COLORS = {
   BURN: '#FF453A', LIFT: '#FF8C00', MOVE: '#85FFBA',
@@ -450,7 +451,7 @@ function ReviewModal({ item, token, onClose, onReviewed }) {
               : isImage
                 ? <img src={item.video_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 : isLink
-                  ? <a href={item.video_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700 }}>Open evidence link ↗</a>
+                  ? <a href={safeUrl(item.video_url) || undefined} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700 }}>Open evidence link ↗</a>
                   : <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>No preview</span>}
           </div>
         ) : (

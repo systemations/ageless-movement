@@ -4,55 +4,51 @@ const AuthContext = createContext(null);
 
 const API_URL = '/api';
 
+// The real JWT now lives only in the httpOnly `am_auth` cookie (SECURITY.md L2)
+// — it is never stored in localStorage or held in JS, so an XSS can't read it.
+// We still expose a truthy `token` sentinel so the app's many `if (token)`
+// guards and `Authorization: Bearer ${token}` headers keep working unchanged;
+// the server authenticates from the cookie and ignores this value.
+const SESSION = 'cookie';
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('am_token'));
+  const [token, setToken] = useState(null); // SESSION when logged in, else null
   const [loading, setLoading] = useState(true);
 
+  // On load, establish session from the cookie via /me (cookie auto-sent).
   useEffect(() => {
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+    // One-time cleanup of the pre-L2 localStorage token (now unused).
+    try { localStorage.removeItem('am_token'); } catch { /* ignore */ }
+    bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const fetchUser = async () => {
+  const bootstrap = async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_URL}/auth/me`);
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         setProfile(data.profile);
-      } else {
-        logout();
+        setToken(SESSION);
       }
-    } catch {
-      logout();
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* logged out */ }
+    setLoading(false);
   };
 
-  // Refetch profile from the server. Used after onboarding finalize so
-  // the routing guard in App.jsx sees onboarding_complete = 1 without
-  // requiring a hard reload.
+  // Refetch profile (after onboarding finalize, etc.).
   const refreshProfile = async () => {
-    if (!token) return null;
     try {
-      const res = await fetch(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_URL}/auth/me`);
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         setProfile(data.profile);
         return data.profile;
       }
-    } catch {}
+    } catch { /* ignore */ }
     return null;
   };
 
@@ -69,20 +65,16 @@ export function AuthProvider({ children }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    localStorage.setItem('am_token', data.token);
-    // Same race as register(): if setUser lands before profile, ProtectedRoute
-    // on /home renders for one frame before being redirected to /onboarding.
-    // Fetch profile first, commit token + user + profile in a single render.
+    // The server set the am_auth cookie. Fetch the profile (cookie auth) first,
+    // then commit token + user + profile together so ProtectedRoute doesn't
+    // flash /home before redirecting an unfinished-onboarding client.
     let freshProfile = null;
     try {
-      const meRes = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${data.token}` } });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        freshProfile = me.profile;
-      }
-    } catch {}
+      const meRes = await fetch(`${API_URL}/auth/me`);
+      if (meRes.ok) freshProfile = (await meRes.json()).profile;
+    } catch { /* ignore */ }
     setProfile(freshProfile);
-    setToken(data.token);
+    setToken(SESSION);
     setUser(data.user);
     return data;
   };
@@ -95,37 +87,25 @@ export function AuthProvider({ children }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    localStorage.setItem('am_token', data.token);
     localStorage.removeItem('am_onboarding_answers');
-    // IMPORTANT: fetch the profile BEFORE flipping user, then commit
-    // both together. If user lands first, /register's route element
-    // immediately Navigates to defaultRoute (/home) because user is
-    // truthy. ProtectedRoute on /home can't redirect to /onboarding
-    // yet (it requires profile to be present), so Home flashes for a
-    // frame until profile arrives. Awaiting /me before setUser closes
-    // that race so the user goes straight from /register -> /onboarding
-    // with no flash.
     let freshProfile = null;
     try {
-      const meRes = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${data.token}` } });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        freshProfile = me.profile;
-      }
-    } catch {}
+      const meRes = await fetch(`${API_URL}/auth/me`);
+      if (meRes.ok) freshProfile = (await meRes.json()).profile;
+    } catch { /* ignore */ }
     setProfile(freshProfile);
-    setToken(data.token);
+    setToken(SESSION);
     setUser(data.user);
     return data;
   };
 
   const logout = () => {
-    localStorage.removeItem('am_token');
+    // Revoke the session + clear the cookie server-side (best-effort).
+    try { fetch(`${API_URL}/auth/logout`, { method: 'POST' }).catch(() => {}); } catch { /* ignore */ }
     setToken(null);
     setUser(null);
     setProfile(null);
-    // Clear per-session view caches (home dashboard, today) so the next
-    // login doesn't briefly flash the previous user's content.
+    // Clear per-session view caches so the next login doesn't flash old content.
     try { window.dispatchEvent(new Event('am-logout')); } catch { /* SSR/no-window */ }
   };
 

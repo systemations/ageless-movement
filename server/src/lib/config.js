@@ -48,13 +48,35 @@ function loadAllowedOrigins() {
   return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+const ALLOWED_ORIGINS = loadAllowedOrigins();
+
+// Public base URL of the SPA, used to build links inside transactional
+// emails (e.g. password reset). Email links can't lean on req.headers.origin
+// — a job-sent mail has no request, and Origin is client-controlled — so we
+// pin it from env. Dev falls back to the Vite dev server; prod falls back to
+// the first allowed origin when APP_BASE_URL isn't set explicitly.
+function loadAppBaseUrl() {
+  const raw = process.env.APP_BASE_URL;
+  if (raw) return raw.replace(/\/+$/, '');
+  if (!IS_PROD) return 'http://localhost:5173';
+  return ALLOWED_ORIGINS[0] || '';
+}
+
 export const config = {
   NODE_ENV,
   IS_PROD,
   PORT: Number(process.env.PORT) || 3001,
   JWT_SECRET: loadJwtSecret(),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-  ALLOWED_ORIGINS: loadAllowedOrigins(),
+  ALLOWED_ORIGINS,
+  // Transactional email (Resend). When RESEND_API_KEY is unset the mailer
+  // degrades to a dev fallback that logs the link instead of sending.
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  // EMAIL_FROM must be an address on a domain verified in Resend for real
+  // delivery. Defaults to Resend's shared test sender, which only delivers
+  // to the Resend account owner's own email — fine for first-run testing.
+  EMAIL_FROM: process.env.EMAIL_FROM || 'Ageless Movement <onboarding@resend.dev>',
+  APP_BASE_URL: loadAppBaseUrl(),
 };
 
 // Fields that must NEVER appear in logs. Used by request-body scrubber.

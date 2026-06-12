@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -181,7 +182,7 @@ export default function ScheduleManager() {
         body: JSON.stringify({ scheduled_date: targetDate }),
       });
     } else if (dragItem.source === 'program' && dragItem.enrollment_id) {
-      const ok = confirm(`Shift the whole ${dragItem.program_title || 'program'} by ${deltaDays} day${Math.abs(deltaDays) === 1 ? '' : 's'}? Every day in the program will move together.`);
+      const ok = await modal.confirm(`Shift the whole ${dragItem.program_title || 'program'} by ${deltaDays} day${Math.abs(deltaDays) === 1 ? '' : 's'}? Every day in the program will move together.`);
       if (!ok) { setDragItem(null); return; }
       await fetch(`/api/coach/schedules/${dragItem.enrollment_id}/shift`, {
         method: 'PATCH',

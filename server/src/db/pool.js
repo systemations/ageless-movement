@@ -720,6 +720,14 @@ const alterStatements = [
   // when the user picks a Warmup block. Extends to any training modality
   // (Tabata -> "conditioning", Mobility block -> "mobility-flow" etc).
   "ALTER TABLE exercises ADD COLUMN tags TEXT",
+  // Draft/Published lifecycle for the content library. DEFAULT 'published' so
+  // every PRE-EXISTING row is treated as live (the column is added to a
+  // populated table); new rows created via the API default to 'draft' in the
+  // route handler so coaches can build before publishing. Client-facing
+  // discovery queries filter status='published'.
+  "ALTER TABLE exercises ADD COLUMN status TEXT DEFAULT 'published'",
+  "CREATE INDEX IF NOT EXISTS idx_exercises_status ON exercises(status)",
+  "CREATE INDEX IF NOT EXISTS idx_exercises_body_part ON exercises(body_part)",
   // Supplements: section/display grouping + sort order + optional notes per supp.
   "ALTER TABLE supplements ADD COLUMN section TEXT",        // e.g. "Upon Waking", "After Breakfast"
   "ALTER TABLE supplements ADD COLUMN section_order INTEGER DEFAULT 0",
@@ -755,6 +763,63 @@ const alterStatements = [
   "ALTER TABLE programs ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE programs ADD COLUMN featured INTEGER DEFAULT 0",
   "ALTER TABLE programs ADD COLUMN intro_video_url TEXT",
+  // Draft/Published lifecycle + coach-defined category (e.g. 'Pickleball',
+  // 'AMS'). status DEFAULT 'published' backfills existing programs as live;
+  // new ones default to 'draft' in the route. See exercises note above.
+  "ALTER TABLE programs ADD COLUMN status TEXT DEFAULT 'published'",
+  "ALTER TABLE programs ADD COLUMN category TEXT",
+  "CREATE INDEX IF NOT EXISTS idx_programs_status ON programs(status)",
+  "CREATE INDEX IF NOT EXISTS idx_programs_category ON programs(category)",
+  "CREATE INDEX IF NOT EXISTS idx_workouts_status ON workouts(status)",
+  // Access audit log (SECURITY.md L6) — who touched what, for breach
+  // forensics. Records authenticated mutations + sensitive reads only.
+  `CREATE TABLE IF NOT EXISTS access_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    method TEXT,
+    path TEXT,
+    status INTEGER,
+    ip TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_access_log_user ON access_log(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC)",
+  // Server-side sessions for JWT revocation (SECURITY.md L3). The session id is
+  // carried in the JWT `sid` claim; revoking the row (logout / password change)
+  // invalidates the token immediately, before its expiry.
+  `CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_agent TEXT,
+    ip TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_used_at TEXT DEFAULT (datetime('now')),
+    revoked_at TEXT
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, revoked_at)",
+  // Versioned consent (SECURITY.md L8). consent_versions is the catalogue of
+  // Terms/Privacy versions; user_consents is the timestamped, IP-stamped record
+  // of which version a user accepted (captured at signup).
+  `CREATE TABLE IF NOT EXISTS consent_versions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    version TEXT NOT NULL,
+    summary TEXT,
+    effective_date TEXT,
+    is_current INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(kind, version)
+  )`,
+  `CREATE TABLE IF NOT EXISTS user_consents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    version TEXT NOT NULL,
+    consent_version_id INTEGER REFERENCES consent_versions(id),
+    ip TEXT,
+    consented_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_user_consents_user ON user_consents(user_id, consented_at DESC)",
   "ALTER TABLE workouts ADD COLUMN visible INTEGER DEFAULT 1",
   "ALTER TABLE workouts ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE client_profiles ADD COLUMN tier_id INTEGER DEFAULT 1",
@@ -2069,5 +2134,26 @@ const pool = {
     }
   },
 };
+
+// Online backup (SECURITY.md L9). VACUUM INTO writes a consistent copy of the
+// live DB without locking it, into data/backups/. Keeps the most recent
+// BACKUP_KEEP files. Safe to call on a schedule while the app is serving.
+const BACKUP_KEEP = 7;
+export function backupDatabase() {
+  const dir = path.join(path.dirname(dbPath), 'backups');
+  fs.mkdirSync(dir, { recursive: true });
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const dest = path.join(dir, `ageless-${ts}.db`);
+  db.exec(`VACUUM INTO '${dest.replace(/'/g, "''")}'`);
+
+  // Prune old backups, keeping the newest BACKUP_KEEP (names sort chronologically).
+  const files = fs.readdirSync(dir)
+    .filter((f) => f.startsWith('ageless-') && f.endsWith('.db'))
+    .sort();
+  for (const f of files.slice(0, Math.max(0, files.length - BACKUP_KEEP))) {
+    try { fs.rmSync(path.join(dir, f)); } catch { /* best effort */ }
+  }
+  return dest;
+}
 
 export default pool;

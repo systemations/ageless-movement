@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 
 const todayIso = () => new Date().toISOString().split('T')[0];
 const SECTION_OPTIONS = ['Upon Waking', 'After Breakfast', 'Pre-Training', 'After Lunch', 'Before Bed', 'My Supplements'];
@@ -93,7 +94,7 @@ export default function SupplementPlan() {
   };
 
   const removeMine = async (supp) => {
-    if (!window.confirm(`Remove ${supp.name}?`)) return;
+    if (!(await modal.confirm(`Remove ${supp.name}?`))) return;
     await fetch(`/api/nutrition/supplements/${supp.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

@@ -12,5 +12,8 @@
     "start": "cd server && node src/index.js",
     "seed": "cd server && node src/db/seed.js && node src/db/seed-messaging.js",
     "postinstall": "cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.0"
   }
 }

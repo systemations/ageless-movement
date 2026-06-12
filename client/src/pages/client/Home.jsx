@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import { useFavourites } from '../../context/FavouritesContext';
 import { CalendarIcon } from '../../components/Icons';
 import WorkoutThumb, { MiniThumb } from '../../components/WorkoutThumb';
@@ -351,7 +352,7 @@ export default function Home() {
       });
       if (res.status === 409) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'This workout is already scheduled for that day.');
+        modal.notify(data.error || 'This workout is already scheduled for that day.');
         return;
       }
       setShowAddPicker(false);

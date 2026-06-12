@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import { ChevronRight } from '../../components/Icons';
 import ContentManager from './ContentManager';
+import ClientDetail from './ClientDetail';
 import { parseDbDate } from '../../lib/dates';
 
 const actionIcons = {
@@ -22,6 +24,11 @@ export default function CoachMore() {
   const [showContent, setShowContent] = useState(false);
   const [activities, setActivities] = useState([]);
   const [clients, setClients] = useState([]);
+  const [clientTotal, setClientTotal] = useState(0);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [debouncedClientSearch, setDebouncedClientSearch] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
   const [inviteForm, setInviteForm] = useState({ name: '', email: '' });
   const [inviteMsg, setInviteMsg] = useState('');
   const [feedback, setFeedback] = useState([]);
@@ -41,12 +48,35 @@ export default function CoachMore() {
     } catch (err) { console.error(err); }
   };
 
-  const fetchClients = async () => {
+  // Paginated (25/page) + searchable client list. reset=true replaces the
+  // list (new search / first open); reset=false appends the next page.
+  const fetchClients = async (reset = true) => {
+    setLoadingClients(true);
     try {
-      const res = await fetch('/api/coach/clients', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { const data = await res.json(); setClients(data.clients); }
+      const offset = reset ? 0 : clients.length;
+      const qs = new URLSearchParams({ limit: '25', offset: String(offset) });
+      if (debouncedClientSearch) qs.set('search', debouncedClientSearch);
+      const res = await fetch(`/api/coach/clients?${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.clients || [];
+        setClients((prev) => (reset ? list : [...prev, ...list]));
+        setClientTotal(data.total ?? list.length);
+      }
     } catch (err) { console.error(err); }
+    setLoadingClients(false);
   };
+
+  // Debounce the search box, then (re)load page 0 whenever the clients view is
+  // open and the search term settles.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedClientSearch(clientSearch), 300);
+    return () => clearTimeout(t);
+  }, [clientSearch]);
+  useEffect(() => {
+    if (showClients) fetchClients(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showClients, debouncedClientSearch]);
 
   const inviteClient = async () => {
     if (!inviteForm.name || !inviteForm.email) return;
@@ -115,9 +145,13 @@ export default function CoachMore() {
     );
   }
 
+  // Tapping a client opens the shared mobile client detail view.
+  if (selectedClient) {
+    return <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} />;
+  }
+
   // Clients list view
   if (showClients) {
-    if (clients.length === 0) fetchClients();
     return (
       <div className="page-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -144,8 +178,15 @@ export default function CoachMore() {
           </div>
         )}
 
+        <input
+          value={clientSearch}
+          onChange={e => setClientSearch(e.target.value)}
+          placeholder="Search clients..."
+          style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--divider)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', marginBottom: 8 }}
+        />
+
         {clients.map((c) => (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--divider)' }}>
+          <div key={c.id} onClick={() => setSelectedClient(c)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--divider)', cursor: 'pointer' }}>
             <div style={{
               width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -160,6 +201,20 @@ export default function CoachMore() {
             <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{c.workouts_completed || 0} workouts</p>
           </div>
         ))}
+
+        {clients.length === 0 && !loadingClients && (
+          <p style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>No clients found</p>
+        )}
+        {clients.length < clientTotal && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+            <button onClick={() => fetchClients(false)} disabled={loadingClients} style={{
+              padding: '10px 22px', borderRadius: 20, border: '1px solid var(--divider)',
+              background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>
+              {loadingClients ? 'Loading…' : `Load more (${clientTotal - clients.length} left)`}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -214,9 +269,9 @@ export default function CoachMore() {
       <div className="card" style={{ marginTop: 12 }}>
         {[
           { label: 'Explore', desc: 'The on-demand content available for your clients', action: () => setShowContent(true) },
-          { label: 'Leads Landing Page', desc: 'The landing page shown to new users', action: () => alert('Landing page editor - coming soon') },
-          { label: 'App Launch Page', desc: 'The screen someone sees when they launch the app', action: () => alert('Launch page editor - coming soon') },
-          { label: 'About Company', desc: 'How clients see your company profile', action: () => alert('Company profile editor - coming soon') },
+          { label: 'Leads Landing Page', desc: 'The landing page shown to new users', action: () => modal.notify('Landing page editor - coming soon') },
+          { label: 'App Launch Page', desc: 'The screen someone sees when they launch the app', action: () => modal.notify('Launch page editor - coming soon') },
+          { label: 'About Company', desc: 'How clients see your company profile', action: () => modal.notify('Company profile editor - coming soon') },
         ].map(({ label, desc, action }) => (
           <div key={label} onClick={action} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',

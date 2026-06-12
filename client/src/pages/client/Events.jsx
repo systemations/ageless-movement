@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { safeUrl } from '../../lib/safeUrl';
+import { modal } from '../../components/Modal';
 
 const API = '/api';
 
@@ -34,7 +36,7 @@ async function downloadEventIcs(event, token) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (err) {
     console.error('ics download failed', err);
-    alert('Could not download calendar invite. Please try again.');
+    modal.notify('Could not download calendar invite. Please try again.');
   }
 }
 
@@ -503,7 +505,7 @@ export default function Events() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                       {evt.meeting_url && new Date(evt.scheduled_at) > new Date() && (
                         <a
-                          href={evt.meeting_url}
+                          href={safeUrl(evt.meeting_url) || undefined}
                           target="_blank"
                           rel="noreferrer"
                           style={{
@@ -586,7 +588,7 @@ function BookingCard({ booking, dim, token, onCancelled }) {
   const isUpcoming = !dim && booking.status !== 'cancelled' && new Date(booking.scheduled_at) > new Date();
 
   const cancel = async () => {
-    if (!window.confirm(`Cancel ${booking.session_title || 'this session'} with ${booking.coach_name}?`)) return;
+    if (!(await modal.confirm(`Cancel ${booking.session_title || 'this session'} with ${booking.coach_name}?`))) return;
     setCancelling(true);
     try {
       const res = await fetch(`${API}/coaches/me/bookings/${booking.id}/cancel`, {
@@ -727,7 +729,7 @@ function FollowAlongCard({ st, accent }) {
             {formatMoney(st.price_cents, st.currency)}
           </p>
           <a
-            href={hasLink ? st.meeting_url : undefined}
+            href={hasLink ? (safeUrl(st.meeting_url) || undefined) : undefined}
             target="_blank" rel="noreferrer"
             onClick={(e) => { if (!hasLink) e.preventDefault(); }}
             style={{
@@ -907,7 +909,8 @@ const hexToRgba = (hex, alpha = 1) => {
 
 // Social icon in the footer row
 const SocialIcon = ({ type, href, color }) => {
-  if (!href) return null;
+  const safeHref = safeUrl(href);
+  if (!safeHref) return null;
   const paths = {
     instagram: <><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></>,
     facebook: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>,
@@ -917,7 +920,7 @@ const SocialIcon = ({ type, href, color }) => {
   };
   return (
     <a
-      href={href}
+      href={safeHref}
       target="_blank"
       rel="noreferrer"
       style={{

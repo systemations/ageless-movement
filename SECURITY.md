@@ -57,12 +57,46 @@ unknowns.
 - `.env` gitignored. `.env.example` documents every env the server reads.
 - `npm audit` clean on server + client (0 vulnerabilities) at commit time.
 
+## Security status tracker
+
+At-a-glance status of every known security item. Update the status here when
+you ship a fix, and log the change in [CHANGELOG.md](CHANGELOG.md).
+Legend: ✅ Done · 🟡 In progress · ⬜ Open (deferred / not started).
+
+| Item | Area | Status | Notes |
+|------|------|--------|-------|
+| L1 — Public upload URLs | Uploads | ✅ Done | 2026-06-12 — `/uploads` gated behind a session cookie (`am_file`); anonymous URL fetches now 403. Per-user authz still open (any logged-in user with a URL can fetch) |
+| L2 — JWT in `localStorage` | Auth | ✅ Done | 2026-06-13 — real JWT moved to an httpOnly + SameSite=Lax `am_auth` cookie ([auth.js](server/src/middleware/auth.js)); the SPA holds only a sentinel ([AuthContext.jsx](client/src/context/AuthContext.jsx)), so XSS can't read the token. CSRF via SameSite=Lax + prod Origin check. Verified |
+| L3 — JWT revocation | Auth | ✅ Done | 2026-06-12 — server-side `sessions` table (id in JWT `sid`); logout + password-change/reset revoke instantly; backward-compatible with pre-feature tokens. Verified |
+| L4 — SQLite not encrypted at rest | Data | ⬜ Open | Postgres migration planned |
+| L5 — Account deletion / export | GDPR | ✅ Done | 2026-06-12 — self-service GDPR export + password-gated account deletion ([gdpr.js](server/src/routes/gdpr.js)); UI on client Profile. Verified end-to-end |
+| L6 — Data-access audit log | Observability | ✅ Done | 2026-06-12 — `access_log` captures authed mutations + sensitive reads ([accessLog.js](server/src/middleware/accessLog.js)); coach viewer at `GET /api/coach/audit` |
+| L7 — Content-Security-Policy | Headers | ✅ Done | 2026-06-12 — strict CSP via helmet (`script-src 'self'`, no inline scripts; `style-src` allows inline attrs). Header + asset serving verified; **browser smoke-test recommended before prod deploy** |
+| L8 — Consent versioning | GDPR | 🟡 In progress | 2026-06-13 — versioned `consent_versions` + timestamped/IP-stamped `user_consents` captured at signup ([consent.js](server/src/routes/consent.js)). Infra done; **legal-reviewed copy + re-consent-on-version-change still required** before EU end-users |
+| L9 — Automated backups | Ops | ✅ Done | 2026-06-13 — daily online backup (`VACUUM INTO`) to `data/backups/` with 7-file retention ([backup.js](server/src/jobs/backup.js)). Pair with a Render disk snapshot for off-box copies |
+| L10 — Client routes taking body `user_id` | Authz | ✅ Done | 2026-06-12 — full sweep: body `user_id` cases guarded; every client mutation scopes to `req.user.id` / verifies ownership; no client IDOR found |
+| F1 — Stored XSS via unsanitized rich-text | XSS | ✅ Done | Fixed 2026-06-10 — DOMPurify sanitises all 6 rich-text sinks ([sanitizeHtml.js](client/src/lib/sanitizeHtml.js)) |
+| F2 — `javascript:` URLs in coach links | XSS | ✅ Done | Fixed 2026-06-12 — shared `safeUrl()` allowlist (http/https/mailto/tel/relative) on every href + window.open sink ([safeUrl.js](client/src/lib/safeUrl.js)) |
+| F3 — Client `npm audit` | Deps | ✅ Done | 2026-06-13 — **0 vulnerabilities**: react-router open-redirect fixed (6.30.4); removed the unused `vite-plugin-pwa` and upgraded to vite 8.0.16 / @vitejs/plugin-react 6 (clears the esbuild/vite chain). Build + dev server + CSP-compat verified |
+
+F-items (findings from the 2026-06-10 internal review) are detailed in
+[CHANGELOG.md](CHANGELOG.md#open-findings-from-the-2026-06-10-review).
+
 ## Known V1 limitations (do not treat as finds)
 
 These are real gaps we've decided to defer past internal red-team. Flagging
 them here so reviewers focus on deeper issues rather than these.
 
 ### 1. Uploaded files are publicly accessible by URL
+✅ **Addressed (2026-06-12):** `/uploads/*` is now gated by a `requireFileCookie`
+check in [index.js](server/src/index.js). A short httpOnly `am_file` cookie
+(carrying the user's JWT) is set on the first authenticated API call
+([auth.js](server/src/middleware/auth.js)) and is sent automatically on
+same-origin `<img>` requests, so anonymous fetches get a 403 with no client or
+DB changes. Residual: no per-user authorization yet — a *logged-in* user who
+obtains another user's URL can still fetch it (UUID filenames remain the only
+barrier there). The original note below is kept for context.
+
 `/uploads/<uuid>.{jpg|mp4|...}` is served by `express.static` with no auth
 check. UUID filenames provide security-through-obscurity — nobody's
 guessing `f47ac10b-58cc-4372-a567-0e02b2c3d479.jpg` — but anyone who
@@ -79,9 +113,13 @@ file without a token.
 
 ### 2. JWT stored in `localStorage`
 Tokens live at `localStorage['am_token']`. Vulnerable to token theft via
-XSS. React's default escaping means no currently-known vector, and the
-codebase has zero `dangerouslySetInnerHTML` — but any third-party script
-(future analytics SDK, marketing pixel) lowers the bar.
+XSS. ⚠️ **Correction (2026-06-10):** an earlier version of this note claimed
+"the codebase has zero `dangerouslySetInnerHTML`" — that is **false**. There
+are 7 unsanitized `dangerouslySetInnerHTML` sinks rendering coach-authored
+rich text (finding **F1**), plus unvalidated URL schemes in coach links
+(**F2**). So a real XSS → token-theft path exists today (coach-authored,
+reaching all clients). The localStorage deferral below should be
+re-evaluated in light of this, and F1/F2 fixed regardless.
 
 - **Planned fix:** migrate to httpOnly+secure+sameSite=lax cookies with a
   CSRF token for state-changing requests. Post red-team.

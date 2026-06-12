@@ -1,5 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { modal } from './Modal';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -94,9 +95,9 @@ function Toolbar({ editor, uploadEndpoint, authToken }) {
   const [colorOpen, setColorOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
 
-  const insertLink = () => {
+  const insertLink = async () => {
     const prev = editor.getAttributes('link').href;
-    const url = window.prompt('URL', prev || 'https://');
+    const url = await modal.prompt({ message: 'Link URL', defaultValue: prev || 'https://' });
     if (url === null) return; // cancelled
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -123,7 +124,7 @@ function Toolbar({ editor, uploadEndpoint, authToken }) {
       editor.chain().focus().setImage({ src: data.url, alt: file.name }).run();
     } catch (err) {
       console.error('Image upload error:', err);
-      alert('Image upload failed.');
+      modal.notify('Image upload failed.');
     } finally {
       setUploading(false);
     }

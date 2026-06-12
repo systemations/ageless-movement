@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import { BookmarkIcon, SearchIcon } from '../../components/Icons';
 import FavButton from '../../components/FavButton';
 
@@ -68,7 +69,7 @@ export default function RecipeBrowser({ onBack, onLocked, initialSearch = '' }) 
         serving_size: `${addQty} serving`,
       }),
     });
-    alert('Added to diary!');
+    modal.notify('Added to diary!');
   };
 
   // ─── Recipe Detail View ─────────────────────────────

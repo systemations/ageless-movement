@@ -704,7 +704,7 @@ function TierCard({ badge, badgeColor, highlight, title, price, description, fea
         </p>
       )}
       {features && features.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {features.map((f, i) => (
             <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, lineHeight: 1.4, textAlign: 'left' }}>
               <span style={{ color: 'var(--accent-mint)', fontWeight: 800, flexShrink: 0, marginTop: 1 }}>✓</span>
@@ -717,8 +717,8 @@ function TierCard({ badge, badgeColor, highlight, title, price, description, fea
         onClick={onClick}
         disabled={loading}
         style={{
-          marginTop: 'auto',
-          width: '100%', padding: '12px 14px', borderRadius: 10, border: 'none',
+          marginTop: 20,
+          width: '100%', padding: '13px 14px', borderRadius: 10, border: 'none',
           background: highlight ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
           color: highlight ? '#fff' : 'var(--text-primary)',
           fontSize: 13, fontWeight: 800,
@@ -958,8 +958,8 @@ const metricField = {
 const tierGrid = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 14,
-  marginTop: 18,
+  gap: 20,
+  marginTop: 20,
 };
 
 const tierCard = {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import VimeoEmbed from '../../components/VimeoEmbed';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import '../../components/rich-text.css';
 
 // Client-facing course view. Fetches the full course (modules + lessons +
@@ -176,7 +177,7 @@ export default function CourseDetail({ course, onBack }) {
           <div
             className="lesson-description"
             style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}
-            dangerouslySetInnerHTML={{ __html: full.description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(full.description) }}
           />
         )}
 
@@ -1000,7 +1001,7 @@ function QuizPlayer({ quiz, description, flatLessons, onPickLesson, onBack, less
         <div
           className="lesson-description"
           style={{ marginBottom: 18 }}
-          dangerouslySetInnerHTML={{ __html: description }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(description) }}
         />
       )}
 
@@ -1267,16 +1268,16 @@ function LessonDescription({ html, lessonId, interactive, onLogged }) {
       <div
         className="lesson-description"
         style={{ marginBottom: 18 }}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
       />
     );
   }
   const [before, after] = html.split(TOKEN);
   return (
     <div className="lesson-description" style={{ marginBottom: 18 }}>
-      {before && <div dangerouslySetInnerHTML={{ __html: before }} />}
+      {before && <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(before) }} />}
       <CoachesRoster />
-      {after && <div dangerouslySetInnerHTML={{ __html: after }} />}
+      {after && <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(after) }} />}
     </div>
   );
 }
@@ -1444,7 +1445,7 @@ function InteractiveAssessmentDescription({ html, lessonId, onLogged }) {
       <div
         ref={containerRef}
         className="lesson-description"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
       />
 
       {/* Confirm + history block. Confirm/Clear buttons sit on top of

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 import MealScheduleBuilder from './MealScheduleBuilder';
 
@@ -211,7 +212,7 @@ function ScheduleEditor({ schedule, token, onClose, onSaved }) {
   };
 
   const remove = async () => {
-    if (!schedule || !confirm(`Delete "${schedule.title}"? This unassigns it from any clients using it.`)) return;
+    if (!schedule || !(await modal.confirm(`Delete "${schedule.title}"? This unassigns it from any clients using it.`))) return;
     await fetch(`/api/nutrition/meal-schedules/${schedule.id}`, { method: 'DELETE', headers });
     onSaved();
     onClose();

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 // Admin manager for MEAL PLANS - one reusable structured day in the three-tier
@@ -179,7 +180,7 @@ function MealPlanEditor({ plan, token, onClose, onSaved }) {
   };
 
   const remove = async () => {
-    if (!plan || !confirm(`Delete "${plan.title}"? This cannot be undone.`)) return;
+    if (!plan || !(await modal.confirm(`Delete "${plan.title}"? This cannot be undone.`))) return;
     await fetch(`/api/nutrition/meal-plans/${plan.id}`, { method: 'DELETE', headers });
     onSaved();
     onClose();

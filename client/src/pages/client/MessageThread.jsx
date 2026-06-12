@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { safeUrl } from '../../lib/safeUrl';
 import { useAuth } from '../../context/AuthContext';
 
 // Tier visuals shared with the Clients list + Messages inbox so the user
@@ -20,11 +21,14 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
   const [otherLastReadAt, setOtherLastReadAt] = useState(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [menuMsgId, setMenuMsgId] = useState(null);
+  const [menuAnchor, setMenuAnchor] = useState(null); // { top, left } viewport coords for the open options menu
   const [reactorsFor, setReactorsFor] = useState(null); // { messageId, emoji } - tapped chip → show names
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
   const pollRef = useRef(null);
+  const fileInputRef = useRef(null);
   const initialScrollDoneRef = useRef(false);
 
   useEffect(() => {
@@ -106,6 +110,18 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
   };
 
   const QUICK_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '👏'];
+  const MENU_W = 244; // fixed options-menu width, used to clamp it within the viewport
+
+  // Open the options menu anchored just below the tapped ⋯ button, clamped so
+  // it never spills off either screen edge (long own-messages push the dots
+  // close to the right edge; short ones keep them there too).
+  const openMenu = (messageId, btn) => {
+    const r = btn.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - MENU_W - 8);
+    const top = Math.min(r.bottom + 4, window.innerHeight - 160);
+    setMenuAnchor({ top, left });
+    setMenuMsgId(messageId);
+  };
 
   const toggleReaction = async (messageId, emoji) => {
     try {
@@ -172,6 +188,34 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
       fetchMessages();
     } catch (err) { console.error(err); }
     setSending(false);
+  };
+
+  // Attach a photo: upload to /api/upload, then post it as an image message
+  // (with whatever caption is already typed, if any).
+  const handleAttach = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so the same file can be re-picked later
+    if (!file || uploading || sending) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!up.ok) throw new Error('Upload failed');
+      const { url } = await up.json();
+      await fetch(`/api/messages/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: input.trim(), attachment_url: url, message_type: 'image' }),
+      });
+      setInput('');
+      fetchMessages();
+    } catch (err) { console.error(err); }
+    setUploading(false);
   };
 
   const formatTime = (dateStr) => {
@@ -309,7 +353,21 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
                       {item.sender_role === 'coach' && <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.8 }}>COACH</span>}
                     </p>
                   )}
-                  <p style={{ fontSize: 14, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{item.content}</p>
+                  {item.attachment_url && (
+                    <img
+                      src={item.attachment_url}
+                      alt="attachment"
+                      loading="lazy"
+                      onClick={() => window.open(item.attachment_url, '_blank', 'noopener')}
+                      style={{
+                        display: 'block', maxWidth: '100%', maxHeight: 260, borderRadius: 10,
+                        marginBottom: item.content ? 6 : 2, cursor: 'pointer',
+                      }}
+                    />
+                  )}
+                  {item.content && (
+                    <p style={{ fontSize: 14, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{item.content}</p>
+                  )}
                   <p style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right' }}>{formatTime(item.created_at)}</p>
                 </div>
                 {/* Reaction chips under the bubble. Tap a chip to toggle your
@@ -350,7 +408,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
                             <div
                               onClick={(e) => e.stopPropagation()}
                               style={{
-                                position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+                                position: 'absolute', top: 'calc(100% + 4px)', [isMe ? 'right' : 'left']: 0,
                                 background: 'var(--bg-card)', border: '1px solid var(--divider)',
                                 borderRadius: 8, padding: '6px 10px', zIndex: 10,
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)', minWidth: 140,
@@ -382,7 +440,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
                 )}
                 {/* Options menu - reactions for everyone; mark-unread only on others' messages */}
                 <button
-                  onClick={(e) => { e.stopPropagation(); setMenuMsgId(menuOpen ? null : item.id); }}
+                  onClick={(e) => { e.stopPropagation(); menuOpen ? setMenuMsgId(null) : openMenu(item.id, e.currentTarget); }}
                   title="Message options"
                   style={{
                     position: 'absolute', top: 2, [isMe ? 'left' : 'right']: -28,
@@ -396,10 +454,11 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
                   <div
                     onClick={(e) => e.stopPropagation()}
                     style={{
-                      position: 'absolute', top: 28, [isMe ? 'left' : 'right']: -8,
+                      position: 'fixed', top: menuAnchor?.top ?? 0, left: menuAnchor?.left ?? 0,
+                      width: MENU_W,
                       background: 'var(--bg-card)', border: '1px solid var(--divider)',
-                      borderRadius: 10, padding: 6, zIndex: 10,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)', minWidth: 200,
+                      borderRadius: 10, padding: 6, zIndex: 50,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                     }}
                   >
                     <div style={{ display: 'flex', gap: 2, marginBottom: !isMe ? 4 : 0 }}>
@@ -498,7 +557,7 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
               </button>
             ) : (
               <a
-                href={convo.cta_url}
+                href={safeUrl(convo.cta_url) || undefined}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -521,12 +580,26 @@ export default function MessageThread({ conversationId, title, subtitle, onBack,
           borderTop: '1px solid var(--divider)',
           flexShrink: 0, background: 'var(--bg-primary)',
         }}>
-          <button style={{
-            width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-card)', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            title="Attach a photo"
+            style={{
+              width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-card)', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              cursor: uploading ? 'default' : 'pointer', opacity: uploading ? 0.6 : 1,
+            }}>
+            {uploading
+              ? <span style={{ fontSize: 16 }}>⏳</span>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAttach}
+            style={{ display: 'none' }}
+          />
           <input
             value={input}
             onChange={e => setInput(e.target.value)}

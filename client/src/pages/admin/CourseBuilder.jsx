@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 import RichTextEditor from '../../components/RichTextEditor';
 
@@ -65,7 +66,7 @@ export default function CourseBuilder({ courseId, onBack }) {
   };
 
   const deleteModule = async (moduleId) => {
-    if (!confirm('Delete this module and all its lessons?')) return;
+    if (!(await modal.confirm('Delete this module and all its lessons?'))) return;
     await fetch(`/api/content/course-modules/${moduleId}`, { method: 'DELETE', headers });
     if (selectedLesson?.module_id === moduleId) setSelectedLesson(null);
     fetchCourse();
@@ -94,7 +95,7 @@ export default function CourseBuilder({ courseId, onBack }) {
   };
 
   const deleteLesson = async (lessonId) => {
-    if (!confirm('Delete this lesson?')) return;
+    if (!(await modal.confirm('Delete this lesson?'))) return;
     await fetch(`/api/content/course-lessons/${lessonId}`, { method: 'DELETE', headers });
     if (selectedLesson?.id === lessonId) setSelectedLesson(null);
     fetchCourse();
@@ -637,8 +638,8 @@ function QuizEditor({ quiz, onChange }) {
       }],
     });
   };
-  const removeQuestion = (idx) => {
-    if (!confirm('Remove this question?')) return;
+  const removeQuestion = async (idx) => {
+    if (!(await modal.confirm('Remove this question?'))) return;
     set({ questions: quiz.questions.filter((_, i) => i !== idx) });
   };
   const moveQuestion = (idx, dir) => {
@@ -670,7 +671,7 @@ function QuizEditor({ quiz, onChange }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <p style={{ fontSize: 14, fontWeight: 800 }}>📝 Quiz</p>
         <button
-          onClick={() => { if (confirm('Remove the quiz from this lesson?')) onChange(null); }}
+          onClick={async () => { if (await modal.confirm('Remove the quiz from this lesson?')) onChange(null); }}
           style={{ background: 'none', border: 'none', color: '#FF3B30', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
         >Remove quiz</button>
       </div>

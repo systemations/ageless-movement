@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ExerciseThumb, { getExerciseLabel } from '../../components/ExerciseThumb';
 import ImageUpload from '../../components/ImageUpload';
 import FollowAlongEditor from './FollowAlongEditor';
@@ -272,7 +273,7 @@ export default function WorkoutBuilder({
         if (onExitPersonalise) onExitPersonalise();
       } catch (err) {
         console.error('savePersonalised error:', err);
-        alert('Failed to save personalised version. Check console for details.');
+        modal.notify('Failed to save personalised version. Check console for details.');
       } finally {
         setSaving(false);
       }
@@ -367,7 +368,7 @@ export default function WorkoutBuilder({
       }
     } catch (err) {
       console.error('saveWorkout error:', err);
-      alert('Failed to save workout. Check console for details.');
+      modal.notify('Failed to save workout. Check console for details.');
     } finally {
       setSaving(false);
     }
@@ -378,7 +379,7 @@ export default function WorkoutBuilder({
   const revertOverride = async () => {
     if (!isPersonalising || !selectedWorkout || saving) return;
     const name = overrideClientName?.split(' ')[0] || 'this client';
-    if (!confirm(`Remove the personalised version of "${selectedWorkout.title}"? ${name} will revert to the template.`)) return;
+    if (!(await modal.confirm(`Remove the personalised version of "${selectedWorkout.title}"? ${name} will revert to the template.`))) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/coach/clients/${overrideClientId}/workouts/${selectedWorkout.id}/override`, {
@@ -389,7 +390,7 @@ export default function WorkoutBuilder({
       if (onExitPersonalise) onExitPersonalise();
     } catch (err) {
       console.error('revertOverride error:', err);
-      alert('Failed to revert.');
+      modal.notify('Failed to revert.');
     } finally {
       setSaving(false);
     }
@@ -430,7 +431,7 @@ export default function WorkoutBuilder({
       setDriftPrompt(null);
     } catch (e) {
       console.error('Drift apply failed:', e);
-      alert('Failed to apply changes to selected clients.');
+      modal.notify('Failed to apply changes to selected clients.');
       setDriftPrompt(prev => prev ? { ...prev, submitting: false } : prev);
     }
   };
@@ -448,17 +449,17 @@ export default function WorkoutBuilder({
     setExerciseSearch('');
   };
 
-  const removeExerciseFromBlock = (blockId, exIdx) => {
+  const removeExerciseFromBlock = async (blockId, exIdx) => {
     const block = blocks.find(b => b.id === blockId);
     const exName = block?.exercises?.[exIdx]?.name || 'this exercise';
-    if (!confirm(`Remove "${exName}" from this block?`)) return;
+    if (!(await modal.confirm(`Remove "${exName}" from this block?`))) return;
     setBlocks(blocks.map(b => b.id === blockId ? { ...b, exercises: b.exercises.filter((_, i) => i !== exIdx) } : b));
   };
 
-  const removeBlock = (blockId) => {
+  const removeBlock = async (blockId) => {
     const block = blocks.find(b => b.id === blockId);
     const exCount = block?.exercises?.length || 0;
-    if (!confirm(`Delete this block${exCount ? ` and its ${exCount} exercise${exCount > 1 ? 's' : ''}` : ''}?`)) return;
+    if (!(await modal.confirm(`Delete this block${exCount ? ` and its ${exCount} exercise${exCount > 1 ? 's' : ''}` : ''}?`))) return;
     setBlocks(blocks.filter(b => b.id !== blockId));
   };
 

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole, requireCoachOwnsClient, requireCoachOwnsClientBody, checkCoachOwnsClient, parseUserAgent } from '../middleware/auth.js';
 import { isBetaMode, setSetting } from '../lib/settings.js';
+import { config } from '../lib/config.js';
+import { sendEmail, passwordResetEmail } from '../lib/mailer.js';
 
 const router = Router();
 
@@ -14,6 +16,25 @@ router.get('/clients', authenticateToken, requireRole('coach'), async (req, res)
     let statusSql = "AND COALESCE(cp.status, 'active') != 'archived'";
     if (statusFilter === 'archived') statusSql = "AND cp.status = 'archived'";
     else if (statusFilter === 'all') statusSql = '';
+
+    // Optional name/email search. Pagination is opt-in: only when ?limit is
+    // present do we LIMIT/OFFSET + return a total, so callers that expect the
+    // full list (e.g. the admin client manager) keep getting everything.
+    const search = req.query.search;
+    let searchSql = '';
+    const searchParams = [];
+    if (search) { searchSql = 'AND (u.name LIKE ? OR u.email LIKE ?)'; searchParams.push(`%${search}%`, `%${search}%`); }
+
+    const hasLimit = typeof req.query.limit !== 'undefined';
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const total = hasLimit
+      ? pool.query(
+          `SELECT COUNT(*) AS c FROM users u LEFT JOIN client_profiles cp ON cp.user_id = u.id WHERE u.role = 'client' ${statusSql} ${searchSql}`,
+          searchParams,
+        ).rows[0].c
+      : undefined;
 
     const clients = pool.query(`
       SELECT u.id, u.name, u.email, u.avatar_url, u.created_at,
@@ -30,9 +51,10 @@ router.get('/clients', authenticateToken, requireRole('coach'), async (req, res)
       LEFT JOIN client_profiles cp ON cp.user_id = u.id
       LEFT JOIN tiers t ON t.id = cp.tier_id
       LEFT JOIN onboarding_answers oa ON oa.user_id = u.id
-      WHERE u.role = 'client' ${statusSql}
+      WHERE u.role = 'client' ${statusSql} ${searchSql}
       ORDER BY u.name
-    `);
+      ${hasLimit ? 'LIMIT ? OFFSET ?' : ''}
+    `, hasLimit ? [...searchParams, limit, offset] : searchParams);
     // Parse equipment JSON for easy consumption client-side
     const rows = clients.rows.map((c) => {
       let equipment = null;
@@ -41,9 +63,29 @@ router.get('/clients', authenticateToken, requireRole('coach'), async (req, res)
       }
       return { ...c, equipment };
     });
-    res.json({ clients: rows });
+    res.json(hasLimit ? { clients: rows, total } : { clients: rows });
   } catch (err) {
     console.error('Clients error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Access audit log viewer (SECURITY.md L6). Optionally filter by ?user_id.
+router.get('/audit', authenticateToken, requireRole('coach'), (req, res) => {
+  try {
+    const userId = req.query.user_id ? Number(req.query.user_id) : null;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 500);
+    const where = userId ? 'WHERE a.user_id = ?' : '';
+    const params = userId ? [userId, limit] : [limit];
+    const entries = pool.query(
+      `SELECT a.id, a.user_id, u.name AS user_name, a.method, a.path, a.status, a.ip, a.created_at
+       FROM access_log a LEFT JOIN users u ON u.id = a.user_id
+       ${where} ORDER BY a.created_at DESC LIMIT ?`,
+      params,
+    ).rows;
+    res.json({ entries });
+  } catch (err) {
+    console.error('Audit log error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -824,8 +866,33 @@ router.get('/clients/:id/profile', authenticateToken, requireRole('coach'), requ
       };
     });
 
+    // Drill-down datasets for the mobile client Profile tab. Bounded by LIMIT
+    // so this stays cheap even for long-tenured clients.
+    const exerciseHistory = pool.query(`
+      SELECT e.name AS exercise_name, el.set_number, el.reps, el.weight, wl.date
+      FROM exercise_logs el
+      JOIN workout_logs wl ON wl.id = el.workout_log_id
+      LEFT JOIN exercises e ON e.id = el.exercise_id
+      WHERE wl.user_id = ?
+      ORDER BY wl.date DESC, el.id DESC
+      LIMIT 100
+    `, [id]).rows;
+
+    const habitEntries = pool.query(
+      'SELECT date, sleep_hours, alcohol_units, meditation_minutes, notes FROM habit_entries WHERE user_id = ? ORDER BY date DESC LIMIT 60',
+      [id],
+    ).rows;
+
+    const activity = pool.query(
+      'SELECT action_type, description, created_at FROM activity_log WHERE user_id = ? ORDER BY created_at DESC LIMIT 100',
+      [id],
+    ).rows;
+
     res.json({
       client,
+      exerciseHistory,
+      habitEntries,
+      activity,
       tags,
       checkins,
       goals,
@@ -1254,7 +1321,7 @@ router.patch('/clients/:id/coach-prefs', authenticateToken, requireRole('coach')
 
 import crypto from 'crypto';
 
-router.post('/clients/:id/reset-password', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), (req, res) => {
+router.post('/clients/:id/reset-password', authenticateToken, requireRole('coach'), requireCoachOwnsClient('id'), async (req, res) => {
   try {
     const client = pool.query(
       "SELECT id, email, name FROM users WHERE id = ? AND role = 'client'",
@@ -1279,16 +1346,26 @@ router.post('/clients/:id/reset-password', authenticateToken, requireRole('coach
       [client.id, tokenHash, expiresAt, req.user.id],
     );
 
-    // Until SMTP is wired, the URL is returned to the coach so they can forward it
-    // to the client themselves. See project_pre_launch_checklist.md.
-    const origin = req.headers.origin || `http://localhost:${process.env.PORT || 3001}`;
-    const url = `${origin}/reset-password?token=${token}`;
+    // Email the reset link to the client via Resend. The URL is still returned
+    // to the coach as a fallback (so they can forward it manually if delivery
+    // fails or the mailer isn't configured in this environment).
+    const url = `${config.APP_BASE_URL}/reset-password?token=${token}`;
+    let emailSent = false;
+    try {
+      const { subject, html, text } = passwordResetEmail({ name: client.name, resetUrl: url });
+      const result = await sendEmail({ to: client.email, subject, html, text });
+      emailSent = !!result.delivered;
+    } catch (e) {
+      console.error('Coach reset-password email failed:', e);
+    }
     res.json({
       ok: true,
       reset_url: url,
       expires_at: expiresAt,
-      email_sent: false,
-      note: 'SMTP not configured yet - copy this URL and send it to the client manually.',
+      email_sent: emailSent,
+      note: emailSent
+        ? `Reset link emailed to ${client.email}.`
+        : 'Email not sent (mailer not configured or delivery failed) — copy this URL and send it to the client manually.',
     });
   } catch (err) {
     console.error('Reset password error:', err);

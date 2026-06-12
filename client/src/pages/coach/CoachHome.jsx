@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { parseDbDate } from '../../lib/dates';
+import ClientDetail from './ClientDetail';
 
 // Coach mobile Home dashboard. Mirrors the desktop admin CoachHome but
 // mobile-sized: a greeting, 4 KPI tiles in a 2x2 grid, then priority
@@ -12,6 +13,7 @@ export default function CoachHome() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
 
   useEffect(() => {
     fetch('/api/coach/home', { headers: { Authorization: `Bearer ${token}` } })
@@ -34,6 +36,12 @@ export default function CoachHome() {
         <div className="spinner" />
       </div>
     );
+  }
+
+  // Tapping a client (Needs attention / inbox) opens the shared mobile client
+  // detail view - same component CoachCheckins uses.
+  if (selectedClient) {
+    return <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} />;
   }
 
   // Users stored as "Coach Dan" should render as "Dan" - strip the
@@ -107,10 +115,11 @@ export default function CoachHome() {
           data.at_risk.slice(0, 4).map((c) => (
             <div
               key={c.id}
+              onClick={() => setSelectedClient(c)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                 background: 'var(--bg-card)', borderRadius: 10, marginBottom: 6,
-                borderLeft: '3px solid #FF5E5E',
+                borderLeft: '3px solid #FF5E5E', cursor: 'pointer',
               }}
             >
               <Avatar name={c.name} photo={c.photo_url} size={32} />

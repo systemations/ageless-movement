@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 
 const KIND_OPTIONS = [
   { value: 'announcement', label: 'Announcement', desc: 'General news / update' },
@@ -104,7 +105,7 @@ export default function NotificationManager() {
 
   const remove = async () => {
     if (editing === 'new' || !editing) return;
-    if (!confirm('Delete this notification?')) return;
+    if (!(await modal.confirm('Delete this notification?'))) return;
     await fetch(`/api/notifications/${editing.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

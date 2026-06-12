@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 import CourseBuilder from './CourseBuilder';
 import WorkoutThumb from '../../components/WorkoutThumb';
@@ -150,7 +151,7 @@ function SectionsTab({ sections, setSections, tiers, programs, workouts, courses
   };
 
   const deleteSection = async (id) => {
-    if (!confirm('Delete this section?')) return;
+    if (!(await modal.confirm('Delete this section?'))) return;
     await fetch(`/api/content/explore-sections/${id}`, { method: 'DELETE', headers });
     onRefresh();
   };
@@ -666,7 +667,7 @@ function CoursesTab({ courses, tiers, headers, onRefresh }) {
   };
 
   const deleteCourse = async (id) => {
-    if (!confirm('Delete this course and all its modules/lessons?')) return;
+    if (!(await modal.confirm('Delete this course and all its modules/lessons?'))) return;
     await fetch(`/api/content/courses/${id}`, { method: 'DELETE', headers });
     onRefresh();
   };
@@ -778,7 +779,7 @@ function TiersTab({ tiers, headers, onRefresh }) {
   };
 
   const deleteTier = async (id) => {
-    if (!confirm('Delete this tier? Content assigned to it will need reassigning.')) return;
+    if (!(await modal.confirm('Delete this tier? Content assigned to it will need reassigning.'))) return;
     await fetch(`/api/content/tiers/${id}`, { method: 'DELETE', headers });
     onRefresh();
   };

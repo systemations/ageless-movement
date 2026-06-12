@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { safeUrl } from '../lib/safeUrl';
 
 // Bottom-sheet style popup for an in-app notification. Three shapes:
 // - daily_checkin: form with sleep / alcohol / meditation / notes + Skip/Submit
@@ -25,9 +26,8 @@ export default function NotificationPopup({ notification, onDismiss, onCompleteC
   };
 
   const handleCta = () => {
-    if (notification.cta_url) {
-      window.open(notification.cta_url, '_blank', 'noopener');
-    }
+    const url = safeUrl(notification.cta_url);
+    if (url) window.open(url, '_blank', 'noopener');
     onDismiss();
   };
 

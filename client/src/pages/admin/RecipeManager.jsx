@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 const categoryOptions = ['Breakfast', 'Smoothies', 'Mains', 'Salads', 'Soups', 'Snacks'];
@@ -81,7 +82,7 @@ export default function RecipeManager() {
   };
 
   const deleteRecipe = async (id) => {
-    if (!confirm('Delete this recipe?')) return;
+    if (!(await modal.confirm('Delete this recipe?'))) return;
     await fetch(`/api/nutrition/recipes/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

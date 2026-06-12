@@ -221,11 +221,11 @@ router.get('/search', authenticateToken, (req, res) => {
     }
     const like = `%${q}%`;
     const workouts = pool.query(
-      "SELECT id, title, body_parts, image_url FROM workouts WHERE COALESCE(visible,1)=1 AND owner_user_id IS NULL AND title LIKE ? ORDER BY title LIMIT 8",
+      "SELECT id, title, body_parts, image_url FROM workouts WHERE COALESCE(visible,1)=1 AND owner_user_id IS NULL AND status='published' AND title LIKE ? ORDER BY title LIMIT 8",
       [like],
     ).rows;
     const programs = pool.query(
-      "SELECT id, title, image_url FROM programs WHERE COALESCE(visible,1)=1 AND title LIKE ? ORDER BY title LIMIT 8",
+      "SELECT id, title, image_url FROM programs WHERE COALESCE(visible,1)=1 AND status='published' AND title LIKE ? ORDER BY title LIMIT 8",
       [like],
     ).rows;
     const courses = pool.query(
@@ -233,7 +233,7 @@ router.get('/search', authenticateToken, (req, res) => {
       [like],
     ).rows;
     const exercises = pool.query(
-      "SELECT id, name, thumbnail_url, body_part, equipment, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0 AND name LIKE ? ORDER BY name LIMIT 10",
+      "SELECT id, name, thumbnail_url, body_part, equipment, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0 AND status='published' AND name LIKE ? ORDER BY name LIMIT 10",
       [like],
     ).rows;
     // Match title OR category so a client searching "smoothies", "salads",
@@ -254,6 +254,13 @@ router.get('/programs/:id', authenticateToken, async (req, res) => {
   try {
     const program = pool.query('SELECT p.*, t.level as tier_level FROM programs p LEFT JOIN tiers t ON t.id = p.tier_id WHERE p.id = ?', [req.params.id]);
     if (program.rows.length === 0) return res.status(404).json({ error: 'Program not found' });
+
+    // Draft programs aren't reachable by clients (deep-link). Coaches can
+    // preview; already-enrolled clients keep access (enrolment bypass).
+    if (program.rows[0].status === 'draft' && req.user.role !== 'coach') {
+      const enr = pool.query('SELECT 1 FROM client_programs WHERE user_id = ? AND program_id = ?', [req.user.id, req.params.id]).rows.length > 0;
+      if (!enr) return res.status(404).json({ error: 'Program not found' });
+    }
 
     // A locked program still opens (so the client can do session 1 free).
     // Instead of a tier 403, flag each session's locked state. Enrolment
@@ -387,6 +394,13 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
   try {
     const workout = pool.query('SELECT w.*, t.level as tier_level FROM workouts w LEFT JOIN tiers t ON t.id = w.tier_id WHERE w.id = ?', [req.params.id]);
     if (workout.rows.length === 0) return res.status(404).json({ error: 'Workout not found' });
+
+    // Draft coach-template workouts aren't reachable by clients (deep-link).
+    // Client-built workouts (owner_user_id set) are handled by the owner check
+    // below, so this only gates coach library content.
+    if (workout.rows[0].owner_user_id == null && workout.rows[0].status === 'draft' && req.user.role !== 'coach') {
+      return res.status(404).json({ error: 'Workout not found' });
+    }
 
     // A client-built workout is private to its owner. Coaches may view their
     // own clients' workouts (handled separately); any other viewer gets 404.
@@ -705,7 +719,9 @@ router.get('/exercises', authenticateToken, (req, res) => {
     // picker) can sort/group client-side - e.g. recommend tag=warm up at
     // the top of a Warmup block, then fall back to type=Mobility if the
     // coach hasn't tagged enough exercises yet.
-    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, exercise_type, tags, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0";
+    // status='published' hides draft exercises from the client library + the
+    // BuildWorkout picker (both consume this endpoint). See Draft/Publish.
+    let sql = "SELECT id, name, thumbnail_url, body_part, equipment, exercise_type, tags, demo_video_url, description FROM exercises WHERE demo_video_url IS NOT NULL AND length(demo_video_url) > 0 AND status='published'";
     const params = [];
 
     if (search) {

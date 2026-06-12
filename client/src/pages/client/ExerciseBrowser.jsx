@@ -8,6 +8,11 @@ const BODY_PART_CATEGORIES = [
   'All', 'Hips', 'Back', 'Shoulders', 'Core', 'Arms', 'Legs', 'Chest', 'Full Body',
 ];
 
+// The full library is ~500 exercises. Rendering every card (and its thumbnail)
+// at once is the slow part, so we window the grid: show this many, then load
+// the next page as the user scrolls near the bottom.
+const PAGE_SIZE = 50;
+
 function categorize(bodyPart) {
   if (!bodyPart) return 'Other';
   const bp = bodyPart.toLowerCase();
@@ -29,6 +34,7 @@ export default function ExerciseBrowser({ initialFilter, onBack }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Map initialFilter (section title like "Hip Exercises") to a category
   useEffect(() => {
@@ -47,12 +53,26 @@ export default function ExerciseBrowser({ initialFilter, onBack }) {
       .catch(() => setLoading(false));
   }, [search]);
 
+  // Reset the visible window whenever the result set changes (new search or
+  // category) so the user always starts back at the first page.
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, activeCategory]);
+
   const filtered = activeCategory === 'All'
     ? exercises
     : exercises.filter(e => categorize(e.body_part) === activeCategory);
 
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+  const remaining = filtered.length - visibleCount;
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', paddingBottom: 100 }}>
+      {/* Sticky header: title + search + category chips + count stay pinned
+          to the top while the exercise grid scrolls underneath. */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 20,
+        background: 'var(--bg-primary)', borderBottom: '1px solid var(--divider)', paddingBottom: 8,
+      }}>
       {/* Header */}
       <div style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={onBack} style={{
@@ -96,31 +116,51 @@ export default function ExerciseBrowser({ initialFilter, onBack }) {
       </div>
 
       {/* Results count */}
-      <div style={{ padding: '0 16px', marginBottom: 12 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{filtered.length} exercises</p>
+      <div style={{ padding: '0 16px' }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          {hasMore ? `Showing ${visible.length} of ${filtered.length}` : `${filtered.length} exercises`}
+        </p>
+      </div>
       </div>
 
       {/* Grid */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>Loading...</div>
       ) : (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
-          padding: '0 16px',
-        }}>
-          {filtered.map(ex => (
-            <div key={ex.id} onClick={() => setSelectedExercise(ex)} style={{ cursor: 'pointer' }}>
-              <WorkoutThumb
-                title={ex.name}
-                thumbnailUrl={ex.thumbnail_url}
-                aspectRatio="1/1"
-                borderRadius={10}
-                titleFontSize={10}
-              />
-              <p style={{ fontSize: 11, fontWeight: 600, marginTop: 4, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ex.name}</p>
+        <>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
+            padding: '12px 16px 0',
+          }}>
+            {visible.map(ex => (
+              <div key={ex.id} onClick={() => setSelectedExercise(ex)} style={{ cursor: 'pointer' }}>
+                <WorkoutThumb
+                  title={ex.name}
+                  thumbnailUrl={ex.thumbnail_url}
+                  aspectRatio="1/1"
+                  borderRadius={10}
+                  titleFontSize={10}
+                  lazy
+                />
+                <p style={{ fontSize: 11, fontWeight: 600, marginTop: 4, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ex.name}</p>
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <div style={{ padding: '20px 16px 4px', display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => setVisibleCount(c => Math.min(c + PAGE_SIZE, filtered.length))}
+                style={{
+                  padding: '11px 24px', borderRadius: 22, border: '1px solid var(--divider)',
+                  background: 'var(--bg-card)', color: 'var(--text-primary)',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Load more ({remaining} left)
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Exercise detail modal */}

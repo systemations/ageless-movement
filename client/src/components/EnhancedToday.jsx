@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { modal } from './Modal';
 import WorkoutThumb from './WorkoutThumb';
 
 /* ─── Phase theme config ─── */
@@ -123,7 +124,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
   const removeSession = async (entry) => {
     if (!entry?.workout_id && !entry?.schedule_id) return;
     const label = entry.workout?.title || entry.session_ref?.replace(/_/g, ' ') || 'this session';
-    if (!window.confirm(`Remove "${label}" from today?`)) return;
+    if (!(await modal.confirm(`Remove "${label}" from today?`))) return;
     try {
       if (entry.source === 'user_added' && entry.schedule_id) {
         await fetch(`/api/schedule/${entry.schedule_id}`, {

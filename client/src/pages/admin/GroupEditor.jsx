@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 // Inline group editor panel. Opens in CoachWorkspace's right pane when the
@@ -94,7 +95,7 @@ export default function GroupEditor({ group, onSaved, onDeleted, onCancel }) {
 
   const handleDelete = async () => {
     if (!isEdit) return;
-    if (!confirm(`Delete "${group.title}"? This removes the group for everyone.`)) return;
+    if (!(await modal.confirm(`Delete "${group.title}"? This removes the group for everyone.`))) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/messages/groups/${group.id}`, {

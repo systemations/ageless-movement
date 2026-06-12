@@ -17,6 +17,32 @@ import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 // Example:
 //   { name: '2026-06-10-add-mobility-program', up: () => { pool.query('INSERT ...'); } },
 const MIGRATIONS = [
+  // Seed the initial Terms / Privacy consent versions (SECURITY.md L8). The
+  // copy still needs legal review — version dates let us prompt re-consent when
+  // it changes. Idempotent via the UNIQUE(kind, version) constraint.
+  {
+    name: '2026-06-13-seed-consent-versions',
+    up: () => {
+      pool.query("INSERT OR IGNORE INTO consent_versions (kind, version, summary, effective_date, is_current) VALUES ('terms', '2026-06-13', 'Initial Terms of Service', '2026-06-13', 1)");
+      pool.query("INSERT OR IGNORE INTO consent_versions (kind, version, summary, effective_date, is_current) VALUES ('privacy', '2026-06-13', 'Initial Privacy Policy', '2026-06-13', 1)");
+    },
+  },
+  // Draft/Published rollout: workouts.status existed before this feature but
+  // was never used for client gating (clients gate on `visible`), so ~92% of
+  // coach workouts sit at the column default 'draft' while being fully live.
+  // Backfill every existing coach-template workout (owner_user_id IS NULL) to
+  // 'published' so adding the new client-side status guard doesn't hide live
+  // content. Runs once; workouts created after this default to 'draft' via the
+  // route and are the only drafts going forward. Client-built workouts
+  // (owner_user_id set) are left untouched - their status is irrelevant.
+  {
+    name: '2026-06-12-backfill-coach-workout-status-published',
+    up: () => {
+      pool.query(
+        "UPDATE workouts SET status = 'published' WHERE owner_user_id IS NULL AND COALESCE(status, '') <> 'published'",
+      );
+    },
+  },
   // Move the Kettlebell Foundations program to the front of the "Programs"
   // Explore section (it was added last, so it sat off-screen at the end of
   // the carousel). Pure sort_order change - no user data touched.

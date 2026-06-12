@@ -83,6 +83,7 @@ export default function WorkoutThumb({
   style = {},
   titleFontSize,
   label = null, // short badge (e.g. "S1") shown instead of the wrapping full title on small tiles
+  lazy = false, // defer offscreen images (long grids like the Exercise Library)
 }) {
   const baseStyle = {
     width: '100%',
@@ -102,6 +103,8 @@ export default function WorkoutThumb({
         <img
           src={thumbnailUrl}
           alt={title}
+          loading={lazy ? 'lazy' : undefined}
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius }}
         />
       </div>

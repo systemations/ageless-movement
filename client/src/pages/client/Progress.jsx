@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import CheckinForm from './CheckinForm';
 import ROMTracking from './ROMTracking';
 import PainLogging from './PainLogging';
@@ -389,7 +390,7 @@ export default function Progress() {
   };
 
   const deleteGoal = async (goalId) => {
-    if (!confirm('Delete this goal? This can\'t be undone.')) return;
+    if (!(await modal.confirm('Delete this goal? This can\'t be undone.'))) return;
     await fetch(`/api/goals/${goalId}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     });

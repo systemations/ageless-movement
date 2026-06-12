@@ -175,7 +175,12 @@ router.get('/conversations', authenticateToken, async (req, res) => {
       SELECT c.id, c.type, c.title, c.icon, c.icon_bg, c.image_url, c.description,
         c.client_id, c.created_at,
         c.visibility, c.chat_enabled, c.cta_label, c.cta_url,
-        (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+        (SELECT CASE
+                  WHEN COALESCE(content, '') != '' THEN content
+                  WHEN attachment_url IS NOT NULL THEN '📷 Photo'
+                  ELSE ''
+                END
+           FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
         (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
         (SELECT id FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_id,
         (SELECT sender_id FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_sender_id
@@ -364,14 +369,16 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
 router.post('/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const { content, message_type, attachment_url } = req.body;
-    if (!content) return res.status(400).json({ error: 'Content required' });
+    // A message needs either text or an attachment (photo). Attachment-only
+    // messages carry an empty content string (the column is NOT NULL).
+    if (!content && !attachment_url) return res.status(400).json({ error: 'Content or attachment required' });
 
     const member = pool.query('SELECT id FROM conversation_members WHERE conversation_id = ? AND user_id = ?', [req.params.id, req.user.id]);
     if (member.rows.length === 0) return res.status(403).json({ error: 'Not a member' });
 
     const msg = pool.query(
       'INSERT INTO messages (conversation_id, sender_id, content, message_type, attachment_url) VALUES (?, ?, ?, ?, ?) RETURNING id, conversation_id, sender_id, content, message_type, created_at',
-      [req.params.id, req.user.id, content, message_type || 'text', attachment_url || null]
+      [req.params.id, req.user.id, content || '', message_type || 'text', attachment_url || null]
     );
 
     // Sender's own messages are implicitly read by them

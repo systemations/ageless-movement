@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 // Fullscreen meal schedule builder with three-pane layout:
@@ -168,12 +169,12 @@ export default function MealScheduleBuilder({ scheduleId, onClose, onSaved }) {
       }
       await loadAll();
       onSaved?.();
-    } catch (err) { console.error(err); alert('Save failed.'); }
+    } catch (err) { console.error(err); modal.notify('Save failed.'); }
     setSaving(false);
   };
 
-  const tryClose = () => {
-    if (dirty && !confirm('You have unsaved changes. Discard?')) return;
+  const tryClose = async () => {
+    if (dirty && !(await modal.confirm('You have unsaved changes. Discard?'))) return;
     onClose();
   };
 

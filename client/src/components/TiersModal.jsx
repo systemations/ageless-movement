@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { safeUrl } from '../lib/safeUrl';
 
 // Shown when a client taps a locked Explore item. Renders a side-by-side
 // comparison of every tier (price, description, feature checklist) with
@@ -37,7 +38,8 @@ export default function TiersModal({ open, onClose, itemTitle, requiredTierLevel
     navigate('/messages');
   };
 
-  const handleBookingLink = (url) => {
+  const handleBookingLink = (rawUrl) => {
+    const url = safeUrl(rawUrl);
     if (!url) return;
     window.open(url, '_blank', 'noopener');
   };

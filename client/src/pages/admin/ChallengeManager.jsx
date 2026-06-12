@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 
 export default function ChallengeManager() {
@@ -201,7 +202,7 @@ function ChallengeEditor({ challenge, token, onClose, onSaved }) {
   };
 
   const remove = async () => {
-    if (!challenge || !confirm(`Delete "${challenge.title}"? This cannot be undone.`)) return;
+    if (!challenge || !(await modal.confirm(`Delete "${challenge.title}"? This cannot be undone.`))) return;
     await fetch(`/api/challenges/admin/${challenge.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

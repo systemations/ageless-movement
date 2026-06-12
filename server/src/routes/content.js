@@ -6,31 +6,72 @@ import { fetchVimeoThumbnail } from '../lib/vimeoOembed.js';
 
 const router = Router();
 
+// Pagination helpers. Cap the page size so a caller can't ask for everything.
+const pageLimit = (req) => Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+const pageOffset = (req) => Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+// Broad body-part groups (mirrors the client Exercise Library chips) mapped to
+// the keyword fragments that appear in the granular `body_part` values. Lets
+// the admin filter by the same friendly categories members see, server-side.
+const BODY_PART_GROUPS = {
+  Hips: ['hip', 'glute'],
+  Back: ['back', 'lat', 'rhomb', 'erector', 'trap'],
+  Shoulders: ['delt', 'shoulder', 'rotator'],
+  Core: ['abdom', 'core', 'obliq'],
+  Arms: ['bicep', 'tricep', 'forearm', 'brach', 'arm'],
+  Legs: ['quad', 'hamstring', 'calf', 'tibial', 'lower body', 'leg'],
+  Chest: ['pec', 'chest'],
+  'Full Body': ['full body'],
+};
+
 // ===== PROGRAMS =====
+// Paginated + filterable list for the admin Content Manager. Filters:
+// ?status=published|draft, ?category=<name>, ?search=<title>. Returns total
+// (for "load more") + distinct categories (for the filter chips).
 router.get('/programs', authenticateToken, requireRole('coach'), (req, res) => {
-  const programs = pool.query('SELECT * FROM programs ORDER BY created_at DESC');
-  res.json({ programs: programs.rows });
+  const { status, category, search } = req.query;
+  const where = [];
+  const params = [];
+  if (status && status !== 'all') { where.push('status = ?'); params.push(status); }
+  if (category && category !== 'all') { where.push('category = ?'); params.push(category); }
+  if (search) { where.push('title LIKE ?'); params.push(`%${search}%`); }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const total = pool.query(`SELECT COUNT(*) AS c FROM programs ${whereSql}`, params).rows[0].c;
+  const programs = pool.query(
+    `SELECT * FROM programs ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, pageLimit(req), pageOffset(req)],
+  ).rows;
+  const categories = pool.query(
+    "SELECT DISTINCT category FROM programs WHERE category IS NOT NULL AND category != '' ORDER BY category",
+  ).rows.map((r) => r.category);
+  res.json({ programs, total, categories });
 });
 
 router.post('/programs', authenticateToken, requireRole('coach'), (req, res) => {
-  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id } = req.body;
+  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id, status, category } = req.body;
   const result = pool.query(
-    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
-    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null, intro_video_url || null, tier_id || 1]
+    'INSERT INTO programs (coach_id, title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, intro_video_url, tier_id, status, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, title',
+    [req.user.id, title, description, duration_weeks || 8, workouts_per_week || 5, min_duration || '', max_duration || '', image_url || null, intro_video_url || null, tier_id || 1, status === 'published' ? 'published' : 'draft', category || null]
   );
   res.json({ program: result.rows[0] });
 });
 
 router.put('/programs/:id', authenticateToken, requireRole('coach'), (req, res) => {
-  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, tier_id, visible, featured, intro_video_url } = req.body;
-  // intro_video_url is optional; null/undefined leave the existing value
-  // alone via COALESCE so partial PUTs from old clients don't wipe it.
+  const { title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url, tier_id, visible, featured, intro_video_url, status, category } = req.body;
+  // COALESCE-guarded fields are left untouched when a partial PUT omits them.
   pool.query(
-    'UPDATE programs SET title=?, description=?, duration_weeks=?, workouts_per_week=?, min_duration=?, max_duration=?, image_url=?, tier_id=COALESCE(?, tier_id), visible=COALESCE(?, visible), featured=COALESCE(?, featured), intro_video_url=COALESCE(?, intro_video_url) WHERE id=?',
+    'UPDATE programs SET title=?, description=?, duration_weeks=?, workouts_per_week=?, min_duration=?, max_duration=?, image_url=?, tier_id=COALESCE(?, tier_id), visible=COALESCE(?, visible), featured=COALESCE(?, featured), intro_video_url=COALESCE(?, intro_video_url), status=COALESCE(?, status), category=COALESCE(?, category) WHERE id=?',
     [title, description, duration_weeks, workouts_per_week, min_duration, max_duration, image_url,
-     tier_id ?? null, visible ?? null, featured ?? null, intro_video_url ?? null, req.params.id]
+     tier_id ?? null, visible ?? null, featured ?? null, intro_video_url ?? null, status ?? null, category ?? null, req.params.id]
   );
   res.json({ success: true });
+});
+
+// Quick publish/unpublish toggle for the list view (no full-form PUT needed).
+router.patch('/programs/:id/status', authenticateToken, requireRole('coach'), (req, res) => {
+  const status = req.body.status === 'published' ? 'published' : 'draft';
+  pool.query('UPDATE programs SET status = ? WHERE id = ?', [status, req.params.id]);
+  res.json({ success: true, status });
 });
 
 router.delete('/programs/:id', authenticateToken, requireRole('coach'), (req, res) => {
@@ -39,14 +80,46 @@ router.delete('/programs/:id', authenticateToken, requireRole('coach'), (req, re
 });
 
 // ===== WORKOUTS =====
+// owner_user_id IS NULL excludes client-built workouts (phase-2 workout
+// builder) from the coach library; those are private to the client.
+//
+// Two modes:
+//   - Builder mode (?program_id=X with NO ?limit): returns ALL workouts for a
+//     program ordered by week/day. The Program Builder grid relies on this.
+//   - Library mode (any ?limit, the admin Content Manager): paginated +
+//     filterable by ?status, ?workout_type, ?program_id, ?search.
 router.get('/workouts', authenticateToken, requireRole('coach'), (req, res) => {
-  const programId = req.query.program_id;
-  // owner_user_id IS NULL excludes client-built workouts (phase-2 workout
-  // builder) from the coach library; those are private to the client.
-  const workouts = programId
-    ? pool.query('SELECT * FROM workouts WHERE program_id = ? AND owner_user_id IS NULL ORDER BY week_number, day_number', [programId])
-    : pool.query('SELECT w.*, p.title as program_title FROM workouts w LEFT JOIN programs p ON w.program_id = p.id WHERE w.owner_user_id IS NULL ORDER BY w.created_at DESC');
-  res.json({ workouts: workouts.rows });
+  const { program_id, status, workout_type, search } = req.query;
+  const hasLimit = typeof req.query.limit !== 'undefined';
+
+  if (program_id && !hasLimit) {
+    const workouts = pool.query(
+      'SELECT * FROM workouts WHERE program_id = ? AND owner_user_id IS NULL ORDER BY week_number, day_number',
+      [program_id],
+    );
+    return res.json({ workouts: workouts.rows });
+  }
+
+  const where = ['w.owner_user_id IS NULL'];
+  const params = [];
+  if (program_id && program_id !== 'all') { where.push('w.program_id = ?'); params.push(program_id); }
+  if (status && status !== 'all') { where.push('w.status = ?'); params.push(status); }
+  if (workout_type && workout_type !== 'all') { where.push('w.workout_type = ?'); params.push(workout_type); }
+  if (search) { where.push('w.title LIKE ?'); params.push(`%${search}%`); }
+  const whereSql = `WHERE ${where.join(' AND ')}`;
+  const total = pool.query(`SELECT COUNT(*) AS c FROM workouts w ${whereSql}`, params).rows[0].c;
+  const workouts = pool.query(
+    `SELECT w.*, p.title as program_title FROM workouts w LEFT JOIN programs p ON w.program_id = p.id ${whereSql} ORDER BY w.created_at DESC LIMIT ? OFFSET ?`,
+    [...params, pageLimit(req), pageOffset(req)],
+  ).rows;
+  res.json({ workouts, total });
+});
+
+// Quick publish/unpublish toggle for the workouts list.
+router.patch('/workouts/:id/status', authenticateToken, requireRole('coach'), (req, res) => {
+  const status = req.body.status === 'published' ? 'published' : 'draft';
+  pool.query('UPDATE workouts SET status = ? WHERE id = ?', [status, req.params.id]);
+  res.json({ success: true, status });
 });
 
 router.post('/workouts', authenticateToken, requireRole('coach'), (req, res) => {
@@ -163,27 +236,57 @@ router.post('/programs/:programId/workouts/clone', authenticateToken, requireRol
 });
 
 // ===== EXERCISES =====
+// Paginated + filterable. Filters: ?status, ?body_part (broad group name from
+// BODY_PART_GROUPS), ?exercise_type, ?search. Returns total + the distinct
+// exercise types for the Type filter chips (Body Part chips are the fixed
+// broad groups, shared with the client app).
 router.get('/exercises', authenticateToken, requireRole('coach'), (req, res) => {
-  const exercises = pool.query('SELECT * FROM exercises ORDER BY name');
-  res.json({ exercises: exercises.rows });
+  const { status, body_part, exercise_type, search } = req.query;
+  const where = [];
+  const params = [];
+  if (status && status !== 'all') { where.push('status = ?'); params.push(status); }
+  if (body_part && body_part !== 'all' && BODY_PART_GROUPS[body_part]) {
+    const kws = BODY_PART_GROUPS[body_part];
+    where.push(`(${kws.map(() => 'LOWER(body_part) LIKE ?').join(' OR ')})`);
+    params.push(...kws.map((k) => `%${k}%`));
+  }
+  if (exercise_type && exercise_type !== 'all') { where.push('exercise_type = ?'); params.push(exercise_type); }
+  if (search) { where.push('name LIKE ?'); params.push(`%${search}%`); }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const total = pool.query(`SELECT COUNT(*) AS c FROM exercises ${whereSql}`, params).rows[0].c;
+  const exercises = pool.query(
+    `SELECT * FROM exercises ${whereSql} ORDER BY name LIMIT ? OFFSET ?`,
+    [...params, pageLimit(req), pageOffset(req)],
+  ).rows;
+  const types = pool.query(
+    "SELECT DISTINCT exercise_type FROM exercises WHERE exercise_type IS NOT NULL AND exercise_type != '' ORDER BY exercise_type",
+  ).rows.map((r) => r.exercise_type);
+  res.json({ exercises, total, types, bodyPartGroups: Object.keys(BODY_PART_GROUPS) });
 });
 
 router.post('/exercises', authenticateToken, requireRole('coach'), (req, res) => {
-  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area } = req.body;
+  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, status } = req.body;
   const result = pool.query(
-    'INSERT INTO exercises (name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, name',
-    [name, display_name || name, description, demo_video_url || null, thumbnail_url || null, body_part, equipment, exercise_type || 'Strength', tracking_fields || 'Repetitions with Weight', per_side || 'None', target_area]
+    'INSERT INTO exercises (name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, name',
+    [name, display_name || name, description, demo_video_url || null, thumbnail_url || null, body_part, equipment, exercise_type || 'Strength', tracking_fields || 'Repetitions with Weight', per_side || 'None', target_area, status === 'published' ? 'published' : 'draft']
   );
   res.json({ exercise: result.rows[0] });
 });
 
 router.put('/exercises/:id', authenticateToken, requireRole('coach'), (req, res) => {
-  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area } = req.body;
+  const { name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, status } = req.body;
   pool.query(
-    'UPDATE exercises SET name=?, display_name=?, description=?, demo_video_url=?, thumbnail_url=?, body_part=?, equipment=?, exercise_type=?, tracking_fields=?, per_side=?, target_area=? WHERE id=?',
-    [name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, req.params.id]
+    'UPDATE exercises SET name=?, display_name=?, description=?, demo_video_url=?, thumbnail_url=?, body_part=?, equipment=?, exercise_type=?, tracking_fields=?, per_side=?, target_area=?, status=COALESCE(?, status) WHERE id=?',
+    [name, display_name, description, demo_video_url, thumbnail_url, body_part, equipment, exercise_type, tracking_fields, per_side, target_area, status ?? null, req.params.id]
   );
   res.json({ success: true });
+});
+
+// Quick publish/unpublish toggle for the exercises list.
+router.patch('/exercises/:id/status', authenticateToken, requireRole('coach'), (req, res) => {
+  const status = req.body.status === 'published' ? 'published' : 'draft';
+  pool.query('UPDATE exercises SET status = ? WHERE id = ?', [status, req.params.id]);
+  res.json({ success: true, status });
 });
 
 // ===== WORKOUT EXERCISES (link exercises to workouts) =====

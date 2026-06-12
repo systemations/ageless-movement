@@ -18,9 +18,76 @@ function bumpLastActive(userId) {
   } catch { /* non-fatal */ }
 }
 
+// ── Uploaded-file access gate (SECURITY.md L1) ────────────────────────────
+// Files under /uploads (avatars, progress / check-in / chat photos, benchmark
+// videos) are personal data. They were served by express.static with no auth,
+// so anyone holding a URL could fetch them. We now gate them behind a short
+// httpOnly cookie carrying the user's JWT: it's set on the first authenticated
+// API call of a session and is sent automatically on same-origin <img>
+// requests, so no client markup or stored *_url values change. This blocks
+// anonymous URL access while keeping every image working for logged-in users.
+const FILE_COOKIE = 'am_file';
+const FILE_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // match the JWT lifetime
+
+// httpOnly auth cookie (SECURITY.md L2): carries the JWT so it's never exposed
+// to JS. SameSite=Lax keeps it off cross-site state-changing requests (CSRF
+// defence). Set on login/register, cleared on logout.
+const AUTH_COOKIE = 'am_auth';
+export function setAuthCookie(res, token) {
+  res.cookie(AUTH_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.IS_PROD,
+    maxAge: FILE_COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+export function clearAuthCookie(res) {
+  res.clearCookie(AUTH_COOKIE, { path: '/' });
+}
+
+function parseCookies(header) {
+  const out = {};
+  (header || '').split(';').forEach((part) => {
+    const i = part.indexOf('=');
+    if (i > -1) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+}
+
+function cookieIsValid(value) {
+  if (!value) return false;
+  try { jwt.verify(value, config.JWT_SECRET, { algorithms: ['HS256'] }); return true; }
+  catch { return false; }
+}
+
+// Set the file-access cookie only when the request isn't already carrying a
+// valid one, so we don't append Set-Cookie to every authenticated response.
+function ensureFileCookie(req, res, token) {
+  if (cookieIsValid(parseCookies(req.headers.cookie)[FILE_COOKIE])) return;
+  res.cookie(FILE_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.IS_PROD,
+    maxAge: FILE_COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+
+// Guard used by the /uploads static handler in index.js.
+export function fileCookieValid(req) {
+  return cookieIsValid(parseCookies(req.headers.cookie)[FILE_COOKIE]);
+}
+
 export const authenticateToken = (req, res, next) => {
+  // Prefer the httpOnly auth cookie (SECURITY.md L2) so the real JWT never has
+  // to live in JS/localStorage where XSS could read it. Fall back to the
+  // Authorization header for API tooling and pre-migration clients. (The
+  // migrated SPA sends a harmless sentinel Bearer; the cookie is authoritative.)
+  const cookieToken = parseCookies(req.headers.cookie)[AUTH_COOKIE];
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const bearerToken = authHeader && authHeader.split(' ')[1];
+  const token = cookieToken || bearerToken;
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
@@ -31,7 +98,17 @@ export const authenticateToken = (req, res, next) => {
     // default, but callers that rely on defaults have been bitten before - 
     // an algorithm whitelist is defence-in-depth and costs nothing.
     const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
+    // Session revocation check (SECURITY.md L3). Tokens minted before sessions
+    // existed carry no `sid` and are allowed through until they expire, so a
+    // deploy doesn't force-log-out everyone.
+    if (decoded.sid) {
+      const sess = pool.query('SELECT revoked_at FROM sessions WHERE id = ?', [decoded.sid]).rows[0];
+      if (!sess || sess.revoked_at) {
+        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+      }
+    }
     req.user = decoded;
+    ensureFileCookie(req, res, token);
     bumpLastActive(decoded.id);
     next();
   } catch (err) {

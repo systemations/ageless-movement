@@ -65,7 +65,12 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
     if (!token) return;
     const fetchToday = async () => {
       try {
-        const res = await fetch('/api/athlete/today', {
+        // Send the browser's IANA timezone so the server resolves "today"
+        // (consumed counter reset) in the client's local day - works for
+        // both clients and coaches regardless of stored profile tz.
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        const qs = tz ? `?tz=${encodeURIComponent(tz)}` : '';
+        const res = await fetch(`/api/athlete/today${qs}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -437,34 +442,40 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
               </span>
             </div>
 
-            {/* Big calorie number */}
-            <div style={{ textAlign: 'center', marginBottom: 18 }}>
-              <span style={{
-                fontSize: 42, fontWeight: 900, letterSpacing: -2,
-                color: 'var(--accent-orange)',
-                lineHeight: 1,
-              }}>
-                {targetCals}
-              </span>
-              <span style={{
-                fontSize: 14, fontWeight: 600, color: 'var(--text-tertiary)',
-                marginLeft: 4,
-              }}>kcal</span>
-            </div>
+            {/* Big calorie number - consumed / target so the client can
+                see at a glance how much of today's budget is left. */}
+            {(() => {
+              const eaten = today?.consumed_today?.calories ?? 0;
+              const pct = targetCals > 0 ? Math.min(100, Math.round((eaten / targetCals) * 100)) : 0;
+              return (
+                <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2, color: 'var(--accent-orange)', lineHeight: 1 }}>
+                      {eaten}
+                    </span>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-tertiary)' }}>/ {targetCals}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-tertiary)' }}>kcal</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', marginTop: 10, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-orange)', borderRadius: 3, transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+              );
+            })()}
 
-            {/* Macro pills */}
+            {/* Macro pills - consumed / target per macro */}
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { label: 'Protein', value: targetP, unit: 'g', color: '#85FFBA', bg: 'rgba(61,255,210,0.1)' },
-                { label: 'Fat', value: targetF, unit: 'g', color: '#FF6B6B', bg: 'rgba(255,107,107,0.1)' },
-                { label: 'Carbs', value: targetC, unit: 'g', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
+                { label: 'Protein', eaten: today?.consumed_today?.protein ?? 0, value: targetP, unit: 'g', color: '#85FFBA', bg: 'rgba(61,255,210,0.1)' },
+                { label: 'Fat',     eaten: today?.consumed_today?.fat ?? 0,     value: targetF, unit: 'g', color: '#FF6B6B', bg: 'rgba(255,107,107,0.1)' },
+                { label: 'Carbs',   eaten: today?.consumed_today?.carbs ?? 0,   value: targetC, unit: 'g', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
               ].map(m => (
                 <div key={m.label} style={{
                   flex: 1, textAlign: 'center', padding: '12px 8px',
                   borderRadius: 12, background: m.bg,
                 }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: m.color, letterSpacing: -1 }}>
-                    {m.value}<span style={{ fontSize: 12, fontWeight: 600 }}>{m.unit}</span>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: m.color, letterSpacing: -0.5 }}>
+                    {m.eaten}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}> / {m.value}{m.unit}</span>
                   </div>
                   <div style={{
                     fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',

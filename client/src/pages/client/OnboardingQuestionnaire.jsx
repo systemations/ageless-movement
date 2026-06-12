@@ -137,6 +137,13 @@ const QUESTIONS = [
     subtitle: 'Select any that apply. Your coach will adapt the plan.',
     type: 'multi',
     optional: true,
+    note: {
+      // Free-text follow-up so prospects can describe specifics the
+      // checkboxes can't capture (recovery status, pain triggers, etc).
+      key: 'injuries_note',
+      label: 'Anything else we should know?',
+      placeholder: 'e.g. recovering from knee surgery, occasional lower-back stiffness, etc',
+    },
     options: [
       { value: 'none',     label: 'None - good to go' },
       { value: 'knee',     label: 'Knee' },
@@ -313,6 +320,28 @@ export default function OnboardingQuestionnaire() {
                     </button>
                   );
                 })}
+                {/* Open-ended note - rendered when the question config
+                    declares one. Optional; coach reviews it in the
+                    onboarding answers blob. */}
+                {q.note && (
+                  <div style={{ marginTop: 18 }}>
+                    <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+                      {q.note.label} <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>(optional)</span>
+                    </label>
+                    <textarea
+                      value={answers[q.note.key] || ''}
+                      onChange={e => setAnswers(prev => ({ ...prev, [q.note.key]: e.target.value }))}
+                      placeholder={q.note.placeholder}
+                      rows={4}
+                      maxLength={1000}
+                      style={{
+                        width: '100%', background: 'var(--bg-card)', border: '1px solid var(--divider)',
+                        borderRadius: 12, padding: '12px 14px', color: 'var(--text-primary)',
+                        fontSize: 14, fontFamily: 'inherit', resize: 'vertical', minHeight: 90,
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -70,6 +70,28 @@ export default function Explore() {
     });
   };
   const [mealSchedules, setMealSchedules] = useState([]);
+  const [mealEnrolling, setMealEnrolling] = useState(null); // schedule id in flight
+  const [mealToast, setMealToast] = useState(null);
+  const enrollMealPlan = async (sched) => {
+    if (mealEnrolling) return;
+    setMealEnrolling(sched.id);
+    try {
+      const res = await fetch(`/api/nutrition/meal-schedules/${sched.id}/enroll`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setMealToast({ kind: 'success', msg: `${sched.title} added to your plan` });
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setMealToast({ kind: 'error', msg: d.error || 'Could not add. Try again.' });
+      }
+    } catch {
+      setMealToast({ kind: 'error', msg: 'Network error.' });
+    }
+    setMealEnrolling(null);
+    setTimeout(() => setMealToast(null), 2400);
+  };
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [exerciseBrowserSection, setExerciseBrowserSection] = useState(null);
   const [showChallengesList, setShowChallengesList] = useState(false);
@@ -214,6 +236,9 @@ export default function Explore() {
         onOpenProgram={(id) => { setSeeAllSection(null); setSelectedProgram(id); }}
         onOpenWorkout={(id) => { setSeeAllSection(null); setSelectedWorkout(id); }}
         onOpenMealPlan={(id) => { setSeeAllSection(null); setSelectedMealPlanId(id); }}
+        onEnrollMealPlan={enrollMealPlan}
+        mealEnrollingId={mealEnrolling}
+        mealToast={mealToast}
         onLocked={(item) => openTiersModal(item)}
       />
     );
@@ -707,8 +732,25 @@ export default function Explore() {
                     style={{
                       minWidth: 240, maxWidth: 240, cursor: 'pointer',
                       borderRadius: 14, overflow: 'hidden', background: 'var(--bg-card)', flexShrink: 0,
+                      position: 'relative',
                     }}
                   >
+                    {/* Inline enroll affordance - tap-stop so it doesn't open
+                        the detail. One-tap "Add to my plan" right from the card. */}
+                    {!sched.locked && (
+                      <button
+                        onClick={e => { e.stopPropagation(); enrollMealPlan(sched); }}
+                        disabled={mealEnrolling === sched.id}
+                        style={{
+                          position: 'absolute', top: 8, right: 8, zIndex: 2,
+                          padding: '5px 10px', borderRadius: 14, border: 'none',
+                          background: 'var(--accent-mint)', color: '#000',
+                          fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                          opacity: mealEnrolling === sched.id ? 0.6 : 1,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >{mealEnrolling === sched.id ? '...' : '+ My plan'}</button>
+                    )}
                     <div style={{
                       height: 130, position: 'relative',
                       background: sched.image_url
@@ -890,6 +932,19 @@ export default function Explore() {
       onClose={() => setTiersModal(null)}
       itemTitle={tiersModal?.itemTitle}
     />
+
+    {/* Meal-plan enroll feedback toast - shared by the carousel "+ My plan"
+        and the See-all grid affordance. */}
+    {mealToast && (
+      <div style={{
+        position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+        padding: '10px 18px', borderRadius: 22,
+        background: mealToast.kind === 'error' ? '#FF453A' : 'var(--accent-mint)',
+        color: mealToast.kind === 'error' ? '#fff' : '#000',
+        fontSize: 13, fontWeight: 700, zIndex: 250, whiteSpace: 'nowrap',
+        boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
+      }}>{mealToast.msg}</div>
+    )}
     </>
   );
 }
@@ -945,7 +1000,7 @@ function SearchResults({ results, onOpen }) {
 // title / "See all" link. Renders every item in the group as a wrapping
 // grid (vs the inline horizontal carousel). Reuses WorkoutThumb + the same
 // tap-through targets (program detail / workout overview).
-function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onOpenMealPlan, onLocked }) {
+function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onOpenMealPlan, onEnrollMealPlan, mealEnrollingId, mealToast, onLocked }) {
   // Section can be a workout-side carousel (programs/workouts) or a nutrition
   // carousel (meal schedules / recipe picks). Tap target + sub-text vary by
   // type; the grid layout itself stays consistent.
@@ -1006,12 +1061,40 @@ function SeeAllGrid({ section, onBack, onOpenProgram, onOpenWorkout, onOpenMealP
                   <FavButton itemType="recipe" itemId={item.item_id} itemTitle={item.title} itemMeta={[item.calories ? item.calories + ' cal' : '', item.category].filter(Boolean).join(' · ')} />
                 </div>
               )}
+              {/* Meal-plan grid items get a one-tap "Add to my plan" affordance
+                  on the thumbnail so the user doesn't have to drill into
+                  detail just to enroll. */}
+              {isMealPlan && !item.locked && onEnrollMealPlan && (
+                <button
+                  onClick={e => { e.stopPropagation(); onEnrollMealPlan(item); }}
+                  disabled={mealEnrollingId === item.id}
+                  style={{
+                    position: 'absolute', top: 6, right: 6,
+                    padding: '5px 10px', borderRadius: 14, border: 'none',
+                    background: 'var(--accent-mint)', color: '#000',
+                    fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                    opacity: mealEnrollingId === item.id ? 0.6 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >{mealEnrollingId === item.id ? '...' : '+ My plan'}</button>
+              )}
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>{item.title}</p>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{subText(item)}</p>
           </div>
         ))}
       </div>
+
+      {mealToast && (
+        <div style={{
+          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+          padding: '10px 18px', borderRadius: 22,
+          background: mealToast.kind === 'error' ? '#FF453A' : 'var(--accent-mint)',
+          color: mealToast.kind === 'error' ? '#fff' : '#000',
+          fontSize: 13, fontWeight: 700, zIndex: 250, whiteSpace: 'nowrap',
+          boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
+        }}>{mealToast.msg}</div>
+      )}
     </div>
   );
 }

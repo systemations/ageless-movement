@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import pool from './pool.js';
 import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
+import { CARLA, NEW_EXERCISES, SESSIONS as CARLA_SESSIONS } from './seed-carla-phase-1.js';
 
 // Run-once content/schema migrations, applied on every boot. This is how
 // content reaches an ALREADY-POPULATED production DB without the destructive
@@ -164,6 +165,24 @@ const MIGRATIONS = [
       );
     },
   },
+  // Joonas's live account (joonastics@gmail.com) was created as a CLIENT and
+  // his role was never flipped to coach. The desktop router sends role=coach
+  // to /admin and everyone else to /home, so he kept landing on the client
+  // app with the onboarding checklist instead of the coach admin surface.
+  // This sets role='coach' for that one account. Single-row, by email,
+  // non-destructive (no delete - preserves the account + its coach profile).
+  // Idempotent via schema_migrations; case-insensitive match; silent no-op
+  // on any DB where the email doesn't exist (e.g. the dev seed, which uses
+  // joonas@coach.com instead).
+  {
+    name: '2026-06-04-set-joonas-role-coach',
+    up: () => {
+      pool.query(
+        "UPDATE users SET role = 'coach' WHERE LOWER(email) = LOWER(?)",
+        ['joonastics@gmail.com'],
+      );
+    },
+  },
   // Same one-time reset pattern for the dan@systemations.ai account so Dan
   // can log in via that email. Case-insensitive match in case the email is
   // stored with different casing. Silent no-op where the email doesn't exist.
@@ -175,6 +194,438 @@ const MIGRATIONS = [
         "UPDATE users SET password_hash = ? WHERE LOWER(email) = LOWER(?)",
         [hash, 'Dan@systemations.ai'],
       );
+    },
+  },
+  // Batch: four new exercises (Joonas demos) + merge two supine/inverted
+  // duplicate rows Dan flagged. "Supine barbell <X>" and "Inverted barbell
+  // <X>" describe the same movement; Supine is canonical because those
+  // rows already have the demo videos.
+  {
+    name: '2026-05-29-exercises-batch-2',
+    up: () => {
+      const addIfMissing = (name, body_part, exercise_type, video) => {
+        const existing = pool.query('SELECT id FROM exercises WHERE LOWER(name) = LOWER(?)', [name]).rows[0];
+        if (existing) {
+          // Backfill the video if the existing row lacks one.
+          const cur = pool.query('SELECT demo_video_url FROM exercises WHERE id = ?', [existing.id]).rows[0];
+          if (!cur?.demo_video_url) {
+            pool.query('UPDATE exercises SET demo_video_url = ? WHERE id = ?', [video, existing.id]);
+          }
+          return existing.id;
+        }
+        return pool.query(
+          'INSERT INTO exercises (name, body_part, exercise_type, demo_video_url) VALUES (?, ?, ?, ?) RETURNING id',
+          [name, body_part, exercise_type, video],
+        ).rows[0].id;
+      };
+
+      addIfMissing('Foam Roller Hack Squat',          'Quadriceps, Gluteus Maximus',     'Strength',  'https://vimeo.com/1190868003');
+      addIfMissing('Ankle Plantarflexion Isometrics', 'Gastrocnemius, Soleus',           'Mobility',  'https://vimeo.com/1190865051');
+      addIfMissing('Bench Hip Flexor Stretch',        'Hip Flexors, Quadriceps',         'Stretching','https://vimeo.com/1088672096');
+      addIfMissing('Elbow Supination Banded',         'Forearm, Biceps',                 'Mobility',  'https://vimeo.com/1058403797');
+
+      // Merge duplicates: redirect any workout_exercises rows, then delete
+      // the dupe row. Scoped lookups by exact name so we only touch the
+      // ones Dan flagged.
+      const merges = [
+        { fromName: 'Inverted Barbell Chin Up', toName: 'Supine Barbell Chin Up' },
+        { fromName: 'Inverted Barbell Pull Up', toName: 'Supine Barbell Pull Up' },
+      ];
+      for (const { fromName, toName } of merges) {
+        const from = pool.query('SELECT id FROM exercises WHERE name = ?', [fromName]).rows[0];
+        const to   = pool.query('SELECT id FROM exercises WHERE name = ?', [toName]).rows[0];
+        if (!from || !to) continue;
+        pool.query('UPDATE workout_exercises SET exercise_id = ? WHERE exercise_id = ?', [to.id, from.id]);
+        // Also catch any per-instance alternates / global alternatives pointing at the dupe.
+        try { pool.query('UPDATE workout_exercise_alternates SET alternative_id = ? WHERE alternative_id = ?', [to.id, from.id]); } catch {}
+        try { pool.query('UPDATE exercise_alternatives SET exercise_id = ? WHERE exercise_id = ?', [to.id, from.id]); } catch {}
+        try { pool.query('UPDATE exercise_alternatives SET alternative_id = ? WHERE alternative_id = ?', [to.id, from.id]); } catch {}
+        pool.query('DELETE FROM exercises WHERE id = ?', [from.id]);
+      }
+    },
+  },
+  // Final cleanup of the leaderboard seed on Dan's account: drop the mock
+  // 28-day streak so the real workout-log-driven count takes over. (Steps,
+  // welcome DM, and carnivore re-allocation handled by the migration below;
+  // running this AFTER it so a single boot picks up everything.)
+  {
+    name: '2026-05-29-clear-dan-mock-streak',
+    up: () => {
+      const dan = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (!dan) return;
+      // Reset to zero; subsequent workout logs will bump current_streak and
+      // best_streak normally via the explore.js workout-log handler.
+      pool.query(
+        'UPDATE streaks SET current_streak = 0, best_streak = 0, last_activity_date = NULL WHERE user_id = ?',
+        [dan.id],
+      );
+    },
+  },
+
+  // Undo the side-effects of the leaderboard seed on Dan's REAL account:
+  // mock step_logs were polluting his daily steps counter (and not
+  // resetting), the welcome DM re-fired because a stale post_signup_tasks
+  // row was still pending, and the carnivore meal schedule allocation
+  // hadn't taken on the live DB. Idempotent on every step.
+  {
+    name: '2026-05-29-fix-dan-mock-data',
+    up: () => {
+      const dan = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (!dan) return;
+
+      // 1. Mock steps: clear last 14 days so Dan starts the day at zero
+      //    and his real logging takes over.
+      pool.query(
+        "DELETE FROM step_logs WHERE user_id = ? AND date >= date('now', '-14 days')",
+        [dan.id],
+      );
+
+      // 2. Carnivore allocation - re-apply (safe if already present).
+      pool.query(
+        "UPDATE client_profiles SET eating_style = 'carnivore' WHERE user_id = ?",
+        [dan.id],
+      );
+      const carnivore = pool.query(
+        "SELECT id FROM meal_schedules WHERE LOWER(title) LIKE '%carnivore%' LIMIT 1",
+      ).rows[0];
+      if (carnivore) {
+        const already = pool.query(
+          'SELECT id FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+          [dan.id, carnivore.id],
+        ).rows[0];
+        if (!already) {
+          pool.query(
+            "INSERT INTO client_meal_schedules (user_id, meal_schedule_id, started_at) VALUES (?, ?, datetime('now'))",
+            [dan.id, carnivore.id],
+          );
+        }
+      }
+
+      // 3. Welcome DM re-fire: mark any pending welcome_dm tasks for Dan
+      //    as sent so the job runner skips them. (Also catches plans_nudge
+      //    if a stale row is hanging around.)
+      pool.query(
+        "UPDATE post_signup_tasks SET sent_at = datetime('now') WHERE user_id = ? AND sent_at IS NULL",
+        [dan.id],
+      );
+
+      // 4. Also clear any in_app_notifications targeted at Dan that are
+      //    likely the re-fired welcome ("Welcome", "welcome" in title).
+      pool.query(
+        "DELETE FROM in_app_notifications WHERE audience = 'user' AND audience_user_id = ? AND LOWER(title) LIKE '%welcome%'",
+        [dan.id],
+      );
+    },
+  },
+  // Populate streaks + steps for the @example.com seed clients (plus Dan)
+  // so the client-side leaderboards aren't empty. Assigns Dan's carnivore
+  // diet (meal_schedule id 24) + sets his eating_style so Home Targets
+  // recompute to carnivore macros. Idempotent: re-runs leave existing rows
+  // untouched but fill in anything missing.
+  {
+    name: '2026-05-29-seed-leaderboards-and-dan-carnivore',
+    up: () => {
+      const today = new Date();
+      const dateNDaysAgo = (n) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - n);
+        return d.toISOString().slice(0, 10);
+      };
+
+      // Deterministic-but-varied numbers driven off user id so the same
+      // user always lands at the same rank between deploys.
+      const targets = [];
+      const ex = pool.query("SELECT id, name FROM users WHERE email LIKE '%@example.com' AND role = 'client'").rows;
+      for (const u of ex) {
+        const streak  = 2 + (u.id * 7) % 25;     // 2..26
+        const best    = streak + ((u.id * 11) % 30);
+        const baseSteps = 4500 + ((u.id * 137) % 6000); // 4500..10500
+        targets.push({ user: u, streak, best, baseSteps });
+      }
+
+      // Dan - find by email so this works on the live DB; place him in the
+      // upper half of the board so the mockup looks credible.
+      const dan = pool.query(
+        "SELECT id, name FROM users WHERE LOWER(email) = 'dan@systemations.ai'",
+      ).rows[0];
+      if (dan) {
+        targets.push({ user: dan, streak: 28, best: 42, baseSteps: 11200, isDan: true });
+      }
+
+      for (const t of targets) {
+        // Streaks - upsert. Existing rows update last_activity_date so the
+        // leaderboard reads them as "current".
+        const existing = pool.query('SELECT user_id FROM streaks WHERE user_id = ?', [t.user.id]).rows[0];
+        if (existing) {
+          pool.query(
+            'UPDATE streaks SET current_streak = ?, best_streak = ?, last_activity_date = ? WHERE user_id = ?',
+            [t.streak, t.best, dateNDaysAgo(0), t.user.id],
+          );
+        } else {
+          pool.query(
+            'INSERT INTO streaks (user_id, current_streak, best_streak, last_activity_date) VALUES (?, ?, ?, ?)',
+            [t.user.id, t.streak, t.best, dateNDaysAgo(0)],
+          );
+        }
+
+        // Step logs - 7 days, varying by day. Skip days the user already
+        // has a row for (so a real-user import never gets overwritten).
+        for (let d = 0; d < 7; d++) {
+          const date = dateNDaysAgo(d);
+          const hasRow = pool.query(
+            'SELECT id FROM step_logs WHERE user_id = ? AND date = ?',
+            [t.user.id, date],
+          ).rows[0];
+          if (hasRow) continue;
+          const wiggle = 1 + ((t.user.id + d) * 0.13);
+          const steps = Math.round(t.baseSteps * (0.75 + (wiggle - Math.floor(wiggle)) * 0.5));
+          pool.query(
+            'INSERT INTO step_logs (user_id, date, steps) VALUES (?, ?, ?)',
+            [t.user.id, date, steps],
+          );
+        }
+      }
+
+      // Dan's carnivore allocation
+      if (dan) {
+        const carnivore = pool.query(
+          "SELECT id FROM meal_schedules WHERE LOWER(title) LIKE '%carnivore%' LIMIT 1",
+        ).rows[0];
+        if (carnivore) {
+          const already = pool.query(
+            'SELECT id FROM client_meal_schedules WHERE user_id = ? AND meal_schedule_id = ?',
+            [dan.id, carnivore.id],
+          ).rows[0];
+          if (!already) {
+            pool.query(
+              "INSERT INTO client_meal_schedules (user_id, meal_schedule_id, started_at) VALUES (?, ?, datetime('now'))",
+              [dan.id, carnivore.id],
+            );
+          }
+        }
+        // Eating style on the profile so Home Targets recomputes macros to
+        // the carnivore distribution (35/60/5) automatically.
+        pool.query(
+          "UPDATE client_profiles SET eating_style = 'carnivore' WHERE user_id = ?",
+          [dan.id],
+        );
+      }
+    },
+  },
+  // Add Wall Wrist Extension Isometric (Vimeo demo by Coach Joonas) to the
+  // library. Idempotent on name.
+  {
+    name: '2026-05-29-add-wall-wrist-extension-isometric',
+    up: () => {
+      const exists = pool.query("SELECT id FROM exercises WHERE LOWER(name) = LOWER('Wall Wrist Extension Isometric')").rows[0];
+      if (exists) return;
+      pool.query(
+        `INSERT INTO exercises (name, body_part, exercise_type, demo_video_url)
+         VALUES (?, ?, ?, ?)`,
+        [
+          'Wall Wrist Extension Isometric',
+          'Wrist Extensors, Forearm',
+          'Mobility',
+          'https://vimeo.com/1190865926',
+        ],
+      );
+    },
+  },
+  // Add Wall Glute Stretch as its own exercise (distinct from "Glute Stretch"
+  // (394) - the wall provides leverage the floor version doesn't) and remap
+  // Carla's Phase 1 Session 1 to use it. Idempotent on name.
+  {
+    name: '2026-05-29-add-wall-glute-stretch',
+    up: () => {
+      let row = pool.query("SELECT id FROM exercises WHERE LOWER(name) = LOWER('Wall Glute Stretch')").rows[0];
+      if (!row) {
+        row = pool.query(
+          `INSERT INTO exercises (name, body_part, exercise_type, demo_video_url)
+           VALUES (?, ?, ?, ?) RETURNING id`,
+          [
+            'Wall Glute Stretch',
+            'Gluteus Maximus, Hip Flexors',
+            'Stretching',
+            'https://vimeo.com/1047371883/37e200ea48',
+          ],
+        ).rows[0];
+      }
+      // Move Carla's Phase 1 Session 1 (program by title) Glute-Stretch slot
+      // to the new Wall Glute Stretch row. Match by workout title so we only
+      // touch the one slot that was originally Wall Glute Stretch (Session
+      // 1's order 5 - between Toega and Back Squat in the imported order).
+      const w = pool.query(
+        "SELECT id FROM workouts WHERE title = 'Carla Phase 1 - Session 1'",
+      ).rows[0];
+      if (w) {
+        pool.query(
+          // 394 is Glute Stretch; only Carla's slot landed there as a
+          // placeholder remap. Other programs use 394 legitimately so we
+          // scope the UPDATE to this workout.
+          "UPDATE workout_exercises SET exercise_id = ? WHERE workout_id = ? AND exercise_id = 394",
+          [row.id, w.id],
+        );
+      }
+    },
+  },
+  // Carla follow-up: correct her email + replace the two placeholder
+  // exercises with the existing AM library equivalents Dan flagged.
+  //   Wall Glute Stretch  -> Glute Stretch (id 394)
+  //   Inverted Row - Chin Up -> Inverted Barbell Chin Up (id 1263)
+  // Remaps any workout_exercises rows referencing the placeholders, then
+  // deletes the placeholders. Idempotent: only acts when placeholders exist.
+  {
+    name: '2026-05-29-carla-corrections',
+    up: () => {
+      // 1. Email fix
+      const u = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) = 'otteheinz.9@gmail.com'",
+      ).rows[0];
+      if (u) {
+        pool.query(
+          "UPDATE users SET email = 'carlarachelwhyte@hotmail.com' WHERE id = ?",
+          [u.id],
+        );
+      }
+
+      // 2. Remap placeholder exercises -> existing library entries
+      const swaps = [
+        { fromName: 'Wall Glute Stretch',     toId: 394 },
+        { fromName: 'Inverted Row - Chin Up', toId: 1263 },
+      ];
+      for (const { fromName, toId } of swaps) {
+        const ph = pool.query('SELECT id FROM exercises WHERE name = ?', [fromName]).rows[0];
+        const target = pool.query('SELECT id FROM exercises WHERE id = ?', [toId]).rows[0];
+        if (!ph || !target) continue;
+        pool.query(
+          'UPDATE workout_exercises SET exercise_id = ? WHERE exercise_id = ?',
+          [toId, ph.id],
+        );
+        pool.query('DELETE FROM exercises WHERE id = ?', [ph.id]);
+      }
+    },
+  },
+  // Import Carla Whyte's "Phase 1" custom program from her FitBudd history.
+  // Creates her client account (temp password "Welcome2026!" - she changes
+  // on first login), ensures the two exercises missing from the AM library
+  // exist, builds the program with 3 sessions, and enrols her. Idempotent
+  // via existence checks at every step so re-runs are safe.
+  {
+    name: '2026-05-29-import-carla-whyte-phase-1',
+    up: () => {
+      // 1. User + client_profile
+      const emailLow = CARLA.email.toLowerCase();
+      let user = pool.query('SELECT id FROM users WHERE LOWER(email) = ?', [emailLow]).rows[0];
+      if (!user) {
+        const hash = bcrypt.hashSync('Welcome2026!', 10);
+        const inserted = pool.query(
+          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, 'client') RETURNING id",
+          [CARLA.email, hash, CARLA.name],
+        ).rows[0];
+        user = { id: inserted.id };
+        pool.query(
+          'INSERT INTO client_profiles (user_id, timezone) VALUES (?, ?)',
+          [user.id, CARLA.timezone],
+        );
+      }
+
+      // 2. Backfill default daily tasks (mirrors what the register endpoint does)
+      const hasTasks = pool.query('SELECT 1 FROM tasks WHERE client_id = ? LIMIT 1', [user.id]).rows[0];
+      if (!hasTasks) {
+        for (const label of DEFAULT_CLIENT_TASKS) {
+          pool.query(
+            'INSERT INTO tasks (coach_id, client_id, label, recurring) VALUES (NULL, ?, ?, 1)',
+            [user.id, label],
+          );
+        }
+      }
+
+      // 3. Ensure the two AM-library gaps exist (NULL demo_video_url until Dan
+      //    attaches a Vimeo clip in admin).
+      const exIdByName = {};
+      for (const ex of NEW_EXERCISES) {
+        const found = pool.query('SELECT id FROM exercises WHERE LOWER(name) = LOWER(?)', [ex.name]).rows[0];
+        if (found) {
+          exIdByName[ex.name] = found.id;
+        } else {
+          const ins = pool.query(
+            "INSERT INTO exercises (name, body_part, exercise_type) VALUES (?, ?, ?) RETURNING id",
+            [ex.name, ex.body_part, ex.exercise_type],
+          ).rows[0];
+          exIdByName[ex.name] = ins.id;
+        }
+      }
+
+      // 4. Program shell - private custom program for Carla. visible=0 keeps
+      //    it out of Explore; only her enrolment surfaces it on Home.
+      let program = pool.query(
+        "SELECT id FROM programs WHERE title = 'Carla Phase 1' LIMIT 1",
+      ).rows[0];
+      if (!program) {
+        const p = pool.query(
+          `INSERT INTO programs (title, description, duration_weeks, workouts_per_week, visible)
+           VALUES (?, ?, ?, ?, 0) RETURNING id`,
+          ['Carla Phase 1', 'Phase 1 carried over from FitBudd. 3 sessions per week.', 12, 3],
+        ).rows[0];
+        program = { id: p.id };
+      }
+
+      // 5. Workouts + their exercises. Skip session if already imported
+      //    (idempotency) - matches by program_id + day_number.
+      for (const sess of CARLA_SESSIONS) {
+        const existing = pool.query(
+          'SELECT id FROM workouts WHERE program_id = ? AND day_number = ? LIMIT 1',
+          [program.id, sess.day_number],
+        ).rows[0];
+        if (existing) continue;
+        const w = pool.query(
+          `INSERT INTO workouts (program_id, week_number, day_number, title, status, visible)
+           VALUES (?, 1, ?, ?, 'published', 1) RETURNING id`,
+          [program.id, sess.day_number, sess.title],
+        ).rows[0];
+
+        let order = 0;
+        for (const ex of sess.exercises) {
+          const exerciseId = ex.exercise_id || exIdByName[ex.name];
+          if (!exerciseId) continue;
+          const we = pool.query(
+            `INSERT INTO workout_exercises
+               (workout_id, exercise_id, order_index, sets, reps, duration_secs, rest_secs)
+             VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+            [
+              w.id, exerciseId, order++,
+              ex.sets || 1,
+              ex.time_based ? null : (ex.reps || '10'),
+              ex.time_based ? ex.duration_secs : null,
+              30,
+            ],
+          ).rows[0];
+          pool.query(
+            `INSERT INTO workout_exercise_meta
+               (workout_exercise_id, time_based, duration_secs, tracking_type)
+             VALUES (?, ?, ?, ?)`,
+            [we.id, ex.time_based ? 1 : 0, ex.time_based ? ex.duration_secs : null, ex.time_based ? 'duration' : 'reps'],
+          );
+        }
+      }
+
+      // 6. Enrol her in the program
+      const enrolled = pool.query(
+        'SELECT id FROM client_programs WHERE user_id = ? AND program_id = ?',
+        [user.id, program.id],
+      ).rows[0];
+      if (!enrolled) {
+        const totalW = pool.query('SELECT COUNT(*) AS c FROM workouts WHERE program_id = ?', [program.id]).rows[0].c;
+        pool.query(
+          `INSERT INTO client_programs (user_id, program_id, current_week, current_day, total_workouts)
+           VALUES (?, ?, 1, 1, ?)`,
+          [user.id, program.id, totalW],
+        );
+      }
     },
   },
   // Seed the first "warm up" tags on the two existing warmup exercises

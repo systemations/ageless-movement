@@ -30,7 +30,19 @@ export default function CoachHome({ onOpenClient }) {
   }, [token, coachFilter]);
 
   if (loading) return <div style={{ padding: 40, color: 'var(--text-tertiary)' }}>Loading dashboard...</div>;
-  if (!data) return <div style={{ padding: 40, color: 'var(--error)' }}>Failed to load dashboard.</div>;
+  // Guard the whole error path: the API returns { error: ... } (truthy) on a
+  // 403/500, so `!data` alone isn't enough - we must also confirm the success
+  // shape (kpis) is present before reading off it. Without this the page hard
+  // crashes to the error boundary ("Cannot read properties of undefined") e.g.
+  // when a coach hits this with a stale client-role JWT and gets a 403.
+  if (!data || !data.kpis) {
+    return (
+      <div style={{ padding: 40, color: 'var(--text-secondary)' }}>
+        <p style={{ color: 'var(--error)', fontWeight: 700, marginBottom: 8 }}>Couldn't load the dashboard.</p>
+        <p style={{ fontSize: 14 }}>If you were just made a coach, log out and back in to refresh your session, then reload.</p>
+      </div>
+    );
+  }
 
   const k = data.kpis;
   const greeting = getGreeting();

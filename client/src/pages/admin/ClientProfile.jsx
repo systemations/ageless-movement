@@ -24,11 +24,13 @@ export default function ClientProfile({
   showRail = false,
   conversationId = null,
   initialTab = 'Overview',
+  onTabChange, // bubble up the active tab so the parent (CoachWorkspace) can react (e.g. collapse the chat list on Workout)
 }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => { if (onTabChange) onTabChange(activeTab); }, [activeTab, onTabChange]);
 
   // When the parent switches client, snap back to the default tab so we
   // don't persist e.g. "Nutrition" for a client we're viewing for the first time.
@@ -163,8 +165,11 @@ export default function ClientProfile({
         ))}
       </div>
 
-      {/* Tab content - wrap in 2-col grid when we need the always-visible info rail */}
-      {showRail ? (
+      {/* Tab content - wrap in 2-col grid when we need the always-visible info rail.
+          Workout tab opts out because the WorkoutBuilder needs the full width;
+          with the 320px rail in place the block "variableType" pills + add-
+          exercise rows wrap and the layout looks busted on desktop. */}
+      {showRail && activeTab !== 'Workout' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
             {activeTab === 'Overview' && <OverviewTab data={{ ...data, _refetch: refetch }} railMode />}
@@ -2632,29 +2637,70 @@ function NotesTab({ clientId, notes, onChange }) {
       {notes.length === 0 && !showAdd && <EmptyCard text="No notes yet. Click + New note to add one." />}
 
       {notes.map(n => (
-        <Card key={n.id}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <p style={{ fontSize: 14, fontWeight: 700 }}>{n.title}</p>
-                {n.is_pinned ? <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 800 }}>PINNED</span> : null}
-                {n.is_private ? <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 800 }}>PRIVATE</span> : null}
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                {formatDate(n.created_at)}{n.coach_name ? ` · ${n.coach_name}` : ''}
-              </p>
-              <p style={{ fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{n.content}</p>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => togglePin(n)} title={n.is_pinned ? 'Unpin' : 'Pin'} style={iconBtn}>
-                {n.is_pinned ? '📌' : '📍'}
-              </button>
-              <button onClick={() => deleteNote(n.id)} title="Delete" style={iconBtn}>🗑</button>
-            </div>
-          </div>
-        </Card>
+        <NoteCard key={n.id} n={n} onTogglePin={togglePin} onDelete={deleteNote} />
       ))}
     </div>
+  );
+}
+
+// Single note card. Content is clamped to a standard collapsed height so the
+// cards line up evenly in the list regardless of note length (Dan's request -
+// long notes were dwarfing short ones). A "Show more / Show less" toggle only
+// appears when the content actually overflows the clamp, so short notes stay
+// clean with no dangling control.
+const NOTE_CLAMP_LINES = 4;
+function NoteCard({ n, onTogglePin, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const contentRef = useRef(null);
+
+  // Measure overflow while the body is in its clamped state (initial render),
+  // comparing full content height against the clamped box height.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) setOverflowing(el.scrollHeight > el.clientHeight + 1);
+  }, [n.content]);
+
+  const clampStyle = expanded ? {} : {
+    display: '-webkit-box',
+    WebkitLineClamp: NOTE_CLAMP_LINES,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  };
+
+  return (
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>{n.title}</p>
+            {n.is_pinned ? <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 800 }}>PINNED</span> : null}
+            {n.is_private ? <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 800 }}>PRIVATE</span> : null}
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
+            {formatDate(n.created_at)}{n.coach_name ? ` · ${n.coach_name}` : ''}
+          </p>
+          <p ref={contentRef} style={{ fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.5, ...clampStyle }}>{n.content}</p>
+          {overflowing && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              style={{
+                background: 'none', border: 'none', padding: '4px 0 0', marginTop: 2,
+                color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              {expanded ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => onTogglePin(n)} title={n.is_pinned ? 'Unpin' : 'Pin'} style={iconBtn}>
+            {n.is_pinned ? '📌' : '📍'}
+          </button>
+          <button onClick={() => onDelete(n.id)} title="Delete" style={iconBtn}>🗑</button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

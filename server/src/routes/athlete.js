@@ -89,7 +89,26 @@ router.get('/features', authenticateToken, (req, res) => {
 router.get('/today', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const date = req.query.date || new Date().toISOString().split('T')[0];
+    // Timezone precedence: ?tz query param (sent by the browser - always
+    // accurate for the currently-logged-in user, works for coaches who
+    // don't have a client_profiles row) > stored client_profiles.timezone
+    // > UTC. Whichever is used drives the "today" the consumed counter
+    // resets against.
+    const queryTz = typeof req.query.tz === 'string' && /^[A-Za-z_+\-/0-9]+$/.test(req.query.tz) && req.query.tz.length < 64
+      ? req.query.tz
+      : null;
+    const storedTz = pool.query('SELECT timezone FROM client_profiles WHERE user_id = ?', [userId]).rows[0]?.timezone;
+    const tz = queryTz || storedTz;
+    const localToday = (() => {
+      try {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+          timeZone: tz || 'UTC',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+        });
+        return fmt.format(new Date());
+      } catch { return new Date().toISOString().split('T')[0]; }
+    })();
+    const date = req.query.date || localToday;
     const dayOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date(date + 'T12:00:00').getDay()];
 
     // Get user tier
@@ -433,15 +452,36 @@ router.get('/today', authenticateToken, (req, res) => {
       }
     }
 
-    // Determine if it's a training day or rest day
-    const isTrainingDay = todayWorkouts.some(w => w.session_type === 'gym' || w.session_type === 'circuit');
+    // Any workout scheduled for today (program-suggested or user-added)
+    // makes today a training day. The previous check only matched
+    // workout_type 'gym'/'circuit' which excluded real categories like
+    // strength, mobility, follow_along, cardio - so the Targets card
+    // was permanently stuck on Rest Day for anyone with a real program.
+    const isTrainingDay = todayWorkouts.length > 0;
 
-    // Build calorie targets (phase-aware if available)
+    // Build calorie targets. Precedence (highest wins): manual profile
+    // override > phase calories (Prime+) > meal-day template (Prime+) >
+    // currently-enrolled meal_schedule (covers e.g. Dan on Carnivore Diet
+    // with macros set on the schedule itself, not on the profile).
+    const activeSchedule = pool.query(
+      `SELECT ms.calorie_target_min, ms.calorie_target_max,
+              ms.protein_target, ms.fat_target, ms.carbs_target
+       FROM client_meal_schedules cms
+       JOIN meal_schedules ms ON ms.id = cms.meal_schedule_id
+       WHERE cms.user_id = ?
+       ORDER BY cms.started_at DESC LIMIT 1`,
+      [userId],
+    ).rows[0];
+
+    const scheduleKcal = activeSchedule
+      ? Math.round(((activeSchedule.calorie_target_min || 0) + (activeSchedule.calorie_target_max || 0)) / 2) || null
+      : null;
+
     let calorieTargets = {
-      calories: profile?.calorie_target || 2200,
-      protein: profile?.protein_target || 163,
-      fat: profile?.fat_target || 167,
-      carbs: profile?.carbs_target || 10,
+      calories: profile?.calorie_target || scheduleKcal || 2200,
+      protein:  profile?.protein_target || activeSchedule?.protein_target || 163,
+      fat:      profile?.fat_target     || activeSchedule?.fat_target     || 167,
+      carbs:    profile?.carbs_target   || activeSchedule?.carbs_target   || 10,
     };
     if (phaseCalories && tierLevel >= 2) {
       calorieTargets.calories = isTrainingDay ? phaseCalories.training_day_kcal : phaseCalories.rest_day_kcal;
@@ -452,11 +492,30 @@ router.get('/today', authenticateToken, (req, res) => {
       if (mealTemplate.protein_g_target) calorieTargets.protein = mealTemplate.protein_g_target;
     }
 
+    // Today's actual consumption from nutrition_logs - powers the
+    // "consumed / target" display on the Home Targets card.
+    const consumedRow = pool.query(
+      `SELECT
+         COALESCE(SUM(calories), 0) AS calories,
+         COALESCE(SUM(protein), 0)  AS protein,
+         COALESCE(SUM(fat), 0)      AS fat,
+         COALESCE(SUM(carbs), 0)    AS carbs
+       FROM nutrition_logs WHERE user_id = ? AND date = ?`,
+      [req.user.id, date],
+    ).rows[0] || {};
+    const consumedToday = {
+      calories: Math.round(consumedRow.calories || 0),
+      protein:  Math.round(consumedRow.protein  || 0),
+      fat:      Math.round(consumedRow.fat      || 0),
+      carbs:    Math.round(consumedRow.carbs    || 0),
+    };
+
     res.json({
       date,
       day_of_week: dayOfWeek,
       week_number: weekNumber,
       is_training_day: isTrainingDay,
+      consumed_today: consumedToday,
       block: block ? {
         id: block.id,
         name: block.name,

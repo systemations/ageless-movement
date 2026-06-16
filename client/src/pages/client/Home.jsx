@@ -7,6 +7,7 @@ import { CalendarIcon } from '../../components/Icons';
 import WorkoutThumb, { MiniThumb } from '../../components/WorkoutThumb';
 import EnhancedToday, { invalidateTodayCache } from '../../components/EnhancedToday';
 import NotificationPopup from '../../components/NotificationPopup';
+import { cachedGet } from '../../lib/apiCache';
 import {
   ACTIVITY_LEVELS,
   EATING_STYLES,
@@ -103,14 +104,12 @@ export default function Home() {
   // existing rows in client_profiles.reminder_preferences with only a
   // subset of keys still behave sensibly.
   const fetchPrefs = async () => {
-    try {
-      const r = await fetch('/api/athlete/preferences', { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) return;
-      const d = await r.json();
-      if (d?.preferences && typeof d.preferences === 'object') {
-        setPrefs((prev) => ({ ...prev, ...d.preferences }));
-      }
-    } catch {}
+    const d = await cachedGet('/api/athlete/preferences', {
+      headers: { Authorization: `Bearer ${token}` }, ttl: 120_000,
+    });
+    if (d?.preferences && typeof d.preferences === 'object') {
+      setPrefs((prev) => ({ ...prev, ...d.preferences }));
+    }
   };
 
   // BMR recovery - silent self-heal for users whose questionnaire never
@@ -210,17 +209,13 @@ export default function Home() {
   }, [location.search]);
 
   const fetchAthleteFeatures = async () => {
-    try {
-      const res = await fetch('/api/athlete/features', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        homeCache.athleteFeatures = data.features || null;
-        setAthleteFeatures(data.features || null);
-      }
-    } catch (err) {
-      // Non-critical -- enhanced features just won't show
+    // Feature flags barely change — long TTL, and de-duped across mounts.
+    const data = await cachedGet('/api/athlete/features', {
+      headers: { Authorization: `Bearer ${token}` }, ttl: 300_000,
+    });
+    if (data) {
+      homeCache.athleteFeatures = data.features || null;
+      setAthleteFeatures(data.features || null);
     }
   };
 
@@ -304,13 +299,14 @@ export default function Home() {
     if (exploreWorkouts.length > 0) return; // already loaded
     setExploreLoading(true);
     try {
-      // Fetch explore content + recent workouts in parallel
-      const [exploreRes, recentRes] = await Promise.all([
-        fetch('/api/explore/content', { headers: { Authorization: `Bearer ${token}` } }),
+      // Explore content is cached (shared with the Explore page); recent
+      // workouts stay live since they change as the user logs sessions.
+      const [exploreData, recentRes] = await Promise.all([
+        cachedGet('/api/explore/content', { headers: { Authorization: `Bearer ${token}` }, ttl: 60_000 }),
         fetch('/api/schedule/recent-workouts', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (exploreRes.ok) {
-        const data = await exploreRes.json();
+      if (exploreData) {
+        const data = exploreData;
         // Endpoint returns { sections: [...] }, though older versions returned an array.
         const sections = Array.isArray(data) ? data : (data.sections || []);
         const workouts = [];
@@ -1644,15 +1640,19 @@ const LEVEL_COLORS = {
   5: '#8b5cf6',  // violet - mastery
 };
 const challengesCache = { data: null };
+// Clear on logout so the next user doesn't briefly see the previous one's
+// benchmark levels (this is only a synchronous render seed; the network layer
+// in apiCache already clears its own cache on the same event).
+if (typeof window !== 'undefined') {
+  window.addEventListener('am-logout', () => { challengesCache.data = null; });
+}
 
 function ChallengesCard({ token, onOpen }) {
   const [data, setData] = useState(challengesCache.data);
   useEffect(() => {
     if (!token) return;
-    fetch('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) { challengesCache.data = d; setData(d); } })
-      .catch(() => {});
+    cachedGet('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` }, ttl: 60_000 })
+      .then(d => { if (d) { challengesCache.data = d; setData(d); } });
   }, [token]);
 
   const categories = data?.categories || [];

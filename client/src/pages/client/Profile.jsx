@@ -5,6 +5,7 @@ import { modal } from '../../components/Modal';
 import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight } from '../../components/Icons';
 import { EATING_STYLES, calculateTargets } from '../../lib/nutritionTargets';
+import { cachedGet, invalidate } from '../../lib/apiCache';
 
 export default function Profile({ onBack }) {
   const { user, token, profile, logout } = useAuth();
@@ -118,16 +119,15 @@ export default function Profile({ onBack }) {
     fetchProfile();
     // Load reminder preferences
     const fetchPrefs = async () => {
-      try {
-        const res = await fetch('/api/athlete/preferences', { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.preferences && Object.keys(data.preferences).length > 0) {
-            setReminders(prev => ({ ...prev, ...data.preferences }));
-          }
-          setRemindersLoaded(true);
+      const data = await cachedGet('/api/athlete/preferences', {
+        headers: { Authorization: `Bearer ${token}` }, ttl: 120_000,
+      });
+      if (data) {
+        if (data.preferences && Object.keys(data.preferences).length > 0) {
+          setReminders(prev => ({ ...prev, ...data.preferences }));
         }
-      } catch (err) { console.error(err); }
+        setRemindersLoaded(true);
+      }
     };
     fetchPrefs();
     // Onboarding checklist - to decide whether the "Get Started checklist"
@@ -181,6 +181,8 @@ export default function Profile({ onBack }) {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ preferences: updated }),
         });
+        // Bust the cached prefs so Home/Profile re-read the new toggles.
+        invalidate('/api/athlete/preferences');
       } catch (err) { console.error('Failed to save preference:', err); }
     };
 

@@ -530,6 +530,16 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
       [req.user.id, req.params.id],
     ).rows[0];
 
+    // Has the user already logged this workout today? Lets the player show a
+    // "Completed" state instead of a misleading "Mark Complete" CTA on re-open.
+    // Matches the log endpoint's UTC "today" (date('now')).
+    const completedToday = pool.query(
+      `SELECT 1 FROM workout_logs
+        WHERE user_id = ? AND workout_id = ? AND completed = 1
+          AND date = date('now') LIMIT 1`,
+      [req.user.id, req.params.id]
+    ).rows.length > 0;
+
     if (override) {
       let exOverride = null;
       let metaOverride = null;
@@ -539,6 +549,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
         return res.json({
           workout: { ...workout.rows[0], ...(metaOverride || {}) },
           exercises: exOverride,
+          completed_today: completedToday,
           personalised: {
             is_override: true,
             coach_note: override.coach_note,
@@ -551,6 +562,7 @@ router.get('/workouts/:id', authenticateToken, async (req, res) => {
     res.json({
       workout: workout.rows[0],
       exercises: exercisesWithAlts,
+      completed_today: completedToday,
     });
   } catch (err) {
     console.error('Workout detail error:', err);

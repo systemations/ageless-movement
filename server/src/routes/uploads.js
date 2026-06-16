@@ -5,6 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
+import { registerFileAsset } from '../lib/files.js';
+
+// Record an uploaded file's owner + visibility for the /uploads access gate
+// (SECURITY.md L1). Client uploads are personal data ('private' — owner + their
+// coach); coach uploads are shared content ('content' — any authed user). Chat
+// attachments are upgraded to 'message' (conversation-scoped) when the message
+// is posted (messaging.js).
+const registerFile = (filename, user) =>
+  registerFileAsset(filename, user.id, user.role === 'coach' ? 'content' : 'private');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Uploads live under server/data/uploads so they share the Render
@@ -83,12 +92,14 @@ const runUpload = (handler) => (req, res, next) => {
 
 router.post('/', authenticateToken, runUpload(upload.single('file')), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  registerFile(req.file.filename, req.user);
   const url = `/uploads/${req.file.filename}`;
   res.json({ url, filename: req.file.filename, size: req.file.size, mimetype: req.file.mimetype });
 });
 
 router.post('/multiple', authenticateToken, runUpload(upload.array('files', 10)), (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded' });
+  for (const f of req.files) registerFile(f.filename, req.user);
   const urls = req.files.map(f => ({ url: `/uploads/${f.filename}`, filename: f.filename }));
   res.json({ files: urls });
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { invalidate } from '../../lib/apiCache';
 
 const LEVEL_COLORS = {
   0: '#94a3b8',
@@ -347,6 +348,9 @@ function SubmitModal({ bm, token, onClose, onSaved }) {
         body: JSON.stringify({ value: Number(value), notes, video_url: evidenceUrl }),
       });
       if (!r.ok) throw new Error((await r.json()).error || 'Failed');
+      // New attempt may bump the user's level — drop the cached index so the
+      // Home card and Challenges "My Levels" reflect it.
+      invalidate('/api/benchmarks');
       onSaved();
     } catch (e) { setErr(e.message); }
     setSaving(false);

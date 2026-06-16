@@ -1,0 +1,40 @@
+# Dependabot — continuous dependency monitoring (closes the "F3 was a one-time
+# npm audit" gap in SECURITY.md). Watches each package.json, opens PRs to bump
+# vulnerable/outdated packages. Minor + patch bumps are grouped into a single PR
+# per folder to keep the noise down; major bumps come as individual PRs since
+# they need more review.
+#
+# NOTE: this file enables scheduled *version* updates. To also get automatic
+# *security* fix PRs for newly-disclosed CVEs, enable "Dependabot alerts" and
+# "Dependabot security updates" in the repo's GitHub Settings → Code security.
+version: 2
+updates:
+  # Root dev tooling (e.g. concurrently)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Backend (Express, better-sqlite3-multiple-ciphers, etc.)
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Frontend (React, Vite, etc.)
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]

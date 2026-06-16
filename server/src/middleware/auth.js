@@ -61,6 +61,17 @@ function cookieIsValid(value) {
   catch { return false; }
 }
 
+// True when a token's session has been revoked (logout, password change/reset).
+// Tokens minted before sessions existed carry no `sid` and are allowed through
+// until expiry (so a deploy doesn't force-log-out everyone). Shared by the API
+// auth path and the /uploads file gate so a revoked token can't keep fetching
+// files until JWT expiry (SECURITY.md L1 + L3).
+function sessionRevoked(decoded) {
+  if (!decoded || !decoded.sid) return false;
+  const sess = pool.query('SELECT revoked_at FROM sessions WHERE id = ?', [decoded.sid]).rows[0];
+  return !sess || !!sess.revoked_at;
+}
+
 // Set the file-access cookie only when the request isn't already carrying a
 // valid one, so we don't append Set-Cookie to every authenticated response.
 function ensureFileCookie(req, res, token) {
@@ -74,9 +85,69 @@ function ensureFileCookie(req, res, token) {
   });
 }
 
-// Guard used by the /uploads static handler in index.js.
+// Guard used by the /uploads static handler in index.js. Honors session
+// revocation (via fileCookieUser) so a logged-out / revoked token is rejected.
 export function fileCookieValid(req) {
-  return cookieIsValid(parseCookies(req.headers.cookie)[FILE_COOKIE]);
+  return fileCookieUser(req) !== null;
+}
+
+// Decode the user from the file-access cookie (or null). Lets the /uploads gate
+// know WHO is requesting a file so it can enforce per-user authorization — and
+// rejects a token whose session has been revoked, so logout / password change
+// cuts off file access immediately instead of lingering until JWT expiry.
+export function fileCookieUser(req) {
+  const value = parseCookies(req.headers.cookie)[FILE_COOKIE];
+  if (!value) return null;
+  let decoded;
+  try { decoded = jwt.verify(value, config.JWT_SECRET, { algorithms: ['HS256'] }); }
+  catch { return null; }
+  if (sessionRevoked(decoded)) return null;
+  return decoded;
+}
+
+// Pure boolean version of the coach-owns-client check (no response side effect).
+// Mirrors checkCoachOwnsClient: an unassigned client (coach_id NULL) is visible
+// to the sole-admin coach. Used by the file gate.
+export function coachOwnsClient(coachUserId, clientUserId) {
+  if (!Number.isFinite(clientUserId)) return false;
+  const row = pool.query('SELECT coach_id, role FROM users WHERE id = ? LIMIT 1', [clientUserId]).rows[0];
+  if (!row || row.role !== 'client') return false;
+  if (row.coach_id == null) return true;
+  return row.coach_id === coachUserId;
+}
+
+// Per-user authorization for an uploaded file (SECURITY.md L1). Anonymous → no
+// (preserves the original cookie gate). Otherwise, by the file's registered
+// visibility:
+//   content → any authenticated user (coach-uploaded shared content)
+//   message → members of the conversation
+//   private → the owner, or the owner's coach
+// Unregistered files (legacy/seed/coach content not tracked) are allowed: every
+// PRIVATE column is backfilled into file_assets, so an unknown file is
+// non-sensitive shared content rather than personal data.
+export function canAccessFile(req) {
+  const user = fileCookieUser(req);
+  if (!user) return false;
+  // Inside the '/uploads' mount, req.path is mount-relative ('/<uuid>.<ext>').
+  const filename = (req.path || '').split('/').filter(Boolean).pop() || '';
+  if (!filename) return false;
+  const asset = pool.query(
+    'SELECT owner_user_id, visibility, conversation_id FROM file_assets WHERE filename = ?',
+    [filename],
+  ).rows[0];
+  if (!asset) return true;                              // unregistered → shared/legacy content
+  if (asset.visibility === 'content') return true;
+  if (user.id === asset.owner_user_id) return true;    // owner always
+  if (asset.visibility === 'message') {
+    if (!asset.conversation_id) return false;
+    return !!pool.query(
+      'SELECT 1 FROM conversation_members WHERE conversation_id = ? AND user_id = ? LIMIT 1',
+      [asset.conversation_id, user.id],
+    ).rows[0];
+  }
+  // private: the owner's coach may view (e.g. coach reviewing check-in photos).
+  if (user.role === 'coach' && coachOwnsClient(user.id, asset.owner_user_id)) return true;
+  return false;
 }
 
 export const authenticateToken = (req, res, next) => {
@@ -98,14 +169,9 @@ export const authenticateToken = (req, res, next) => {
     // default, but callers that rely on defaults have been bitten before - 
     // an algorithm whitelist is defence-in-depth and costs nothing.
     const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
-    // Session revocation check (SECURITY.md L3). Tokens minted before sessions
-    // existed carry no `sid` and are allowed through until they expire, so a
-    // deploy doesn't force-log-out everyone.
-    if (decoded.sid) {
-      const sess = pool.query('SELECT revoked_at FROM sessions WHERE id = ?', [decoded.sid]).rows[0];
-      if (!sess || sess.revoked_at) {
-        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-      }
+    // Session revocation check (SECURITY.md L3) — shared with the file gate.
+    if (sessionRevoked(decoded)) {
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
     req.user = decoded;
     ensureFileCookie(req, res, token);

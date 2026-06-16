@@ -1,7 +1,8 @@
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { config } from '../lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, '..', '..', 'data', 'ageless.db');
@@ -9,6 +10,30 @@ const dbPath = path.join(__dirname, '..', '..', 'data', 'ageless.db');
 // Ensure data directory exists
 import fs from 'fs';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+// At-rest encryption (SECURITY.md L4). When DB_ENCRYPTION_KEY is set, the
+// SQLite file is transparently encrypted via SQLite3MultipleCiphers: we apply
+// the key right after opening each connection, and migrate an existing
+// plaintext DB to encrypted on first boot (PRAGMA rekey). Unset (dev) → the DB
+// stays a plaintext file and every step below is a no-op.
+const DB_KEY = config.DB_ENCRYPTION_KEY;
+const SQLITE_MAGIC = Buffer.from('SQLite format 3\0', 'latin1');
+
+// True when the file on disk is an unencrypted SQLite database (starts with the
+// "SQLite format 3\0" magic). An encrypted file is ciphertext from byte 0, so
+// it won't match — that's how we tell "needs migrating" from "already encrypted".
+function isPlaintextSqlite(file) {
+  if (!fs.existsSync(file)) return false;
+  const fd = fs.openSync(file, 'r');
+  const buf = Buffer.alloc(16);
+  const n = fs.readSync(fd, buf, 0, 16, 0);
+  fs.closeSync(fd);
+  return n === 16 && buf.equals(SQLITE_MAGIC);
+}
+
+function applyKey(database) {
+  if (DB_KEY) database.pragma(`key='${DB_KEY.replace(/'/g, "''")}'`);
+}
 
 // Content seed, version-stamped.
 //
@@ -52,6 +77,7 @@ if (fs.existsSync(seedPath)) {
     let realClients = 0;
     try {
       const probe = new Database(dbPath, { readonly: true });
+      if (DB_KEY && !isPlaintextSqlite(dbPath)) applyKey(probe);
       realClients = probe.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'client'").get().c;
       probe.close();
     } catch {
@@ -73,7 +99,33 @@ if (fs.existsSync(seedPath)) {
   }
 }
 
+// One-time migration: if a key is configured and the DB on disk is still
+// plaintext (current prod/dev disks, or a freshly-copied seed), encrypt it in
+// place. PRAGMA rekey rewrites every page with the cipher; we checkpoint first
+// so any pending WAL is folded into the main file. No-op once encrypted.
+if (DB_KEY && isPlaintextSqlite(dbPath)) {
+  const mig = new Database(dbPath);
+  // rekey isn't allowed in WAL mode, and the live DB persists journal_mode=WAL.
+  // Switch to a rollback journal first (this also checkpoints + drops the -wal),
+  // rekey, then the main open below restores WAL on the now-encrypted file.
+  mig.pragma('journal_mode = DELETE');
+  mig.pragma(`rekey='${DB_KEY.replace(/'/g, "''")}'`);
+  mig.close();
+  console.log('[db] database encrypted at rest (one-time rekey).');
+}
+
 const db = new Database(dbPath);
+applyKey(db);
+// Fail fast with a clear message if the key doesn't match (e.g. DB_ENCRYPTION_KEY
+// was changed after the DB was encrypted) — otherwise the first real query
+// throws a cryptic "file is not a database".
+try {
+  db.prepare('SELECT count(*) FROM sqlite_master').get();
+} catch (err) {
+  throw new Error(
+    'Could not open the database. If DB_ENCRYPTION_KEY was set or changed, it must match the key the database was encrypted with. (' + err.message + ')',
+  );
+}
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -820,6 +872,23 @@ const alterStatements = [
     consented_at TEXT DEFAULT (datetime('now'))
   )`,
   "CREATE INDEX IF NOT EXISTS idx_user_consents_user ON user_consents(user_id, consented_at DESC)",
+  // Per-file ownership + visibility for upload access control (SECURITY.md L1).
+  // visibility: 'private' = owner + the owner's coach only; 'content' = any
+  // authenticated user (coach-uploaded shared content); 'message' = members of
+  // conversation_id. A row is recorded on upload; the /uploads gate enforces it.
+  `CREATE TABLE IF NOT EXISTS file_assets (
+    filename TEXT PRIMARY KEY,
+    owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    visibility TEXT NOT NULL DEFAULT 'private',
+    conversation_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_file_assets_owner ON file_assets(owner_user_id)",
+  // Admin flag for multi-coach isolation (SECURITY.md Tier 2). Only an admin
+  // coach may act on behalf of another coach or delete coaches; a regular coach
+  // is scoped to themselves + their own clients. Existing coaches are backfilled
+  // to is_admin=1 (migrations.js) so current behaviour is unchanged.
+  "ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0",
   "ALTER TABLE workouts ADD COLUMN visible INTEGER DEFAULT 1",
   "ALTER TABLE workouts ADD COLUMN tier_id INTEGER DEFAULT 1",
   "ALTER TABLE client_profiles ADD COLUMN tier_id INTEGER DEFAULT 1",

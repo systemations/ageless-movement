@@ -13,6 +13,7 @@ import ExerciseBrowser from './ExerciseBrowser';
 import ChallengeDetail from './ChallengeDetail';
 import MealPlanView from './MealPlanView';
 import PlansModal from '../../components/PlansModal';
+import { cachedGet, invalidate } from '../../lib/apiCache';
 
 // Opaque gradient veil + lock silhouette over a locked thumbnail. The
 // gradient darkens toward the bottom so any title baked into the image stays
@@ -81,6 +82,9 @@ export default function Explore() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        // The catalog's enrolled-state is now stale — drop it so the next
+        // Explore visit re-fetches instead of serving the cached list.
+        invalidate('/api/nutrition/meal-schedules');
         setMealToast({ kind: 'success', msg: `${sched.title} added to your plan` });
       } else {
         const d = await res.json().catch(() => ({}));
@@ -127,25 +131,17 @@ export default function Explore() {
 
   useEffect(() => {
     if (!token) return;
-    // Skip empty/non-2xx bodies so an interrupted fetch (page navigated away
-    // mid-flight, auth rehydrating, etc.) doesn't spam the console with
-    // "Unexpected end of JSON input" - those errors aren't user-facing but
-    // they'll generate noise once Sentry is wired.
-    const safeJson = (r) => (r.ok ? r.json().catch(() => null) : null);
-    fetch('/api/explore/content', { headers: { Authorization: `Bearer ${token}` } })
-      .then(safeJson)
-      .then(d => { if (d) setApiData(d); })
-      .catch(console.error);
-
-    fetch('/api/challenges', { headers: { Authorization: `Bearer ${token}` } })
-      .then(safeJson)
-      .then(d => { if (d) setChallenges(d.challenges || []); })
-      .catch(console.error);
-
-    fetch('/api/nutrition/meal-schedules', { headers: { Authorization: `Bearer ${token}` } })
-      .then(safeJson)
-      .then(d => { if (d) setMealSchedules(d.schedules || []); })
-      .catch(console.error);
+    // These are publish-gated catalogs that change rarely, so they go through
+    // the client cache (cachedGet returns null on non-2xx/parse/network error,
+    // and de-dupes the StrictMode double-fire). 60s TTL means bouncing in and
+    // out of Explore doesn't refetch all three every time.
+    const auth = { Authorization: `Bearer ${token}` };
+    cachedGet('/api/explore/content', { headers: auth, ttl: 60_000 })
+      .then(d => { if (d) setApiData(d); });
+    cachedGet('/api/challenges', { headers: auth, ttl: 60_000 })
+      .then(d => { if (d) setChallenges(d.challenges || []); });
+    cachedGet('/api/nutrition/meal-schedules', { headers: auth, ttl: 60_000 })
+      .then(d => { if (d) setMealSchedules(d.schedules || []); });
   }, [token]);
 
   // Open a specific program / workout / course when navigated with

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, coachOwnsClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -10,12 +10,14 @@ router.get('/features', authenticateToken, (req, res) => {
   try {
     let userId = req.user.id;
 
-    // Coaches can query another user's features
-    if (req.query.user_id) {
+    // A coach can query their OWN client's features (SECURITY.md Tier 2) — not
+    // an arbitrary user's. Non-coaches and non-owned clients are rejected.
+    if (req.query.user_id && Number(req.query.user_id) !== req.user.id) {
       const requester = pool.query('SELECT role FROM users WHERE id = ?', [req.user.id]).rows[0];
-      if (requester?.role === 'coach') {
-        userId = Number(req.query.user_id);
+      if (requester?.role !== 'coach' || !coachOwnsClient(req.user.id, Number(req.query.user_id))) {
+        return res.status(403).json({ error: 'Forbidden' });
       }
+      userId = Number(req.query.user_id);
     }
 
     // Get user's tier level
@@ -268,6 +270,25 @@ router.get('/today', authenticateToken, (req, res) => {
         },
       });
     }
+
+    // Mark sessions the athlete has already logged today so the card can show a
+    // completed state instead of silently re-prompting.
+    // NOTE: the session list's "today" (`date`) is timezone-local, but
+    // workout_logs are written with a UTC date (POST /workouts/:id/log) — as is
+    // the player's completed check. Match EITHER so a just-finished session
+    // reads as done regardless of the UTC/local day boundary.
+    const completedToday = new Set(
+      pool.query(
+        `SELECT DISTINCT workout_id FROM workout_logs
+          WHERE user_id = ? AND completed = 1 AND workout_id IS NOT NULL
+            AND date IN (?, date('now'))`,
+        [userId, date]
+      ).rows.map(r => r.workout_id)
+    );
+    todayWorkouts = todayWorkouts.map(w => ({
+      ...w,
+      completed: !!w.workout_id && completedToday.has(w.workout_id),
+    }));
 
     // Get meal template for today's day type
     let mealTemplate = null;

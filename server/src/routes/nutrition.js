@@ -791,20 +791,27 @@ router.post('/shopping-lists/generate', authenticateToken, (req, res) => {
   }
 });
 
-// Toggle an item checked/unchecked
+// Toggle an item checked/unchecked. Scope to items in a list the caller owns
+// (SECURITY.md L1 / IDOR) so a client can't tamper with another user's list.
 router.patch('/shopping-lists/items/:itemId', authenticateToken, (req, res) => {
   try {
     const { checked } = req.body;
-    pool.query('UPDATE shopping_list_items SET checked = ? WHERE id = ?', [checked ? 1 : 0, req.params.itemId]);
+    pool.query(
+      `UPDATE shopping_list_items SET checked = ?
+        WHERE id = ? AND shopping_list_id IN (SELECT id FROM shopping_lists WHERE user_id = ?)`,
+      [checked ? 1 : 0, req.params.itemId, req.user.id],
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Add item manually
+// Add item manually — only to a list the caller owns.
 router.post('/shopping-lists/:id/items', authenticateToken, (req, res) => {
   try {
+    const owns = pool.query('SELECT 1 FROM shopping_lists WHERE id = ? AND user_id = ? LIMIT 1', [req.params.id, req.user.id]).rows[0];
+    if (!owns) return res.status(404).json({ error: 'List not found' });
     const { name, quantity, category } = req.body;
     pool.query(
       'INSERT INTO shopping_list_items (shopping_list_id, name, quantity, category) VALUES (?, ?, ?, ?)',
@@ -816,10 +823,14 @@ router.post('/shopping-lists/:id/items', authenticateToken, (req, res) => {
   }
 });
 
-// Delete item
+// Delete item — only from a list the caller owns.
 router.delete('/shopping-lists/items/:itemId', authenticateToken, (req, res) => {
   try {
-    pool.query('DELETE FROM shopping_list_items WHERE id = ?', [req.params.itemId]);
+    pool.query(
+      `DELETE FROM shopping_list_items
+        WHERE id = ? AND shopping_list_id IN (SELECT id FROM shopping_lists WHERE user_id = ?)`,
+      [req.params.itemId, req.user.id],
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -906,7 +917,7 @@ router.get('/recipes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/recipes', authenticateToken, async (req, res) => {
+router.post('/recipes', authenticateToken, requireRole('coach'), async (req, res) => {
   try {
     const { name, description, category, thumbnail, calories, protein, fat, carbs, ingredients, instructions } = req.body;
     const result = pool.query(
@@ -922,7 +933,7 @@ router.post('/recipes', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/recipes/:id', authenticateToken, async (req, res) => {
+router.put('/recipes/:id', authenticateToken, requireRole('coach'), async (req, res) => {
   try {
     const { name, description, category, thumbnail, calories, protein, fat, carbs, ingredients, instructions } = req.body;
     pool.query(
@@ -938,7 +949,7 @@ router.put('/recipes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/recipes/:id', authenticateToken, async (req, res) => {
+router.delete('/recipes/:id', authenticateToken, requireRole('coach'), async (req, res) => {
   try {
     pool.query('DELETE FROM recipes WHERE id = ?', [req.params.id]);
     res.json({ success: true });

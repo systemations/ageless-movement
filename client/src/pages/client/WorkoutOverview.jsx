@@ -78,7 +78,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
 
   if (playing && data) {
     if (data.workout?.workout_type === 'follow_along') {
-      return <FollowAlongPlayer workout={data.workout} onBack={() => setPlaying(false)} />;
+      return <FollowAlongPlayer workout={data.workout} completed={data.completed_today} onBack={() => setPlaying(false)} />;
     }
     // Apply client-side per-exercise overrides (swap + duration tweak) to
     // the exercise list before handing it to the player. The coach's
@@ -116,7 +116,7 @@ export default function WorkoutOverview({ workoutId, onBack, previewMode = false
       }
       return out;
     });
-    return <WorkoutPlayer workout={data.workout} exercises={exercisesForPlayer} onBack={() => setPlaying(false)} />;
+    return <WorkoutPlayer workout={data.workout} exercises={exercisesForPlayer} completed={data.completed_today} onBack={() => setPlaying(false)} />;
   }
 
   if (!data) return (

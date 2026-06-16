@@ -606,6 +606,7 @@ export default function EnhancedToday({ features, onNavigateWorkout, onNavigateN
 }
 
 function SessionCard({ entry, theme, onNavigateWorkout, onRemove, stacked = false }) {
+  const done = !!entry.completed;
   return (
     <div
       onClick={() => entry.workout && onNavigateWorkout(entry.workout.id)}
@@ -614,8 +615,23 @@ function SessionCard({ entry, theme, onNavigateWorkout, onRemove, stacked = fals
         borderTop: stacked ? '1px solid var(--divider)' : 'none',
         cursor: entry.workout ? 'pointer' : 'default',
         position: 'relative',
+        opacity: done ? 0.72 : 1,
       }}
     >
+      {done && (
+        <div style={{
+          position: 'absolute', top: stacked ? 20 : 8, left: stacked ? 22 : 8,
+          display: 'flex', alignItems: 'center', gap: 5, zIndex: 2,
+          padding: '4px 9px 4px 6px', borderRadius: 50,
+          background: 'rgba(16,185,129,0.92)', color: '#fff',
+          fontSize: 11, fontWeight: 800, backdropFilter: 'blur(4px)',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Completed
+        </div>
+      )}
       {onRemove && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(entry); }}

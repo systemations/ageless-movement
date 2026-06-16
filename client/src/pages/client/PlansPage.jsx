@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { safeUrl } from '../../lib/safeUrl';
 
 // Plans landing page - reached from Profile → "Explore Plans". Shows all
 // tiers with the client's current plan marked, plus a CTA per tier that
@@ -33,8 +34,9 @@ export default function PlansPage() {
 
   const handleMessageCoach = () => navigate('/messages');
   const handleBookingLink = (url) => {
-    if (!url) return;
-    window.open(url, '_blank', 'noopener');
+    const safe = safeUrl(url); // reject javascript:/data: etc. (F2 allowlist)
+    if (!safe) return;
+    window.open(safe, '_blank', 'noopener');
   };
 
   return (

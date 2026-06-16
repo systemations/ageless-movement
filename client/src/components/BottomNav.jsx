@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { cachedGet } from '../lib/apiCache';
 import {
   HomeIcon, EventsIcon, ExploreIcon, MessagesIcon, ProgressIcon,
   GroupsIcon, CheckinsIcon, LiveIcon, MoreIcon
@@ -42,18 +43,23 @@ export default function BottomNav() {
   useEffect(() => {
     if (!token) { setUnread(0); return; }
     let alive = true;
-    const fetchUnread = () => {
-      fetch('/api/messages/unread-count', { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.ok ? r.json() : null)
-        .then(d => { if (alive && d) setUnread(d.count || 0); })
-        .catch(() => {});
+    // Navigation re-runs this effect (location.pathname dep), so the un-forced
+    // call goes through the cache with a short TTL — bouncing between tabs
+    // reuses the count instead of refetching each time. The poll, tab-focus,
+    // and "messages read" triggers force a fresh read so the badge stays live.
+    const fetchUnread = (force = false) => {
+      cachedGet('/api/messages/unread-count', {
+        headers: { Authorization: `Bearer ${token}` },
+        force,
+        ttl: 15_000,
+      }).then(d => { if (alive && d) setUnread(d.count || 0); });
     };
     fetchUnread();
-    const id = setInterval(fetchUnread, UNREAD_POLL_MS);
-    const onFocus = () => fetchUnread();
+    const id = setInterval(() => fetchUnread(true), UNREAD_POLL_MS);
+    const onFocus = () => fetchUnread(true);
     // MessageThread fires this after marking a conversation read so the
     // badge clears immediately instead of waiting for the next 30s poll.
-    const onRead = () => fetchUnread();
+    const onRead = () => fetchUnread(true);
     window.addEventListener('focus', onFocus);
     window.addEventListener('am:messages-read', onRead);
     return () => {

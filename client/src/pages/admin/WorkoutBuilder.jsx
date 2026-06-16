@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { modal } from '../../components/Modal';
 import ExerciseThumb, { getExerciseLabel } from '../../components/ExerciseThumb';
 import ImageUpload from '../../components/ImageUpload';
+import { safeUrl } from '../../lib/safeUrl';
 import FollowAlongEditor from './FollowAlongEditor';
 import PhaseEditor from '../../components/PhaseEditor';
 
@@ -1077,8 +1078,8 @@ export default function WorkoutBuilder({
               <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{inspectorExercise.name}</h4>
               {inspectorExercise.body_part && <p style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 8 }}>{inspectorExercise.body_part}</p>}
               {inspectorExercise.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>{inspectorExercise.description?.substring(0, 200)}</p>}
-              {inspectorExercise.demo_video_url && (
-                <a href={inspectorExercise.demo_video_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>Watch demo video</a>
+              {safeUrl(inspectorExercise.demo_video_url) && (
+                <a href={safeUrl(inspectorExercise.demo_video_url)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>Watch demo video</a>
               )}
             </div>
           ) : null}

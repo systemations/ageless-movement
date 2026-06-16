@@ -38,6 +38,24 @@ function loadJwtSecret() {
   return fromEnv;
 }
 
+// SQLCipher key for at-rest database encryption (SECURITY.md L4). When set, the
+// SQLite file is transparently encrypted (via SQLite3MultipleCiphers) and an
+// existing plaintext DB is migrated to encrypted on first boot. Required in
+// prod; unset in dev runs the DB as a plaintext file, which is fine locally.
+function loadDbEncryptionKey() {
+  const raw = process.env.DB_ENCRYPTION_KEY;
+  if (!raw) {
+    if (IS_PROD) {
+      throw new Error('DB_ENCRYPTION_KEY is missing. Set a long random value in the production environment so the database is encrypted at rest.');
+    }
+    return null; // dev: plaintext DB
+  }
+  if (raw.length < 16 && IS_PROD) {
+    throw new Error('DB_ENCRYPTION_KEY must be at least 16 characters in production.');
+  }
+  return raw;
+}
+
 // Comma-separated list of origins allowed to hit the API in production.
 // e.g. ALLOWED_ORIGINS=https://app.agelessmovement.com,https://www.agelessmovement.com
 // If empty in production, CORS is effectively off (API only accepts same-origin
@@ -68,6 +86,7 @@ export const config = {
   PORT: Number(process.env.PORT) || 3001,
   JWT_SECRET: loadJwtSecret(),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  DB_ENCRYPTION_KEY: loadDbEncryptionKey(),
   ALLOWED_ORIGINS,
   // Transactional email (Resend). When RESEND_API_KEY is unset the mailer
   // degrades to a dev fallback that logs the link instead of sending.

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { allocateProgram } from '../../lib/programAllocator';
+import { safeUrl } from '../../lib/safeUrl';
 import {
   ACTIVITY_LEVELS,
   EATING_STYLES,
@@ -589,7 +590,8 @@ function SuggestionScreen({ answers, onBack, isLoggedIn }) {
         // Open the booking page in a new tab so they can come back to
         // the app afterwards. Then route them home in this tab - the
         // server already logged the intent so the coach knows.
-        window.open(eliteTier.cta_url, '_blank', 'noopener');
+        const safe = safeUrl(eliteTier.cta_url); // reject javascript:/data: (F2 allowlist)
+        if (safe) window.open(safe, '_blank', 'noopener');
         navigate('/home?intent=elite');
       } else if (intent === 'prime') {
         // Stripe isn't wired yet - server stamped tier_requested_id +

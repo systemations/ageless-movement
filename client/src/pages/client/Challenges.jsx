@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { cachedGet } from '../../lib/apiCache';
 
 const TABS = ['Leaderboards', 'My Levels'];
 const GENDERS = [
@@ -95,12 +96,12 @@ function LeaderboardsTab({ token, currentUserId }) {
   const [populatedAgeBuckets, setPopulatedAgeBuckets] = useState(null);
 
   useEffect(() => {
-    fetch('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => {
+    cachedGet('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` }, ttl: 60_000 })
+      .then(d => {
+        if (!d) return;
         setBoardsIndex(d.categories || []);
         setPopulatedAgeBuckets(d.populated_age_buckets || []);
-      })
-      .catch(() => {});
+      });
   }, [token]);
 
   // Filter the static AGE_OPTIONS to just "All ages" plus the populated ones.
@@ -577,8 +578,8 @@ function BenchmarksHub({ token, onOpen }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => { setData(d); setLoading(false); });
+    cachedGet('/api/benchmarks', { headers: { Authorization: `Bearer ${token}` }, ttl: 60_000 })
+      .then(d => { setData(d || { categories: [] }); setLoading(false); });
   }, [token]);
 
   if (loading) return <div style={loadingStyle}>Loading...</div>;

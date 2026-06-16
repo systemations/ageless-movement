@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/pool.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { fileKey } from '../lib/files.js';
 import { isBetaMode } from '../lib/settings.js';
 import { betaMessage, betaFirstName } from '../jobs/reminders.js';
 
@@ -380,6 +381,25 @@ router.post('/conversations/:id/messages', authenticateToken, async (req, res) =
       'INSERT INTO messages (conversation_id, sender_id, content, message_type, attachment_url) VALUES (?, ?, ?, ?, ?) RETURNING id, conversation_id, sender_id, content, message_type, created_at',
       [req.params.id, req.user.id, content || '', message_type || 'text', attachment_url || null]
     );
+
+    // Scope a photo attachment to this conversation (SECURITY.md L1) so only its
+    // members can fetch it — overriding the uploader-role default from upload.
+    // Only re-scope a file the SENDER owns and that isn't already bound to a
+    // conversation, so a member can't point a message at someone else's private
+    // file (e.g. a guessed/leaked basename) and expose it to this conversation.
+    const attachKey = fileKey(attachment_url);
+    if (attachKey) {
+      const asset = pool.query(
+        'SELECT owner_user_id, visibility FROM file_assets WHERE filename = ?',
+        [attachKey],
+      ).rows[0];
+      if (asset && asset.owner_user_id === req.user.id && asset.visibility !== 'message') {
+        pool.query(
+          'UPDATE file_assets SET visibility = ?, conversation_id = ? WHERE filename = ?',
+          ['message', Number(req.params.id), attachKey],
+        );
+      }
+    }
 
     // Sender's own messages are implicitly read by them
     upsertRead(req.params.id, req.user.id, msg.rows[0].id);

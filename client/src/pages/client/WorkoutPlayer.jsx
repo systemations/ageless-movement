@@ -3,6 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import { getVimeoEmbedUrl } from '../../components/VimeoEmbed';
 import ExerciseDetailModal from '../../components/ExerciseDetailModal';
 import ExerciseThumb, { getExerciseLabel } from '../../components/ExerciseThumb';
+import { modal } from '../../components/Modal';
+import { invalidateTodayCache } from '../../components/EnhancedToday';
+import { invalidate } from '../../lib/apiCache';
 
 // Block colour palette must match WorkoutBuilder admin and WorkoutOverview
 const BLOCK_COLORS = {
@@ -98,7 +101,7 @@ const timerBtnStyle = {
 };
 const phaseColor = (intensity) => INTENSITY_COLORS[intensity] || '#94a3b8';
 
-export default function WorkoutPlayer({ workout, exercises, onBack }) {
+export default function WorkoutPlayer({ workout, exercises, onBack, completed = false }) {
   const { token } = useAuth();
   const [phase, setPhase] = useState('countdown'); // countdown, active, paused, settings, log, prep, complete
   const [countdown, setCountdown] = useState(3);
@@ -378,6 +381,11 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
   };
 
   const handleComplete = async () => {
+    // Already logged today → confirm before adding a second log for the day.
+    if (completed && !(await modal.confirm("You've already logged this workout today. Log it again?"))) {
+      onBack();
+      return;
+    }
     try {
       const exerciseLogs = [];
       Object.entries(loggedSets).forEach(([exId, sets]) => {
@@ -400,6 +408,10 @@ export default function WorkoutPlayer({ workout, exercises, onBack }) {
           customized,
         }),
       });
+      // Refresh Home's "Today's Session" card (now shows completed) and any
+      // cached dashboard (streak / program count).
+      invalidateTodayCache();
+      invalidate('/api/dashboard');
     } catch (err) {
       console.error(err);
     }

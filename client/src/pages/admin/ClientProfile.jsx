@@ -692,6 +692,16 @@ function TierEditorCard({ client, onChange }) {
 
   const changeTier = async (newId) => {
     if (newId === current) return;
+    // Confirm before applying — a misclick here would change the client's
+    // content access (locking paid programs, or unlocking them for free).
+    const fromName = tiers.find((t) => t.id === current)?.name || 'their current plan';
+    const toName = tiers.find((t) => t.id === newId)?.name || 'the new plan';
+    const ok = await modal.confirm({
+      title: 'Change tier?',
+      message: `Move ${client.name} from ${fromName} to ${toName}? This changes which programs, courses, and Explore content they can access.`,
+      confirmLabel: `Move to ${toName}`,
+    });
+    if (!ok) return;
     setSaving(true);
     setError(null);
     const res = await fetch(`/api/content/clients/${client.id}/tier`, {

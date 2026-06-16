@@ -28,6 +28,65 @@ const MIGRATIONS = [
       pool.query("INSERT OR IGNORE INTO consent_versions (kind, version, summary, effective_date, is_current) VALUES ('privacy', '2026-06-13', 'Initial Privacy Policy', '2026-06-13', 1)");
     },
   },
+  // Backfill the upload access registry (SECURITY.md L1) so EXISTING personal
+  // uploads are locked to their owner (+ the owner's coach / conversation
+  // members), not any logged-in user. Records only private/message files;
+  // coach-uploaded shared content is left unregistered (the gate allows unknown
+  // files). Idempotent via the filename PK (INSERT OR IGNORE).
+  {
+    name: '2026-06-16-backfill-file-assets',
+    up: () => {
+      const fnameOf = (u) => (typeof u === 'string' && u.startsWith('/uploads/')) ? u.slice('/uploads/'.length) : null;
+      const reg = (url, owner, visibility, convId = null) => {
+        const fn = fnameOf(url);
+        if (!fn) return;
+        pool.query(
+          'INSERT OR IGNORE INTO file_assets (filename, owner_user_id, visibility, conversation_id) VALUES (?, ?, ?, ?)',
+          [fn, owner ?? null, visibility, convId],
+        );
+      };
+      for (const r of pool.query('SELECT user_id, photo_front_url, photo_side_url, photo_back_url FROM checkins').rows) {
+        reg(r.photo_front_url, r.user_id, 'private');
+        reg(r.photo_side_url, r.user_id, 'private');
+        reg(r.photo_back_url, r.user_id, 'private');
+      }
+      for (const r of pool.query('SELECT user_id, video_url FROM benchmark_attempts').rows) reg(r.video_url, r.user_id, 'private');
+      for (const r of pool.query('SELECT user_id, profile_image_url FROM client_profiles').rows) reg(r.profile_image_url, r.user_id, 'private');
+      for (const r of pool.query('SELECT user_id, photo_url FROM nutrition_logs').rows) reg(r.photo_url, r.user_id, 'private');
+      // Avatars: client avatars are personal; coach avatars are shown publicly.
+      for (const r of pool.query('SELECT id, role, avatar_url FROM users').rows) reg(r.avatar_url, r.id, r.role === 'client' ? 'private' : 'content');
+      // Chat attachments: scope to their conversation.
+      for (const r of pool.query('SELECT sender_id, conversation_id, attachment_url FROM messages WHERE attachment_url IS NOT NULL').rows) reg(r.attachment_url, r.sender_id, 'message', r.conversation_id);
+    },
+  },
+  // Multi-coach isolation (SECURITY.md Tier 2): existing coaches kept full
+  // cross-coach capability under the head-coach model, so backfill them to
+  // is_admin=1 (no behaviour change). Coaches created later default to 0 and are
+  // scoped to themselves. Review/demote specific coaches as the team grows.
+  {
+    name: '2026-06-16-backfill-coach-is-admin',
+    up: () => {
+      pool.query("UPDATE users SET is_admin = 1 WHERE role = 'coach' AND COALESCE(is_admin, 0) = 0");
+    },
+  },
+  // Fix L1 keying: the backfill above keyed benchmark videos by their sub-path
+  // ('benchmarks/<uuid>.mp4'), but the /uploads gate looks files up by BASENAME,
+  // so those rows never matched and the videos stayed readable by any user.
+  // Filenames are globally-unique UUIDs → basename keying is collision-free.
+  // Drop the mis-keyed rows (any filename containing '/') and re-register
+  // benchmark videos by basename, private to the submitter.
+  {
+    name: '2026-06-16-fix-file-assets-benchmark-keying',
+    up: () => {
+      pool.query("DELETE FROM file_assets WHERE filename LIKE '%/%'");
+      for (const r of pool.query('SELECT user_id, video_url FROM benchmark_attempts WHERE video_url IS NOT NULL').rows) {
+        const fn = (typeof r.video_url === 'string' && r.video_url.includes('/uploads/'))
+          ? r.video_url.split('/').filter(Boolean).pop()
+          : null;
+        if (fn) pool.query('INSERT OR IGNORE INTO file_assets (filename, owner_user_id, visibility) VALUES (?, ?, ?)', [fn, r.user_id, 'private']);
+      }
+    },
+  },
   // Draft/Published rollout: workouts.status existed before this feature but
   // was never used for client gating (clients gate on `visible`), so ~92% of
   // coach workouts sit at the column default 'draft' while being fully live.

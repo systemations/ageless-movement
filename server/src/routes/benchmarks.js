@@ -5,7 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pool from '../db/pool.js';
-import { authenticateToken, requireRole, requireCoachOwnsClient } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCoachOwnsClient, coachOwnsClient } from '../middleware/auth.js';
+import { registerFileAsset } from '../lib/files.js';
 
 const router = Router();
 
@@ -50,6 +51,9 @@ const runUpload = (handler) => (req, res, next) => {
 
 router.post('/attempts/video', authenticateToken, runUpload(videoUpload.single('file')), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
+  // Benchmark verification clips are personal data (SECURITY.md L1): register as
+  // private so the /uploads gate serves them only to the submitter + their coach.
+  registerFileAsset(req.file.filename, req.user.id, 'private');
   res.json({ url: `/uploads/benchmarks/${req.file.filename}` });
 });
 
@@ -465,15 +469,18 @@ router.get('/leaderboards/steps', authenticateToken, (req, res) => {
     const { gender, bucket } = parseFilters(req);
     const { clause, params } = profileFilterSql(gender, bucket);
 
+    // Parameterized — dates are server-derived (not user input), but keep the
+    // codebase's no-string-concat-in-SQL invariant so this can't become SQLi.
     const today = new Date().toISOString().split('T')[0];
     let dateClause = '';
-    if (timeframe === 'today') { dateClause = `AND sl.date = '${today}'`; }
+    const dateParams = [];
+    if (timeframe === 'today') { dateClause = 'AND sl.date = ?'; dateParams.push(today); }
     else if (timeframe === 'week') {
       const d = new Date(); d.setDate(d.getDate() - 6);
-      dateClause = `AND sl.date >= '${d.toISOString().split('T')[0]}'`;
+      dateClause = 'AND sl.date >= ?'; dateParams.push(d.toISOString().split('T')[0]);
     } else if (timeframe === 'month') {
       const d = new Date(); d.setDate(d.getDate() - 29);
-      dateClause = `AND sl.date >= '${d.toISOString().split('T')[0]}'`;
+      dateClause = 'AND sl.date >= ?'; dateParams.push(d.toISOString().split('T')[0]);
     }
 
     const rows = pool.query(`
@@ -489,7 +496,7 @@ router.get('/leaderboards/steps', authenticateToken, (req, res) => {
       HAVING total_steps > 0
       ORDER BY total_steps DESC
       LIMIT 100
-    `, params).rows.map((r, idx) => ({
+    `, [...dateParams, ...params]).rows.map((r, idx) => ({
       ...r,
       rank: idx + 1,
       photo_url: r.profile_image_url || r.avatar_url,
@@ -748,8 +755,13 @@ router.patch('/coach/attempts/:id', authenticateToken, requireRole('coach'), (re
     if (!['verified', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'status must be verified or rejected' });
     }
-    const existing = pool.query('SELECT id FROM benchmark_attempts WHERE id = ?', [req.params.id]).rows[0];
+    const existing = pool.query('SELECT user_id FROM benchmark_attempts WHERE id = ?', [req.params.id]).rows[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
+    // Only the coach who owns the submitting client may verify/reject the attempt
+    // (SECURITY.md Tier 2) — prevents a coach reviewing another coach's client.
+    if (!coachOwnsClient(req.user.id, existing.user_id)) {
+      return res.status(403).json({ error: 'You do not coach this client' });
+    }
     pool.query(
       `UPDATE benchmark_attempts
        SET status = ?, reviewed_by_user_id = ?, reviewed_at = datetime('now'), review_note = ?

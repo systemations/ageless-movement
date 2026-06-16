@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { modal } from '../../components/Modal';
 import { getVimeoEmbedUrl } from '../../components/VimeoEmbed';
+import { invalidateTodayCache } from '../../components/EnhancedToday';
+import { invalidate } from '../../lib/apiCache';
 
 // Fullscreen video player for follow-along workouts.
 // Vimeo handles scrubbing/volume/fullscreen via its native controls inside
@@ -11,10 +15,12 @@ import { getVimeoEmbedUrl } from '../../components/VimeoEmbed';
 // without the Vimeo Player.js SDK. For MVP the "pause" sheet is opened
 // by tapping a button; the actual video pause/resume is done by the user
 // via Vimeo's native controls. Hooking it up to the SDK is a later polish.
-export default function FollowAlongPlayer({ workout, onBack }) {
+export default function FollowAlongPlayer({ workout, onBack, completed = false }) {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [done, setDone] = useState(false);
   const elapsedRef = useRef(0);
   const startTimeRef = useRef(Date.now());
 
@@ -32,19 +38,64 @@ export default function FollowAlongPlayer({ workout, onBack }) {
 
   const logComplete = async () => {
     setLogging(true);
+    let ok = false;
     try {
       const duration = Math.max(1, Math.round(elapsedRef.current / 60));
-      await fetch(`/api/explore/workouts/${workout.id}/log`, {
+      const res = await fetch(`/api/explore/workouts/${workout.id}/log`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ duration_mins: duration, exercise_logs: [] }),
       });
+      ok = res.ok;
     } catch (err) {
       console.error('Log error:', err);
     }
     setLogging(false);
-    onBack();
+    if (!ok) {
+      // Couldn't save — don't pretend it worked; just close back to the overview.
+      onBack();
+      return;
+    }
+    // Refresh the surfaces the log just changed: Home's "Today's Session" card
+    // (now shows completed) and any cached dashboard (streak / program count).
+    invalidateTodayCache();
+    invalidate('/api/dashboard');
+    // Show a brief confirmation, then drop the athlete back on Home so they see
+    // the session ticked off rather than landing silently on the overview.
+    setDone(true);
+    setTimeout(() => navigate('/home'), 1100);
   };
+
+  // Re-opening an already-completed session shows a "Completed" button; tapping
+  // it confirms before logging again so the count isn't bumped by accident.
+  const handleCompleteClick = async () => {
+    if (completed) {
+      const again = await modal.confirm("You've already logged this session today. Log it again?");
+      if (!again) return;
+    }
+    logComplete();
+  };
+
+  if (done) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#000', zIndex: 200,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 14, color: '#fff', padding: 32, textAlign: 'center',
+      }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%', background: 'var(--accent-mint)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <p style={{ fontSize: 20, fontWeight: 800 }}>Session complete!</p>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>Nice work — logged to your progress.</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -87,21 +138,21 @@ export default function FollowAlongPlayer({ workout, onBack }) {
         </button>
       </div>
 
-      {/* Video */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      {/* Video — fills the area between the top bar and the action bar. The
+          embedded player letterboxes the clip, so the full video stays visible
+          in portrait AND landscape (no cropping when the screen is rotated). */}
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {embedUrl ? (
-          <div style={{ width: '100%', position: 'relative', paddingTop: '56.25%' }}>
-            <iframe
-              src={embedUrl}
-              title={workout.title}
-              frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-            />
-          </div>
+          <iframe
+            src={embedUrl}
+            title={workout.title}
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+          />
         ) : (
-          <div style={{ color: '#fff', textAlign: 'center', padding: 40 }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', textAlign: 'center', padding: 40 }}>
             <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No video URL set</p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
               Ask your coach to add the video for this workout.
@@ -113,15 +164,25 @@ export default function FollowAlongPlayer({ workout, onBack }) {
       {/* Bottom mark-complete bar */}
       <div style={{ padding: '16px 20px 32px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <button
-          onClick={logComplete}
+          onClick={handleCompleteClick}
           disabled={logging}
           style={{
             width: '100%', padding: '14px 20px', borderRadius: 12,
-            background: 'var(--accent-mint)', color: '#000', fontSize: 16, fontWeight: 700,
-            border: 'none', cursor: 'pointer', opacity: logging ? 0.5 : 1,
+            background: completed ? 'rgba(16,185,129,0.18)' : 'var(--accent-mint)',
+            color: completed ? '#34d399' : '#000',
+            border: completed ? '1px solid rgba(16,185,129,0.55)' : 'none',
+            fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: logging ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          {logging ? 'Saving…' : 'Mark Complete'}
+          {logging ? 'Saving…' : completed ? (
+            <>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Completed today
+            </>
+          ) : 'Mark Complete'}
         </button>
       </div>
 

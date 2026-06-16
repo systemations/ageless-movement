@@ -203,14 +203,26 @@ router.patch('/me/bookings/:id/cancel', authenticateToken, (req, res) => {
 //  on any admin endpoint to target that coach; defaults to the caller.
 // =====================================================================
 
-// Helper: the coach being edited. Defaults to the calling coach but any
-// coach can override with ?coach_id=X (Dan-is-head-coach model).
+// Whether the calling coach is an admin. Only an admin may act on behalf of
+// another coach (the head-coach model); a regular coach is scoped to themselves.
+// Existing coaches were backfilled to is_admin=1, so current behaviour is
+// unchanged; coaches created later default to 0 (SECURITY.md Tier 2).
+const isAdmin = (req) => {
+  const row = pool.query('SELECT is_admin FROM users WHERE id = ? LIMIT 1', [req.user.id]).rows[0];
+  return !!(row && row.is_admin);
+};
+
+// Helper: the coach being edited. Defaults to the calling coach. Only an admin
+// may override with ?coach_id=X / body.coach_id to manage another coach — for a
+// non-admin coach the override is ignored, so they can only ever act on themselves.
 const targetCoachId = (req) => {
-  const q = parseInt(req.query.coach_id, 10);
-  if (q && !Number.isNaN(q)) return q;
-  if (req.body && req.body.coach_id) {
-    const b = parseInt(req.body.coach_id, 10);
-    if (!Number.isNaN(b)) return b;
+  if (isAdmin(req)) {
+    const q = parseInt(req.query.coach_id, 10);
+    if (q && !Number.isNaN(q)) return q;
+    if (req.body && req.body.coach_id) {
+      const b = parseInt(req.body.coach_id, 10);
+      if (!Number.isNaN(b)) return b;
+    }
   }
   return req.user.id;
 };
@@ -302,6 +314,9 @@ router.post('/admin/create', authenticateToken, requireRole('coach'), async (req
 // Delete a coach (removes user; FKs cascade profile/sessions/availability/bookings)
 router.delete('/admin/coaches/:id', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    // Deleting another coach (cascades their profile/sessions/bookings) is an
+    // admin-only action (SECURITY.md Tier 2) — a regular coach can't remove peers.
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
     const coachId = parseInt(req.params.id, 10);
     if (coachId === req.user.id) {
       return res.status(400).json({ error: 'You cannot delete your own coach account' });
@@ -1066,6 +1081,13 @@ router.delete('/admin/events/:id', authenticateToken, requireRole('coach'), (req
 // Event registrations list (coach)
 router.get('/admin/events/:id/registrations', authenticateToken, requireRole('coach'), (req, res) => {
   try {
+    // Only the owning coach (or an admin) may see an event's attendee PII —
+    // matches the self-scoping on the sibling event routes (SECURITY.md Tier 2).
+    const ev = pool.query('SELECT coach_user_id FROM coach_events WHERE id = ?', [req.params.id]).rows[0];
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+    if (ev.coach_user_id !== req.user.id && !isAdmin(req)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     const regs = pool.query(`
       SELECT cer.*, u.name as user_name, u.email as user_email
       FROM coach_event_registrations cer

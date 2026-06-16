@@ -32,6 +32,10 @@ export default function Register() {
       setError('Please accept the Terms and Privacy Policy to continue.');
       return;
     }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {

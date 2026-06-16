@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { MiniThumb } from '../../components/WorkoutThumb';
+import { cachedGet } from '../../lib/apiCache';
 
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -61,9 +62,11 @@ export default function WorkoutPlanner({ onBack, onSelectWorkout }) {
       setWeekSchedule(byDate);
 
       // Fetch program/block info for context. Prefer the coach-assigned block
-      // (from /api/athlete/today) since that's the active prescription.
-      const todayRes = await fetch('/api/athlete/today', { headers: { Authorization: `Bearer ${token}` } });
-      const todayData = todayRes.ok ? await todayRes.json() : null;
+      // (from /api/athlete/today) since that's the active prescription. Both go
+      // through the client cache (cachedGet returns null on error) so opening
+      // the planner repeatedly doesn't refetch unchanged plan context.
+      const auth = { Authorization: `Bearer ${token}` };
+      const todayData = await cachedGet('/api/athlete/today', { headers: auth });
       if (todayData?.block) {
         setProgram({
           title: todayData.phase?.name || todayData.block.name,
@@ -74,11 +77,8 @@ export default function WorkoutPlanner({ onBack, onSelectWorkout }) {
         });
       } else {
         // Fallback to dashboard activeProgram if no block is assigned
-        const dashRes = await fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } });
-        if (dashRes.ok) {
-          const dash = await dashRes.json();
-          if (dash.activeProgram) setProgram({ ...dash.activeProgram, source: 'program' });
-        }
+        const dash = await cachedGet('/api/dashboard', { headers: auth });
+        if (dash?.activeProgram) setProgram({ ...dash.activeProgram, source: 'program' });
       }
     } catch (err) { console.error(err); }
   };

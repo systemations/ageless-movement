@@ -952,7 +952,7 @@ const SectionLabel = ({ color, children }) => (
 
 function CoachProfileView({ coachId, token, onBack, onBook }) {
   const [data, setData] = useState(null);
-  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -969,17 +969,16 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
   const socials = coach.social_links || {};
 
   return (
-    <div className="page-content" style={{ paddingBottom: 120, padding: 0 }}>
-      <div style={{ padding: '0 16px' }}>
+    <div className="page-content" style={{ padding: '0 0 140px' }}>
+      <div style={{ padding: '10px 20px 0' }}>
         <BackBar title={firstName} onBack={onBack} />
       </div>
 
       {/* Hero - photo + name block mirroring the PDF cover */}
       <div style={{
         position: 'relative',
-        margin: '0 -16px',
         background: `linear-gradient(180deg, ${hexToRgba(accent, 0.18)} 0%, transparent 100%)`,
-        padding: '8px 16px 20px',
+        padding: '8px 20px 24px',
       }}>
         <div style={{
           display: 'flex', alignItems: 'flex-end', gap: 14, marginBottom: 14,
@@ -1049,7 +1048,7 @@ function CoachProfileView({ coachId, token, onBack, onBook }) {
         )}
       </div>
 
-      <div style={{ padding: '20px 16px 0' }}>
+      <div style={{ padding: '24px 20px 0' }}>
         {/* Intro / bio */}
         {coach.bio && (
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', marginBottom: 20 }}>

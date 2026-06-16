@@ -30,7 +30,7 @@ import myWorkoutsRoutes from './routes/my-workouts.js';
 import gdprRoutes from './routes/gdpr.js';
 import consentRoutes from './routes/consent.js';
 import { config } from './lib/config.js';
-import { fileCookieValid } from './middleware/auth.js';
+import { canAccessFile } from './middleware/auth.js';
 import { accessLog } from './middleware/accessLog.js';
 import { startPostSignupJobRunner } from './jobs/post-signup-tasks.js';
 import { startReminderJobRunner } from './jobs/reminders.js';
@@ -114,49 +114,62 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 // Served from server/data/uploads so it sits on the Render persistent
 // disk. URL path stays /uploads/* - clients and stored URLs don't change.
 const uploadsPath = path.join(__dirname, '..', 'data', 'uploads');
-// Gate personal uploaded media behind a valid session (SECURITY.md L1). The
-// am_file cookie is set on the first authenticated API call and rides along
-// on same-origin <img> requests, so anonymous URL access is rejected while
-// logged-in users see every image with no client changes.
+// Per-user gate on personal uploaded media (SECURITY.md L1). The am_file cookie
+// (set on the first authenticated API call, sent automatically on same-origin
+// <img> requests) identifies the requester; canAccessFile then enforces the
+// file's registered ownership/visibility — so a private check-in photo or
+// benchmark video is only served to its owner + their coach, while shared
+// coach content stays readable by any logged-in user. No client/URL changes.
 app.use('/uploads', (req, res, next) => {
-  if (fileCookieValid(req)) return next();
+  if (canAccessFile(req)) return next();
   return res.status(403).json({ error: 'Forbidden' });
 }, express.static(uploadsPath));
 
-// Global API rate limiter. Caps any single user (or anonymous IP) at
-// 100 requests/minute across the whole API surface. Real human use
-// is nowhere near this - opening Progress fires ~15 calls - so the
-// cap only bites at attack speeds (token scraping, runaway client
-// loops, DoS). Auth routes have their own per-action buckets in
-// routes/auth.js (login 10/15m, register 5/1h, reset 10/15m), so
-// we skip those here to avoid double-limiting. Health check is also
-// exempt so external uptime monitors don't trip the limit.
+// Global API rate limiter — a backstop against abuse (runaway client loops,
+// credential/token scraping, scripted DoS), NOT a throttle on normal use. A
+// data-heavy screen can fire dozens of calls per navigation, so the ceiling is
+// set well above human bursts and only bites at automated speeds.
+//
+// Authenticated traffic is keyed per-user, so one account can never affect
+// anyone else — it gets a high ceiling (1000/min) that only a loop or scraper
+// reaches. Anonymous traffic is keyed by IP (shared behind NAT/CGNAT), so it
+// gets a tighter cap (200/min). Auth routes have their own per-action buckets
+// in routes/auth.js (login 10/15m, register 5/1h, reset 10/15m) and are skipped
+// here; the health check stays open for uptime monitors.
+
+// Pull the user id from the auth cookie (L2) or Bearer header, for keying and
+// sizing the limiter. Decode-without-verify is fine here — real trust still
+// runs in authenticateToken. Returns null when the request isn't authenticated.
+function rateLimitUserId(req) {
+  const cookieMatch = (req.headers.cookie || '').match(/(?:^|;\s*)am_auth=([^;]+)/);
+  const raw = cookieMatch
+    ? decodeURIComponent(cookieMatch[1])
+    : (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+  if (raw) {
+    try {
+      const claims = jwt.decode(raw);
+      if (claims && claims.id) return String(claims.id);
+    } catch { /* not a decodable token — treat as anonymous */ }
+  }
+  return null;
+}
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  // Per-user ceiling for the signed-in app; tighter cap for anonymous IPs.
+  max: (req) => (rateLimitUserId(req) ? 1000 : 200),
   standardHeaders: true,
   legacyHeaders: false,
-  // Key by user.id when we can read one from the JWT, else IP. This
-  // means clients behind a shared NAT (office/family/cafe) don't
-  // collectively exhaust the bucket. Decode-without-verify is fine
-  // for keying - actual trust still runs in authenticateToken.
   keyGenerator: (req, res) => {
-    // Key by user id from the auth cookie (L2) or Bearer header; else by IP.
-    const cookieMatch = (req.headers.cookie || '').match(/(?:^|;\s*)am_auth=([^;]+)/);
-    const raw = cookieMatch
-      ? decodeURIComponent(cookieMatch[1])
-      : (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
-    if (raw) {
-      try {
-        const claims = jwt.decode(raw);
-        if (claims && claims.id) return `u:${claims.id}`;
-      } catch { /* fall through to IP */ }
-    }
-    // ipKeyGenerator normalises IPv6 (collapses /64 prefix) so an
-    // attacker can't trivially rotate addresses inside a single block.
-    return `ip:${ipKeyGenerator(req, res)}`;
+    // ipKeyGenerator normalises IPv6 (collapses /64 prefix) so an attacker
+    // can't trivially rotate addresses inside a single block.
+    const uid = rateLimitUserId(req);
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req, res)}`;
   },
-  skip: (req) => req.path.startsWith('/api/auth') || req.path === '/api/health',
+  // This middleware is mounted at '/api', so inside it req.path is
+  // mount-relative ('/auth/login', not '/api/auth/login'). Match the
+  // mount-relative path so the auth + health exemptions actually fire.
+  skip: (req) => req.path.startsWith('/auth') || req.path === '/health',
   message: { error: 'Too many requests, please slow down.' },
 });
 app.use('/api', apiLimiter);

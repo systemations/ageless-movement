@@ -94,11 +94,20 @@ router.post('/register', registerLimiter, async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
+    // Minimum password strength at signup. Change-password and reset already
+    // enforce this; registration did not, so any non-empty password was accepted.
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
     if (role !== 'client') {
       return res.status(400).json({ error: 'Public registration is for clients only' });
     }
 
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    // Normalize email so register / login / reset all match case-insensitively
+    // (avoids a mixed-case signup that can't later log in or self-reset).
+    const normEmail = String(email).trim().toLowerCase();
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [normEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -107,7 +116,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     const result = await pool.query(
       'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, avatar_url, created_at',
-      [email, passwordHash, name, role]
+      [normEmail, passwordHash, name, role]
     );
 
     const user = result.rows[0];
@@ -164,8 +173,8 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     const result = await pool.query(
-      'SELECT id, email, password_hash, name, role, avatar_url FROM users WHERE email = $1',
-      [email]
+      'SELECT id, email, password_hash, name, role, avatar_url FROM users WHERE LOWER(email) = $1',
+      [String(email).trim().toLowerCase()]
     );
 
     if (result.rows.length === 0) {
@@ -335,7 +344,7 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const user = pool.query(
-      'SELECT id, email, name FROM users WHERE email = ?',
+      'SELECT id, email, name FROM users WHERE LOWER(email) = ?',
       [email],
     ).rows[0];
     // Unknown email: return the same success without doing any work.

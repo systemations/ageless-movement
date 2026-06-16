@@ -51,6 +51,7 @@ class RouteErrorBoundary extends Component {
 }
 import BottomNav from './components/BottomNav';
 import InstallPrompt from './components/InstallPrompt';
+import ConsentGate from './components/ConsentGate';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -331,6 +332,7 @@ function AppRoutes() {
         && location.pathname !== '/register'
         && <BottomNav />}
       {user && <InstallPrompt />}
+      {user && <ConsentGate />}
     </div>
   );
 }

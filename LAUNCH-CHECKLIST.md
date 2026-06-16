@@ -76,9 +76,13 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done
 
 ## E. Ongoing / optional
 
-- ⬜ **Enable Dependabot** (dependency vulnerability monitoring). Recommended.
-  Claude can add the config file; you flip it on in GitHub. (See the explanation
-  Claude gave alongside this doc.)
+- 🟡 **Enable Dependabot** (dependency vulnerability monitoring). The config file
+  [`.github/dependabot.yml`](.github/dependabot.yml) is in place — it schedules
+  weekly grouped version-update PRs for the root, `server/`, and `client/`
+  packages. **Remaining (you):** on GitHub → repo **Settings → Code security**,
+  turn on **Dependabot alerts** *and* **Dependabot security updates** so you also
+  get automatic PRs for newly-disclosed CVEs. (Takes effect once this file is
+  pushed to the default branch.)
 
 - ⬜ **Stripe / payments (future).** Not wired yet. When you add it: verify Stripe
   webhook signatures, and never let card data touch the server (Stripe Elements

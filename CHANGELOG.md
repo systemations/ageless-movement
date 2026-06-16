@@ -19,6 +19,17 @@ Status legend (shared with SECURITY.md): ✅ Done · 🟡 In progress · ⬜ Ope
 
 ## 2026-06-16
 
+### Chore
+- `[Chore]` **Dependabot config + owner checklist.** Added
+  [.github/dependabot.yml](.github/dependabot.yml) for continuous dependency
+  monitoring (weekly grouped version-update PRs across root/`server`/`client`) —
+  closes the "F3 was a one-time `npm audit`" gap (you still flip on Dependabot
+  alerts/security-updates in GitHub Settings). Added
+  [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md), a separate doc collecting all the
+  **non-coding owner action items** (prod env/secrets, Resend domain + DNS, legal
+  copy, CSP smoke-test, off-box backups + restore test, admin review, pen-test,
+  and the open decisions).
+
 ### Security
 - `[Security]` **Audit follow-up (Tier 2) — multi-coach isolation.** The
   `?coach_id=` "act as any coach" override and coach deletion were open to any

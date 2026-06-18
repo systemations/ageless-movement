@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { isNative, setNativeToken, loadFileToken, clearFileToken } from '../lib/nativeApi';
 
 const AuthContext = createContext(null);
 
@@ -65,6 +66,10 @@ export function AuthProvider({ children }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+    // Native: persist the JWT so the fetch wrapper sends it as a Bearer header,
+    // then mint the file token — both before the /me call below so its avatar
+    // URL gets rewritten for native image loading. Web ignores it (cookie auth).
+    if (isNative && data.token) { await setNativeToken(data.token); await loadFileToken(); }
     // The server set the am_auth cookie. Fetch the profile (cookie auth) first,
     // then commit token + user + profile together so ProtectedRoute doesn't
     // flash /home before redirecting an unfinished-onboarding client.
@@ -87,6 +92,7 @@ export function AuthProvider({ children }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+    if (isNative && data.token) { await setNativeToken(data.token); await loadFileToken(); } // see login()
     localStorage.removeItem('am_onboarding_answers');
     let freshProfile = null;
     try {
@@ -102,6 +108,9 @@ export function AuthProvider({ children }) {
   const logout = () => {
     // Revoke the session + clear the cookie server-side (best-effort).
     try { fetch(`${API_URL}/auth/logout`, { method: 'POST' }).catch(() => {}); } catch { /* ignore */ }
+    // Clear the native + file tokens AFTER firing logout (so that request still
+    // carried the Bearer to revoke the session server-side). No-op on web.
+    if (isNative) { setNativeToken(null); clearFileToken(); }
     setToken(null);
     setUser(null);
     setProfile(null);

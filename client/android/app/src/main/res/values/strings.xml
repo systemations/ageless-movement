@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ageless Movement</string>
+    <string name="title_activity_main">Ageless Movement</string>
+    <string name="package_name">com.agelessmovement.app</string>
+    <string name="custom_url_scheme">com.agelessmovement.app</string>
+</resources>

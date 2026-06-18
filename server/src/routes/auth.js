@@ -263,6 +263,26 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Native file-access token (going-native Phase 1b). Native <img> requests can't
+// send the Authorization header or the am_file cookie cross-origin, so the
+// native build appends ?ft=<token> to /uploads URLs. This is a file-only JWT
+// (typ='file') carrying the user + session id — the /uploads gate validates it
+// and STILL applies the per-file L1 authz (owner / coach / conversation). It
+// can't be used for any API mutation, and logout revokes it (session check).
+router.get('/file-token', authenticateToken, (req, res) => {
+  try {
+    const token = jwt.sign(
+      { id: req.user.id, role: req.user.role, sid: req.user.sid, typ: 'file' },
+      config.JWT_SECRET,
+      { algorithm: 'HS256', expiresIn: '7d' },
+    );
+    res.json({ token });
+  } catch (err) {
+    console.error('File token error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Update client profile (currently used for profile photo)
 router.patch('/profile', authenticateToken, async (req, res) => {
   try {

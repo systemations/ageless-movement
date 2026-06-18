@@ -106,11 +106,11 @@ export default function Register() {
             <label style={fieldLabel}>Password</label>
             <input
               type="password"
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               style={input}
             />
@@ -152,10 +152,12 @@ export default function Register() {
 // ── styles ──────────────────────────────────────────────────────────────
 
 const page = {
-  minHeight: '100vh',
+  // Fill the app-shell content area (already inset for the status bar) so the
+  // page doesn't overflow by the safe-area-top and cause a small scroll.
+  minHeight: 'calc(100dvh - env(safe-area-inset-top, 0px))',
   background: 'radial-gradient(ellipse at top, #132235 0%, #0A1428 55%, #060D1A 100%)',
   color: '#fff',
-  padding: '24px 22px 40px',
+  padding: '24px 22px calc(40px + env(safe-area-inset-bottom, 0px))',
   display: 'flex',
   justifyContent: 'center',
 };

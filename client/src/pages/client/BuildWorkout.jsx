@@ -178,17 +178,18 @@ export default function BuildWorkout() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button onClick={() => moveBlock(bi, -1)} disabled={bi === 0} style={{ ...moveBtn, opacity: bi === 0 ? 0.3 : 1 }}>▲</button>
               <button onClick={() => moveBlock(bi, 1)} disabled={bi === blocks.length - 1} style={{ ...moveBtn, opacity: bi === blocks.length - 1 ? 0.3 : 1 }}>▼</button>
-              <button onClick={() => removeBlock(bi)} style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Remove block</button>
+              <button onClick={() => removeBlock(bi)} style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 6px' }}>Remove block</button>
             </div>
           </div>
 
           {/* Block format */}
-          <div className="hide-scrollbar" style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12, paddingBottom: 2 }}>
+          {/* Wrap (not horizontal-scroll) so no format chip is hidden off-screen. */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
             {BLOCK_TYPES.map(({ label, color }) => {
               const active = block.type === label;
               return (
                 <button key={label} onClick={() => setType(bi, label)} style={{
-                  flexShrink: 0, padding: '6px 12px', borderRadius: 16, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                  flexShrink: 0, padding: '9px 16px', borderRadius: 18, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                   border: active ? `2px solid ${color}` : '1px solid var(--divider)',
                   background: active ? `${color}22` : 'transparent',
                   color: active ? color : 'var(--text-secondary)',
@@ -209,16 +210,16 @@ export default function BuildWorkout() {
                   {ex.thumbnail_url && <img src={ex.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 </div>
                 <p style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.name}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <button onClick={() => moveEx(bi, ei, -1)} disabled={ei === 0} style={{ ...moveBtn, opacity: ei === 0 ? 0.3 : 1 }}>▲</button>
                   <button onClick={() => moveEx(bi, ei, 1)} disabled={ei === block.exercises.length - 1} style={{ ...moveBtn, opacity: ei === block.exercises.length - 1 ? 0.3 : 1 }}>▼</button>
                 </div>
-                <button onClick={() => removeEx(bi, ei)} style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 17, cursor: 'pointer' }}>×</button>
+                <button onClick={() => removeEx(bi, ei)} aria-label="Remove exercise" style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: 24, cursor: 'pointer', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                 {['reps', 'time'].map(m => (
                   <button key={m} onClick={() => updateEx(bi, ei, { measure: m })} style={{
-                    padding: '4px 11px', borderRadius: 12, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    padding: '9px 18px', borderRadius: 14, fontSize: 13.5, fontWeight: 700, cursor: 'pointer',
                     border: ex.measure === m ? '2px solid var(--accent-mint)' : '1px solid var(--divider)',
                     background: ex.measure === m ? 'rgba(61,255,210,0.12)' : 'transparent',
                     color: ex.measure === m ? 'var(--accent-mint-ink)' : 'var(--text-secondary)',
@@ -253,8 +254,8 @@ export default function BuildWorkout() {
 
               {/* Advanced: RPE / RIR / tempo / rest - collapsed by default */}
               <button onClick={() => updateEx(bi, ei, { adv: !ex.adv })} style={{
-                background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', marginTop: 8, padding: 0,
+                background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', marginTop: 6, padding: '8px 2px',
               }}>{ex.adv ? '▾' : '▸'} Advanced</button>
               {ex.adv && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -286,9 +287,9 @@ export default function BuildWorkout() {
           {/* A straight set is a single exercise - hide "add" once it has one. */}
           {!(block.type === 'Straight Set' && block.exercises.length >= 1) && (
             <button onClick={() => setPicker(bi)} style={{
-              width: '100%', padding: '10px 0', borderRadius: 10, marginTop: 2,
+              width: '100%', padding: '14px 0', borderRadius: 10, marginTop: 2,
               border: '1.5px dashed var(--divider)', background: 'transparent',
-              color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
             }}>+ Add exercise to Block {letter(bi)}</button>
           )}
         </div>
@@ -332,8 +333,8 @@ function RestControl({ value, onChange, mini }) {
     return (
       <div style={{ textAlign: 'center', margin }}>
         <button onClick={() => onChange('1:00')} style={{
-          background: 'none', border: '1px dashed var(--divider)', borderRadius: 16,
-          color: 'var(--text-tertiary)', fontSize: mini ? 11 : 12, fontWeight: 700, cursor: 'pointer', padding: '4px 12px',
+          background: 'none', border: '1px dashed var(--divider)', borderRadius: 18,
+          color: 'var(--text-tertiary)', fontSize: mini ? 13 : 14, fontWeight: 700, cursor: 'pointer', padding: '9px 18px',
         }}>+ Rest</button>
       </div>
     );
@@ -341,10 +342,10 @@ function RestControl({ value, onChange, mini }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin }}>
       <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>⏱ Rest</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={{ ...miniInput, width: 'auto', padding: '5px 8px' }}>
+      <select value={value} onChange={e => onChange(e.target.value)} style={{ ...miniInput, width: 'auto' }}>
         {REST_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
-      <button onClick={() => onChange('')} aria-label="Remove rest" style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 16, cursor: 'pointer' }}>×</button>
+      <button onClick={() => onChange('')} aria-label="Remove rest" style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 22, cursor: 'pointer', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
     </div>
   );
 }
@@ -461,10 +462,10 @@ function ExercisePicker({ token, multi, blockType, onConfirm, onClose }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <p style={{ fontSize: 16, fontWeight: 800 }}>{multi ? 'Add exercises' : 'Add an exercise'}</p>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 22, cursor: 'pointer' }}>×</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 26, cursor: 'pointer', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
         </div>
         <input value={q} onChange={e => setQ(e.target.value)} autoFocus placeholder="Search the exercise library..."
-          style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--divider)', borderRadius: 12, padding: '12px 14px', color: 'var(--text-primary)', fontSize: 14, marginBottom: 12 }} />
+          style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--divider)', borderRadius: 12, padding: '13px 14px', color: 'var(--text-primary)', fontSize: 16, marginBottom: 12 }} />
         <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {list.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>{q.trim() ? 'No exercises found' : 'Start typing to search'}</p>
@@ -509,6 +510,9 @@ function ExercisePicker({ token, multi, blockType, onConfirm, onClose }) {
   );
 }
 
-const moveBtn = { background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 11, cursor: 'pointer', lineHeight: 1, padding: '2px 4px' };
-const miniLabel = { fontSize: 10, color: 'var(--text-tertiary)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.4 };
-const miniInput = { width: '100%', background: 'var(--bg-input)', border: '1px solid var(--divider)', borderRadius: 8, padding: '7px 9px', color: 'var(--text-primary)', fontSize: 13 };
+// Reorder arrow: a real ~40x34 tap target with a visible button affordance
+// (was an 11px glyph with 2px padding — far too small to hit on a phone).
+const moveBtn = { background: 'var(--bg-input)', border: '1px solid var(--divider)', borderRadius: 8, color: 'var(--text-secondary)', fontSize: 15, cursor: 'pointer', lineHeight: 1, width: 40, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+const miniLabel = { fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
+// ~44px tall; fontSize 16 stops iOS zooming the page when the field is focused.
+const miniInput = { width: '100%', background: 'var(--bg-input)', border: '1px solid var(--divider)', borderRadius: 10, padding: '11px 12px', color: 'var(--text-primary)', fontSize: 16 };

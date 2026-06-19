@@ -189,9 +189,11 @@ function PlanCard({ plan, highlight, onSelect, busy, ctaLabel, secondary }) {
 }
 
 const page = {
-  minHeight: '100vh',
+  // dvh + the app-shell's top inset (status bar); bottom safe-area for the
+  // gesture bar. Scrollable, so min-height (content can exceed the screen).
+  minHeight: 'calc(100dvh - env(safe-area-inset-top, 0px))',
   background: 'var(--bg-primary)',
-  padding: '32px 16px 60px',
+  padding: '32px 16px calc(60px + env(safe-area-inset-bottom, 0px))',
 };
 
 const inner = {

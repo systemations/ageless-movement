@@ -101,6 +101,13 @@ export default function FollowAlongPlayer({ workout, onBack, completed = false }
     <div style={{
       position: 'fixed', inset: 0, background: '#000', zIndex: 200,
       display: 'flex', flexDirection: 'column',
+      // Fixed inset:0 overlays bypass .app-shell's notch padding, so the safe
+      // insets are applied here directly: top clears the status bar/camera, the
+      // sides clear the landscape notch, the bottom clears the gesture bar.
+      paddingTop: 'env(safe-area-inset-top, 0px)',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      paddingLeft: 'env(safe-area-inset-left, 0px)',
+      paddingRight: 'env(safe-area-inset-right, 0px)',
     }}>
       {/* Top bar */}
       <div style={{
@@ -161,8 +168,8 @@ export default function FollowAlongPlayer({ workout, onBack, completed = false }
         )}
       </div>
 
-      {/* Bottom mark-complete bar */}
-      <div style={{ padding: '16px 20px 32px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* Bottom mark-complete bar — container already adds the bottom safe inset */}
+      <div style={{ padding: '16px 20px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <button
           onClick={handleCompleteClick}
           disabled={logging}
@@ -199,7 +206,9 @@ export default function FollowAlongPlayer({ workout, onBack, completed = false }
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
-              width: '100%', padding: '20px 16px 32px',
+              // This sheet is its own fixed inset:0 overlay (sibling, not inside
+              // the padded container), so it carries its own bottom safe inset.
+              width: '100%', padding: '20px 16px calc(20px + env(safe-area-inset-bottom, 0px))',
             }}
           >
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--divider)', margin: '0 auto 20px' }} />

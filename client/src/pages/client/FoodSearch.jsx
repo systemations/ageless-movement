@@ -338,6 +338,12 @@ function BarcodeScanner({ onResult, onClose, onError }) {
     <div style={{
       position: 'fixed', inset: 0, background: '#000', zIndex: 500,
       display: 'flex', flexDirection: 'column',
+      // Fixed inset:0 bypasses .app-shell's notch padding — keep the close ✕ and
+      // the hint clear of the status bar / gesture bar / side notch.
+      paddingTop: 'env(safe-area-inset-top, 0px)',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      paddingLeft: 'env(safe-area-inset-left, 0px)',
+      paddingRight: 'env(safe-area-inset-right, 0px)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px' }}>
         <button

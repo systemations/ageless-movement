@@ -118,10 +118,12 @@ export default function ResetPassword() {
 // ── styles (mirrors Login.jsx) ────────────────────────────────────────────
 
 const page = {
-  minHeight: '100vh',
+  // Fill the app-shell content area (already inset for the status bar) so the
+  // page doesn't overflow by the safe-area-top and cause a small scroll.
+  minHeight: 'calc(100dvh - env(safe-area-inset-top, 0px))',
   background: 'radial-gradient(ellipse at top, #132235 0%, #0A1428 55%, #060D1A 100%)',
   color: '#fff',
-  padding: '24px 22px 40px',
+  padding: '24px 22px calc(40px + env(safe-area-inset-bottom, 0px))',
   display: 'flex',
   justifyContent: 'center',
 };

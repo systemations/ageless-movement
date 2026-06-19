@@ -116,6 +116,23 @@ export function coachOwnsClient(coachUserId, clientUserId) {
   return row.coach_id === coachUserId;
 }
 
+// Resolve the user from a ?ft=<file-token> query param. Native <img> requests
+// can't carry the am_file cookie or an Authorization header cross-origin, so the
+// native build appends this file-only token to /uploads URLs (going-native
+// Phase 1b). We verify it, require typ='file', and honor session revocation —
+// then canAccessFile applies the SAME per-file authz as the cookie path, so L1
+// is preserved (the token only unlocks files this user is already allowed to see).
+function fileQueryUser(req) {
+  const ft = req.query && req.query.ft;
+  if (!ft || typeof ft !== 'string') return null;
+  let decoded;
+  try { decoded = jwt.verify(ft, config.JWT_SECRET, { algorithms: ['HS256'] }); }
+  catch { return null; }
+  if (decoded.typ !== 'file') return null;
+  if (sessionRevoked(decoded)) return null;
+  return decoded;
+}
+
 // Per-user authorization for an uploaded file (SECURITY.md L1). Anonymous → no
 // (preserves the original cookie gate). Otherwise, by the file's registered
 // visibility:
@@ -126,7 +143,7 @@ export function coachOwnsClient(coachUserId, clientUserId) {
 // PRIVATE column is backfilled into file_assets, so an unknown file is
 // non-sensitive shared content rather than personal data.
 export function canAccessFile(req) {
-  const user = fileCookieUser(req);
+  const user = fileCookieUser(req) || fileQueryUser(req);
   if (!user) return false;
   // Inside the '/uploads' mount, req.path is mount-relative ('/<uuid>.<ext>').
   const filename = (req.path || '').split('/').filter(Boolean).pop() || '';

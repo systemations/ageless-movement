@@ -493,7 +493,17 @@ export default function WorkoutPlayer({ workout, exercises, onBack, completed = 
 
   // ===== ACTIVE WORKOUT SCREEN =====
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      position: 'fixed', inset: 0, background: 'var(--bg-primary)', zIndex: 300,
+      display: 'flex', flexDirection: 'column',
+      // Fixed inset:0 bypasses .app-shell's notch padding — apply the safe insets
+      // here so the top bar clears the status bar, the nav buttons clear the
+      // gesture bar, and nothing hides under the side notch in landscape.
+      paddingTop: 'env(safe-area-inset-top, 0px)',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      paddingLeft: 'env(safe-area-inset-left, 0px)',
+      paddingRight: 'env(safe-area-inset-right, 0px)',
+    }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexShrink: 0 }}>
         <button onClick={() => { setIsPaused(!isPaused); if (!isPaused) setShowQuit(false); }} style={{
@@ -723,9 +733,9 @@ export default function WorkoutPlayer({ workout, exercises, onBack, completed = 
         </div>
       )}
 
-      {/* Bottom navigation */}
+      {/* Bottom navigation — container already adds the bottom safe inset */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '12px 24px 32px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '12px 24px 16px',
         background: 'var(--bg-primary)', flexShrink: 0,
       }}>
         <button onClick={handlePrev} disabled={currentIdx === 0} style={{

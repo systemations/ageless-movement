@@ -19,7 +19,74 @@ Status legend (shared with SECURITY.md): ✅ Done · 🟡 In progress · ⬜ Ope
 
 ## 2026-06-16
 
+### Feature
+- `[Feature]` **Going-native Phase 3 — native status bar + splash.** Added the
+  StatusBar plugin (solid `#060D1A` bar with light icons — matches the dark theme
+  instead of clashing) and the SplashScreen plugin (dark `#060D1A` splash so there's
+  no white flash on launch; hidden as soon as the app renders). Wired via
+  `configureNativeUI()` ([nativeApi.js](client/src/lib/nativeApi.js)) + plugin config
+  ([capacitor.config.json](client/capacitor.config.json)); plugins are dynamically
+  imported so they never load in the web bundle. **Android 12+ system splash:** its
+  background is a native theme attribute, not the plugin config — set
+  `windowSplashScreenBackground` to a dark `splash_bg` color in the launch theme
+  (`android/app/src/main/res/values/styles.xml` + `colors.xml`) so the cold-start
+  splash is dark, not white. (The centered logo is still the placeholder launcher
+  icon — branded icon + splash come with the Phase 5 asset pass.)
+- `[Feature]` **Going-native Phase 1b — images load on the native app.** Native
+  `<img src="/uploads/...">` can't send the Bearer header, so uploaded media
+  (avatars, check-in/progress photos) was broken in the Android build. Added a
+  short **file-only access token** (`GET /api/auth/file-token` — `typ='file'`,
+  carries user + session, 7d, revoked by logout) that the `/uploads` gate accepts
+  via `?ft=` while still enforcing the L1 per-file authz
+  ([auth.js](server/src/routes/auth.js), [middleware/auth.js](server/src/middleware/auth.js)).
+  The native fetch wrapper rewrites `/uploads/...` URLs in JSON responses to
+  absolute, token-signed URLs ([nativeApi.js](client/src/lib/nativeApi.js)), so all
+  ~70 image sites work with **zero component changes**; the web build is untouched.
+  Verified: the token unlocks only the user's own files (others blocked), respects
+  logout, and can't be swapped for the main JWT.
+
+### Fix
+- `[Fix]` **Auth screens fit the viewport on mobile (no scroll).** Two layered
+  causes: (1) `min-height: 100vh` is the larger "address-bar-hidden" height on
+  mobile (taller than visible), and (2) `.app-shell` already insets the top by
+  `env(safe-area-inset-top)`, so a child demanding a full `100dvh` overflowed the
+  content area by the status-bar height → a small residual scroll.
+  - All five — **Welcome** + **Login / Register / ForgotPassword / ResetPassword**
+    — now size to `calc(100dvh - env(safe-area-inset-top))` (the app-shell's
+    actual content area) with bottom safe-area padding only (no double top inset).
+    This fits one screen in **portrait** (no scroll) but **scrolls in landscape**,
+    where the content is taller than the short viewport — a `position: fixed`
+    approach was tried first but clipped the CTA off-screen in landscape
+    ([Welcome.jsx](client/src/pages/auth/Welcome.jsx)).
+  - Admin desktop `100vh` layouts left as-is (no mobile address-bar issue).
+- `[Fix]` **Build-a-Workout touch targets (mobile).** On the native app the block
+  builder's controls were far too small to tap — the ▲▼ reorder arrows (~15px),
+  the ✕ remove buttons (bare glyphs), the format chips (scrolled off-screen), the
+  Reps/Time toggle, and the Sets/Reps/Notes inputs. Resized every interactive
+  control to a comfortable ≥40px tap target, made the format chips **wrap** (so
+  none are hidden), and bumped inputs to 16px (stops iOS zooming on focus)
+  ([BuildWorkout.jsx](client/src/pages/client/BuildWorkout.jsx)). Sweep: the
+  ▲▼/cramped-control pattern only otherwise appears in the coach desktop
+  ExploreManager; other client screens use small *labels*, not small touch
+  targets.
+
 ### Chore
+- `[Chore]` **Going-native groundwork (Capacitor Phase 0).** Added
+  [GOING-NATIVE.md](GOING-NATIVE.md) — the full runbook for wrapping the PWA into
+  iOS/Android via Capacitor (phases, the WebView auth adaptation, store
+  requirements, gotchas). Installed Capacitor (`core`/`cli`/`ios`/`android`) in
+  `client/`, added [capacitor.config.json](client/capacitor.config.json)
+  (`com.agelessmovement.app`, webDir `dist`) and `cap:sync`/`cap:android`/`cap:ios`
+  scripts. No app-behaviour change. **Android platform added** (`client/android/`
+  Gradle project, web build copied in) — ready to open in Android Studio; iOS
+  still needs a Mac. Auth won't work in the native build until Phase 1 (the
+  cookie→Bearer adaptation). Owner prerequisites in
+  [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) §G.
+- `[Chore]` **Client deps back to 0 vulnerabilities.** Installing Capacitor
+  surfaced a newly-published advisory in `markdown-it` (a pre-existing TipTap
+  transitive dep, GHSA-6v5v-wf23-fmfq, moderate DoS) — *not* introduced by
+  Capacitor. Cleared with a non-breaking `npm audit fix`; build verified. (Exactly
+  the kind of drift the new Dependabot config will catch automatically.)
 - `[Chore]` **Dependabot config + owner checklist.** Added
   [.github/dependabot.yml](.github/dependabot.yml) for continuous dependency
   monitoring (weekly grouped version-update PRs across root/`server`/`client`) —

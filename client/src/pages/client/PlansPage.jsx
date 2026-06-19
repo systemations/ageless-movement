@@ -125,7 +125,7 @@ export default function PlansPage() {
   );
 }
 
-const page = { minHeight: '100vh', background: 'var(--bg-primary)', padding: '24px 16px 48px' };
+const page = { minHeight: 'calc(100dvh - env(safe-area-inset-top, 0px))', background: 'var(--bg-primary)', padding: '24px 16px calc(48px + env(safe-area-inset-bottom, 0px))' };
 const inner = { maxWidth: 1040, margin: '0 auto' };
 const header = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 };
 const backBtn = {

@@ -28,6 +28,18 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done
   tables (`file_assets`, the `is_admin` column) and runs the backfill migrations
   automatically. Nothing to do beyond a clean deploy.
 
+- ⬜ **Set `ALLOWED_ORIGINS` to include the native app origins** *(only needed once
+  the native app talks to prod).*
+  - *Why:* in production the API only accepts cross-origin requests from origins
+    listed in `ALLOWED_ORIGINS`. The native WebView's origin is **not** your web
+    domain — Android sends `https://localhost`, iOS sends `capacitor://localhost`
+    — so without these the native app's API calls are CORS-blocked.
+  - *How:* `ALLOWED_ORIGINS=https://app.agelessmovement.com,https://localhost,capacitor://localhost`
+    (web domain first, then both native origins). The web/PWA itself needs no
+    entry if it's served from the same host as the API.
+  - *Note:* the CSP header doesn't affect the native build (it loads its own
+    bundled HTML, not the Express-served page), so there's nothing to change there.
+
 ## B. Email deliverability (password reset depends on this)
 
 - ⬜ **Verify your sending domain in Resend + set `EMAIL_FROM`.**
@@ -98,6 +110,22 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done
 - ⬜ **Office-doc / zip upload scanning.** `.doc/.docx/.xls/.zip` uploads are
   accepted and not malware-scanned (they're served as downloads, never executed).
   *Accept the risk for now, or add scanning before wider use.*
+
+## G. Going native (App Store / Play Store) — owner prerequisites
+
+The full plan lives in [GOING-NATIVE.md](GOING-NATIVE.md) (Capacitor approach,
+phases, gotchas). Capacitor Phase 0 (foundation) is already done in the repo.
+The non-coding things only you can get:
+
+- ⬜ **A Mac with Xcode** — *required* for iOS builds; cannot be done on Windows.
+  (Android can be built on Windows with Android Studio.) Tip: do **Android first**
+  to validate the whole flow without waiting on Mac access.
+- ⬜ **Apple Developer Program** — $99/year, to ship to the App Store.
+- ⬜ **Google Play Developer account** — $25 one-time.
+- ⬜ **Android Studio + JDK 17** installed (for the Android build).
+- ⬜ **Decide on in-app payments (IAP)** before adding any in-app purchase of
+  digital tiers — Apple/Google take 15–30% and require their billing for digital
+  goods. (See GOING-NATIVE.md Phase 7.)
 
 ---
 

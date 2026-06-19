@@ -86,7 +86,11 @@ export default function Welcome() {
 
 const page = {
   position: 'relative',
-  minHeight: '100vh',
+  // Fill the app-shell content area (already inset for the status bar). Using
+  // min-height (not a fixed height / position:fixed) means it fits one screen in
+  // portrait but SCROLLS in landscape — where the content is taller than the
+  // short viewport and would otherwise be clipped with no way to reach the CTA.
+  minHeight: 'calc(100dvh - var(--safe-area-top, 0px))',
   background: '#060D1A',
   color: '#fff',
   overflow: 'hidden',
@@ -149,10 +153,13 @@ const gradientWash = {
 const foreground = {
   position: 'relative',
   zIndex: 1,
-  minHeight: '100vh',
+  // Min-height (not fixed) so it grows + scrolls in landscape. Matches the page;
+  // the .app-shell already adds the top inset, so only the bottom safe-area
+  // (gesture bar) is added here — no double top inset.
+  minHeight: 'calc(100dvh - var(--safe-area-top, 0px))',
   display: 'flex',
   flexDirection: 'column',
-  padding: '32px 24px 32px',
+  padding: '22px 24px calc(18px + env(safe-area-inset-bottom, 0px))',
   maxWidth: 480,
   margin: '0 auto',
   width: '100%',
@@ -236,7 +243,7 @@ const welcomeBody = {
   fontSize: 14,
   lineHeight: 1.5,
   color: 'rgba(255,255,255,0.85)',
-  margin: '0 0 20px',
+  margin: '0 0 16px',
   textShadow: '0 2px 12px rgba(0,0,0,0.45)',
 };
 
@@ -255,9 +262,9 @@ const ctaBtn = {
 };
 
 const loginLink = {
-  fontSize: 13,
+  fontSize: 14,
   color: 'rgba(255,255,255,0.75)',
-  margin: '16px 0 0',
+  margin: '14px 0 0',
   textShadow: '0 1px 6px rgba(0,0,0,0.4)',
 };
 

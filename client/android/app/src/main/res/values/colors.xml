@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch splash background (Android 12+ system splash). Matches the app's
+         dark theme so there's no white flash on cold start. -->
+    <color name="splash_bg">#060D1A</color>
+</resources>

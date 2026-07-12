@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import pool from './pool.js';
 import { DEFAULT_CLIENT_TASKS } from '../lib/default-tasks.js';
 import { CARLA, NEW_EXERCISES, SESSIONS as CARLA_SESSIONS } from './seed-carla-phase-1.js';
+import { DAN_PHASE_2, SESSIONS as DAN_PHASE_2_SESSIONS } from './seed-dan-phase-2.js';
 
 // Run-once content/schema migrations, applied on every boot. This is how
 // content reaches an ALREADY-POPULATED production DB without the destructive
@@ -841,6 +842,99 @@ const MIGRATIONS = [
         `INSERT INTO client_programs (user_id, program_id, current_week, current_day, total_workouts)
          VALUES (?, ?, 1, 1, ?)`,
         [user.id, program.id, total],
+      );
+    },
+  },
+  // Rebuild "Dan - Phase 2" with Dan's real 5 FitBudd sessions (data in
+  // seed-dan-phase-2.js, session contents + name mappings signed off by Dan
+  // 2026-07-12). Keyed by program title, never a seed bump. Replaces the old
+  // single-workout placeholder "#2 Chest/Biceps/Hips" only when that workout
+  // has no logged history; sessions insert idempotently by title.
+  {
+    name: '2026-07-12-rebuild-dan-phase-2-five-sessions',
+    up: () => {
+      const program = pool.query(
+        'SELECT id FROM programs WHERE LOWER(title) = LOWER(?) LIMIT 1',
+        [DAN_PHASE_2.programTitle],
+      ).rows[0];
+      if (!program) {
+        console.log('[migrations] rebuild-dan-phase-2: program not found, skipped');
+        return;
+      }
+
+      // 0. Personal custom program - visible=0 keeps it out of coach-facing
+      //    program pickers and Explore, same convention as Carla Phase 1.
+      //    Dan's enrolment still surfaces it on his Home.
+      pool.query('UPDATE programs SET visible = 0 WHERE id = ?', [program.id]);
+
+      // 1. Drop the placeholder workout - targeted by exact title within this
+      //    program, and only if no client ever logged against it.
+      const placeholder = pool.query(
+        "SELECT id FROM workouts WHERE program_id = ? AND title = '#2 Chest/Biceps/Hips' LIMIT 1",
+        [program.id],
+      ).rows[0];
+      if (placeholder) {
+        const logged = pool.query(
+          'SELECT 1 FROM workout_logs WHERE workout_id = ? LIMIT 1',
+          [placeholder.id],
+        ).rows[0];
+        if (!logged) {
+          pool.query('DELETE FROM workouts WHERE id = ?', [placeholder.id]); // cascades to workout_exercises + meta
+        }
+      }
+
+      // 2. Insert the 5 sessions. Idempotent by program_id + title (the old
+      //    placeholder occupied day_number 5, so day-based checks would clash).
+      for (const sess of DAN_PHASE_2_SESSIONS) {
+        const existing = pool.query(
+          'SELECT id FROM workouts WHERE program_id = ? AND title = ? LIMIT 1',
+          [program.id, sess.title],
+        ).rows[0];
+        if (existing) continue;
+        const w = pool.query(
+          `INSERT INTO workouts (program_id, week_number, day_number, title, status, visible)
+           VALUES (?, 1, ?, ?, 'published', 1) RETURNING id`,
+          [program.id, sess.day_number, sess.title],
+        ).rows[0];
+
+        let order = 0;
+        for (const ex of sess.exercises) {
+          const found = pool.query('SELECT id FROM exercises WHERE id = ?', [ex.exercise_id]).rows[0];
+          if (!found) {
+            console.log(`[migrations] rebuild-dan-phase-2: exercise ${ex.exercise_id} missing, slot skipped`);
+            continue;
+          }
+          const we = pool.query(
+            `INSERT INTO workout_exercises
+               (workout_id, exercise_id, order_index, sets, reps, duration_secs, rest_secs, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+            [
+              w.id, ex.exercise_id, order++,
+              ex.sets || 1,
+              ex.time_based ? null : (ex.reps || '10'),
+              ex.time_based ? ex.duration_secs : null,
+              30,
+              ex.notes || null,
+            ],
+          ).rows[0];
+          pool.query(
+            `INSERT INTO workout_exercise_meta
+               (workout_exercise_id, time_based, duration_secs, tracking_type)
+             VALUES (?, ?, ?, ?)`,
+            [we.id, ex.time_based ? 1 : 0, ex.time_based ? ex.duration_secs : null, ex.time_based ? 'duration' : 'reps'],
+          );
+        }
+      }
+
+      // 3. Refresh total_workouts on any enrolment in this program (Dan's
+      //    live client account is already enrolled).
+      const total = pool.query(
+        'SELECT COUNT(*) AS c FROM workouts WHERE program_id = ?',
+        [program.id],
+      ).rows[0].c;
+      pool.query(
+        'UPDATE client_programs SET total_workouts = ? WHERE program_id = ?',
+        [total, program.id],
       );
     },
   },

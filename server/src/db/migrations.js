@@ -807,6 +807,43 @@ const MIGRATIONS = [
       }
     },
   },
+  // Enrol Dan's own client account (dan@systemations.ai) in his personal
+  // "Dan - Phase 2" program so it appears on his Home/Schedule like any
+  // coach-assigned program. Mirrors POST /api/coach/schedules exactly
+  // (week 1 / day 1, total_workouts snapshot). Matches the program by
+  // title so it works regardless of id drift between dev and live, and
+  // accepts both spellings of the email in case the live account was
+  // registered without the first "e". Silent no-op if either row is
+  // missing so the migration chain never blocks.
+  {
+    name: '2026-07-12-enrol-dan-systemations-in-dan-phase-2',
+    up: () => {
+      const user = pool.query(
+        "SELECT id FROM users WHERE LOWER(email) IN ('dan@systemations.ai', 'dan@systmations.ai') AND role = 'client' LIMIT 1",
+      ).rows[0];
+      const program = pool.query(
+        "SELECT id FROM programs WHERE LOWER(title) = 'dan - phase 2' LIMIT 1",
+      ).rows[0];
+      if (!user || !program) {
+        console.log('[migrations] enrol-dan-phase-2: user or program not found, skipped');
+        return;
+      }
+      const existing = pool.query(
+        'SELECT id FROM client_programs WHERE user_id = ? AND program_id = ?',
+        [user.id, program.id],
+      ).rows[0];
+      if (existing) return;
+      const total = pool.query(
+        'SELECT COUNT(*) AS c FROM workouts WHERE program_id = ?',
+        [program.id],
+      ).rows[0].c;
+      pool.query(
+        `INSERT INTO client_programs (user_id, program_id, current_week, current_day, total_workouts)
+         VALUES (?, ?, 1, 1, ?)`,
+        [user.id, program.id, total],
+      );
+    },
+  },
 ];
 
 export function runMigrations() {

@@ -88,19 +88,30 @@ app.use(helmet({
 // CORS policy:
 // - Dev: allow every origin (Vite dev server runs on a different port and
 //   proxies through; tooling like Postman also needs to work locally).
-// - Prod: restrict to ALLOWED_ORIGINS env (comma-separated). If unset, only
-//   same-origin requests are accepted - the target state once the client is
-//   served from the same host as the API. Requests without an Origin header
-//   (curl, server-to-server health checks) are always allowed.
+// - Prod: allow same-origin unconditionally, plus any origin listed in
+//   ALLOWED_ORIGINS (comma-separated) for the native shells. Requests without
+//   an Origin header (curl, server-to-server health checks) are always allowed.
+//
+// Two rules here are load-bearing, both learned from an outage (2026-09-02):
+//   1. Same-origin is decided by comparing the Origin's host to the request's
+//      own host, NOT by the env var. The SPA is served from this same host, and
+//      browsers put an Origin on its module scripts (<script crossorigin>) and
+//      its fetches. If ALLOWED_ORIGINS omits our own URL those requests must
+//      still succeed - the page is not a cross-origin caller of its own API.
+//   2. A disallowed origin is refused by WITHHOLDING the CORS header, never by
+//      passing an Error to the callback. A thrown error propagates to Express's
+//      error handler and turns every response into a 500 - including the static
+//      /assets/*.js the app needs to boot - which white-screens the whole site
+//      rather than blocking one cross-origin reader.
 if (config.IS_PROD) {
-  app.use(cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      if (config.ALLOWED_ORIGINS.length === 0) return cb(null, false);
-      if (config.ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      return cb(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
+  // Delegate form (req, cb) so the check can see the request's own host.
+  app.use(cors((req, cb) => {
+    const origin = req.headers.origin;
+    if (!origin) return cb(null, { origin: true, credentials: true });
+    let sameHost = false;
+    try { sameHost = new URL(origin).host === req.headers.host; } catch { /* malformed Origin */ }
+    const allowed = sameHost || config.ALLOWED_ORIGINS.includes(origin);
+    cb(null, { origin: allowed, credentials: true });
   }));
 } else {
   app.use(cors());
